@@ -1,41 +1,34 @@
 const scrapers = require('../../scrapers');
+const api = require('../../api');
 
 const getAssetsValue = async () => {
-    const nasdaqIsin = 'LU1829221024' // Amundi Nasdaq-100 UCITS ETF DR EUR (C)
-    const allWordIsin = 'IE00B4L5Y983' // iShares Core MSCI World UCITS ETF USD (Acc)
-    const bitcoinSymbol = 'BTC' // Bitcoin
-    const ethereumSymbol = 'ETH' // Ethereum
-    const usdSymbol = 'USD' // USD
+    const assetsSchema = await api.getAssetsSchema()
 
-    const nasdaqOptions = scrapers.etfScraper.isinOptionCreator(nasdaqIsin)
-    const allWorldOptions = scrapers.etfScraper.isinOptionCreator(allWordIsin)
-    const bitcoinOptions = scrapers.cryptoScraper.cryptoOptionsCreator(bitcoinSymbol)
-    const ethereumOptions = scrapers.cryptoScraper.cryptoOptionsCreator(ethereumSymbol)
-    const usdOptions = scrapers.cryptoScraper.cryptoOptionsCreator(usdSymbol)
+    const scraperOptions = assetsSchema.assets.map(asset => {
+        if (asset[0] === 'Crypto') {
+            const cryptoOption = scrapers.cryptoScraper.cryptoOptionsCreator(asset[1])
+            return cryptoOption
+        } else if (asset[0] === 'Equity') {
+            const etfOption = scrapers.etfScraper.isinOptionCreator(asset[1])
+            return etfOption
+        } else {
+            console.error('getAssetsValue - Invalid asset class: ', asset[0])
+        }
+        return options
+    })
 
-    const assetValues = await scrapers.multipleScraper([
-        nasdaqOptions, 
-        allWorldOptions, 
-        bitcoinOptions, 
-        ethereumOptions, 
-        usdOptions
-    ], 5)
+    const assetValues = await scrapers.multipleScraper(scraperOptions, 5)
     
     return assetValues
 }
 
 const getPortfolio = async () => {
-    const assetQuantities = {
-        'LU1829221024': 534, // Amundi Nasdaq-100 UCITS ETF DR EUR (C)
-        'IE00B4L5Y983': 641, // iShares Core MSCI World UCITS ETF USD (Acc)
-        'BTC': 0.78, // Bitcoin
-        'ETH': 13.1, // Ethereum
-        'USD': 3365, // USD
-    }
+    const assetsSchema = await api.getAssetsSchema()
     const assetValues = await getAssetsValue()
 
     const portfolio = Object.keys(assetValues).reduce((acc, key) => {
-        const quantity = assetQuantities[key]
+        const asset = assetsSchema.assets.find(asset => asset[1] === key)
+        const quantity = asset[2]
         const value = assetValues[key]
         acc[key] = { quantity, value, total: quantity * value }
         return acc
@@ -46,16 +39,11 @@ const getPortfolio = async () => {
 
 const getPortfolioByAssetClass = async () => {
     const portfolio = await getPortfolio()
-    const assetClasses = {
-        'LU1829221024': 'Equity',
-        'IE00B4L5Y983': 'Equity',
-        'BTC': 'Crypto',
-        'ETH': 'Crypto',
-        'USD': 'Crypto',
-    }
+    const assetsSchema = await api.getAssetsSchema()
 
     const portfolioByAssetClass = Object.keys(portfolio).reduce((acc, key) => {
-        const assetClass = assetClasses[key]
+        const asset = assetsSchema.assets.find(asset => asset[1] === key)
+        const assetClass = asset[0]
         if (!acc[assetClass]) acc[assetClass] = 0
         acc[assetClass] += portfolio[key].total
         return acc
