@@ -1,4 +1,4 @@
-const u = require('./utils')
+const core = require('../core')
 
 /**
  * Scrape the value of an isin
@@ -17,7 +17,7 @@ const validatorAdjustedBalanceScraper = async (validator) => {
         return match ? parseFloat(match[0]) : null;
     }
 
-    return u.urlSelectorScraper(URL, SELECTOR, selectorFunction, logger)
+    return core.urlSelectorScraper(URL, SELECTOR, selectorFunction, logger)
 }
 
 module.exports = {

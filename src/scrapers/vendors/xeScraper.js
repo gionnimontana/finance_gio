@@ -1,4 +1,4 @@
-const u = require('./utils')
+const core = require('../core')
 
 /**
  * Create the params for the isinValueScraper
@@ -32,7 +32,7 @@ const cryptoOptionsCreator = (crypto) => {
 const cryptoValue = async (crypto) => {
     const params = cryptoOptionsCreator(crypto)
     const { url, selector, selectorFunction, logger } = params[crypto]
-    return u.urlSelectorScraper(url, selector, selectorFunction, logger)
+    return core.urlSelectorScraper(url, selector, selectorFunction, logger)
 }
 
 module.exports = {

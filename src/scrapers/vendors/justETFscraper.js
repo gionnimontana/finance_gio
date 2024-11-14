@@ -1,4 +1,4 @@
-const u = require('./utils')
+const core = require('../core')
 
 /**
  * Create the params for the isinValueScraper
@@ -28,7 +28,7 @@ const isinOptionCreator = (isin) => {
 const isinValueScraper = async (isin) => {
     const params = isinOptionCreator(isin)
     const { url, selector, selectorFunction, logger } = params[isin]
-    return u.urlSelectorScraper(url, selector, selectorFunction, logger)
+    return core.urlSelectorScraper(url, selector, selectorFunction, logger)
 }
 
 module.exports = {

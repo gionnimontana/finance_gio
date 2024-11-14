@@ -1,7 +1,7 @@
 require('dotenv').config({path: __dirname + '/.env'})
 
 const portfolioScripts = require('./src/scripts/portfolio')
-const beaconchainScraper = require('./src/scrapers/beaconchainScraper')
+const beaconchainScraper = require('./src/scrapers/vendors/beaconchainScraper')
 const scrapers = require('./src/scrapers')
 
 const main = async () => {

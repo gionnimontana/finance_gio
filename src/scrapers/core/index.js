@@ -80,6 +80,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 0) => {
             throw error
         }
         await browser.close()
+        console.log('multipleUrlSelectorScraper - failed, retrying...')
         return multipleUrlSelectorScraper(options, maxRetries - 1)
     }
 }
