@@ -6,7 +6,9 @@ const getAssetsSchema = async () => {
             ['Equity', 'IE00B4L5Y983', 641],
             ['Crypto', 'BTC', 0.78],
             ['Crypto', 'ETH', 13.1],
-            ['Crypto', 'USD', 3365]
+            ['Crypto', 'USD', 3365],
+            ['Liquidity', 'contoDeposito1', 30000],
+            ['RealEstate', 'house', 120000],
         ]
     }
 }

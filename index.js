@@ -8,7 +8,7 @@ const main = async () => {
 
     // await scrapers.cryptoScraper.cryptoValue('BTC')
     
-    const portfolio = await portfolioScripts.getPortfolioByAssetClass()
+    const portfolio = await portfolioScripts.getPortfolio()
     console.log(portfolio)
 
     // const beaconchainValue = await beaconchainScraper.validatorAdjustedBalanceScraper('259846')
