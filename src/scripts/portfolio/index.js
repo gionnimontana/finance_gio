@@ -52,10 +52,10 @@ const getPortfolio = async () => {
     const assetsDetails = Object.keys(assetsMap).reduce((acc, key) => {
         const categoryAssets = assetsSchema.assets.filter(asset => asset[0] === key)
         acc[key] = categoryAssets.reduce((acc, asset) => {
-            acc[asset[1]] = portfolioRow[asset[1]]
-            acc.total = (acc.total || 0) + portfolioRow[asset[1]].total
+            acc.details[asset[1]] = portfolioRow[asset[1]]
+            acc.total += portfolioRow[asset[1]].total
             return acc
-        }, {})
+        }, { total: 0, details: {} })
         return acc
     }, {})
 

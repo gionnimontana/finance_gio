@@ -34,6 +34,8 @@ const urlSelectorScraper = async (url, selector, selectorFunction, logger) => {
     return value
 }
 
+const values = {}
+
 /**
  * Scrape the value of multiple urls
  * @param {Array<{ name: { url: string, selector: string, selectorFunction: function, logger: function}}>} options - The options to scrape
@@ -46,12 +48,13 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 0) => {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
     })
 
-    const values = {}
-
     try {
 
     for (const option of options) {
+        
         const name = Object.keys(option)[0]
+
+        if (values[name]) continue
         const { url, selector, selectorFunction, logger } = option[name]
 
         logger(`Navigating to ${url}...`)
