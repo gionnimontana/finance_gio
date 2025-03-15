@@ -43,7 +43,7 @@ const values = {}
  * @returns {Promise<{string: number}>} - The values of the selectors
  * @throws {Error} - If the value is not found or not a number or 0
  */
-const multipleUrlSelectorScraper = async (options, maxRetries = 0) => {
+const multipleUrlSelectorScraper = async (options, maxRetries = 0, refresh) => {
     const browser = await puppeteer.launch({
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
     })
@@ -54,7 +54,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 0) => {
         
         const name = Object.keys(option)[0]
 
-        if (values[name]) continue
+        if (!refresh && values[name]) continue
         const { url, selector, selectorFunction, logger } = option[name]
 
         logger(`Navigating to ${url}...`)
@@ -62,7 +62,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 0) => {
         await page.goto(url, { waitUntil: 'load' })
 
         logger(`Collecting the stats...`)
-        await page.waitForSelector(selector)
+        await page.waitForSelector(selector, { timeout: 5000 })
 
         const value = await page.evaluate(selectorFunction, selector);
         if (value === 0 || undefined) throw new Error('Value not found')

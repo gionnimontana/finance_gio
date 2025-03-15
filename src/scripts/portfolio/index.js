@@ -3,7 +3,7 @@ const api = require('../../api');
 
 const isStaticAsset = (asset) => asset[0] !== 'Equity' && asset[0] !== 'Crypto'
 
-const getAssetsValue = async () => {
+const getAssetsValue = async (refresh) => {
     const assetsSchema = await api.getAssetsSchema()
 
     const dynamicAssets = assetsSchema.assets.filter(asset => asset[0] === 'Equity' || asset[0] === 'Crypto')
@@ -20,7 +20,7 @@ const getAssetsValue = async () => {
         return options
     })
 
-    const dynamicAssetValues = await scrapers.multipleScraper(scraperOptions, 5)
+    const dynamicAssetValues = await scrapers.multipleScraper(scraperOptions, 5, refresh)
 
     const assetValues = { ...dynamicAssetValues, ...staticAssets.reduce((acc, asset) => {
         acc[asset[1]] = asset[2]
@@ -30,9 +30,9 @@ const getAssetsValue = async () => {
     return assetValues
 }
 
-const getPortfolio = async () => {
+const getPortfolio = async (refresh) => {
     const assetsSchema = await api.getAssetsSchema()
-    const assetValues = await getAssetsValue()
+    const assetValues = await getAssetsValue(refresh)
 
     let assetsMap = {}
 

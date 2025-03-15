@@ -1,0 +1,270 @@
+<html>
+<header>
+    <title>Personal Finance App</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"> -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-size: 20px;
+        }
+
+        #page_title {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+        }
+
+        .overview {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: white;
+            margin: 20px;
+            border-radius: 5px;
+        }
+
+        .overview_title {
+            font-weight: bold;
+        }
+
+        .overview_value {
+            font-weight: bold;
+        }
+
+        .table_view {
+            display: flex;
+        }
+
+        .row {
+            margin: 20px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            width: 100%;
+            min-width: fit-content;
+            flex-wrap: wrap;
+        }
+
+        .mainrow {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .row_title {
+            font-weight: bold;
+        }
+
+        .row_value {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .row_value_details {
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            color: red;
+            justify-content: flex-end;
+        }
+
+        .subrow {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            margin-left: 20px;
+            font-size: 15px;
+        }
+
+        .subrow_title {
+            font-weight: bold;
+        }
+
+        .subrow_value {
+            text-align: right;
+            font-weight: bold;
+            /* // trim number to 2 decimal */
+            
+        }
+
+        #refresh_button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 150px;
+        }
+        #refresh_button:disabled {
+            background-color: #cccccc;
+        }
+    </style>
+</header>
+<body>
+    <div id="page_title">
+        <h1>Networth</h1>
+        <button id="refresh_button" onclick="renderPortfolio(true)">Refresh</button>
+    </div>
+    <div class="overview">
+        <div class="overview_title">Total:</div>
+        <div id="total_value" class="overview_value">?</div>
+    </div>
+    <div class="overview">
+        <div class="overview_title">Delta year to goal</div>
+        <div id="deltagoal_value" class="overview_value">?</div>
+    </div>
+    <div class="overview">
+        <div class="overview_title">Delta year to date</div>
+        <div id="delta_value" class="overview_value">?</div>
+    </div>
+    <div class="table_view">
+        <div class="row">
+            <div class="mainrow">
+                <div class="row_title">Equity:</div>
+                <div id="equity_value" class="row_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Nasdaq ETF:</div>
+                <div id="LU1829221024_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">All word ETF:</div>
+                <div id="IE00B4L5Y983_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">MSCI China ETF:</div>
+                <div id="LU1900068914_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Rate swap ETF:</div>
+                <div id="LU0290358497_value" class="subrow_value">?</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="mainrow">
+                <div class="row_title">Crypto:</div>
+                <div class="row_value">
+                    <div class="row_value_withdetails">
+                        <div id="crypto_value" class="row_value">?</div>
+                        <div class="row_value_details">
+                            <div id="cryptoonrisk_value">?</div>🔥
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Bitcoin:</div>
+                <div id="BTC_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Ethereum:</div>
+                <div id="ETH_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">USDT:</div>
+                <div id="USD_value" class="subrow_value">?</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="mainrow">
+                <div class="row_title">Liquidity:</div>
+                <div id="liquidity_value" class="row_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Conto Deposito:</div>
+                <div id="contoDeposito1_value" class="subrow_value">?</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="mainrow">
+                <div class="row_title">Real Estate:</div>
+                <div id="realEstate_value" class="row_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Casa:</div>
+                <div id="house_value" class="subrow_value">?</div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    // fetchData payload Example
+    // {"total":366067.488825,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54},"IE00B4L5Y983":{"quantity":641,"value":101.69,"total":65183.29}}},"Crypto":{"total":109066.65882500002,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.024},"ETH":{"quantity":13.1,"value":2921.86,"total":38276.366},"USD":{"quantity":3365,"value":0.944805,"total":3179.268825}}},"Liquidity":{"total":30000,"details":{"contoDeposito1":{"quantity":1,"value":30000,"total":30000}}},"RealEstate":{"total":120000,"details":{"house":{"quantity":1,"value":120000,"total":120000}}}}
+    // url = 'http://localhost:8085/portfolio?refresh=true'
+    const fetchData = async (refresh) => {
+        const response = await fetch('http://localhost:8085/portfolio?refresh=' + refresh);
+        const data = await response.json();
+        return data;
+    }
+
+    const getPortfolio = async (refresh) => {
+        let portfolio = JSON.parse(localStorage.getItem('portfolio') || null) || null;
+        if (portfolio === null || refresh) {
+            const refreshButton = document.getElementById('refresh_button');
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = 'Refreshing...';
+            portfolio = await fetchData(refresh)
+            localStorage.setItem('portfolio', JSON.stringify(portfolio));
+            refreshButton.disabled = false;
+            refreshButton.innerHTML = 'Refresh';
+        }
+        return portfolio;
+    }
+
+    const renderPortfolio = async (refresh) => {
+        const portfolio = await getPortfolio(refresh);
+        const total = portfolio.total;
+        const equity = portfolio.Equity;
+        const crypto = portfolio.Crypto;
+        const liquidity = portfolio.Liquidity;
+        const realEstate = portfolio.RealEstate;
+
+        const initYearNetworth = 383770.95;
+        const delta = total - initYearNetworth;
+        const deltaPercentage = (delta / initYearNetworth) * 100;
+        const deltaPercentageLabel = deltaPercentage > 0 ? '🚀' : '🔥';
+
+        const yearGoalTarget = 342857.14;
+        const yearGoalDelta = total - yearGoalTarget;
+        const yearGoalLabel = yearGoalDelta > 0 ? '🚀' : '🔥';
+
+        const cryptoonrisk = Math.floor(crypto.total - crypto.details.USD.total);
+        const t = (number) => number.toFixed(2);
+
+        document.getElementById('total_value').innerHTML = t(total);
+        document.getElementById('equity_value').innerHTML = t(equity.total);
+        document.getElementById('crypto_value').innerHTML = t(crypto.total);
+        document.getElementById('cryptoonrisk_value').innerHTML = t(cryptoonrisk);
+        document.getElementById('liquidity_value').innerHTML = t(liquidity.total);
+        document.getElementById('realEstate_value').innerHTML = t(realEstate.total);
+        document.getElementById('LU1829221024_value').innerHTML = t(equity.details.LU1829221024.total);
+        document.getElementById('LU1900068914_value').innerHTML = t(equity.details.LU1900068914.total);
+        document.getElementById('LU0290358497_value').innerHTML = t(equity.details.LU0290358497.total);
+        document.getElementById('IE00B4L5Y983_value').innerHTML = t(equity.details.IE00B4L5Y983.total);
+        document.getElementById('BTC_value').innerHTML = t(crypto.details.BTC.total);
+        document.getElementById('ETH_value').innerHTML = t(crypto.details.ETH.total);
+        document.getElementById('USD_value').innerHTML = t(crypto.details.USD.total);
+        document.getElementById('contoDeposito1_value').innerHTML = t(liquidity.details.contoDeposito1.total);
+        document.getElementById('house_value').innerHTML = t(realEstate.details.house.total);
+        document.getElementById('delta_value').innerHTML = t(deltaPercentage) + '%' + deltaPercentageLabel;
+        document.getElementById('deltagoal_value').innerHTML = t(yearGoalDelta) + yearGoalLabel;
+    }
+
+    renderPortfolio();
+</script>
+</html>

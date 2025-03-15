@@ -6,7 +6,7 @@ const scrapers = require('./src/scrapers')
 
 const main = async () => {
 
-    // await scrapers.cryptoScraper.cryptoValue('BTC')
+    // await scrapers.cryptoWalletScraper.cryptoWalletValue('ETH')
     
     const portfolio = await portfolioScripts.getPortfolio()
     console.log(JSON.stringify(portfolio))
