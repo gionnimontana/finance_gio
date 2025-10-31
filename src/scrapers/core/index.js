@@ -19,7 +19,7 @@ const urlSelectorScraper = async (url, selector, selectorFunction, logger) => {
     await page.goto(url, { waitUntil: 'load' })
 
     logger(`Collecting the stats...`)
-    await page.waitForSelector(selector)
+    await page.waitForSelector(selector, { timeout: 5000 })
 
     const value = await page.evaluate(selectorFunction, selector);
     if (value === 0 || undefined) throw new Error('Value not found')
