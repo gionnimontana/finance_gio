@@ -6,10 +6,10 @@ const scrapers = require('./src/scrapers')
 
 const main = async () => {
 
-    // await scrapers.cryptoWalletScraper.cryptoWalletValue('ETH')
+    await scrapers.cryptoScraper.cryptoValue('BTC')
     
-    const portfolio = await portfolioScripts.getPortfolio()
-    console.log(JSON.stringify(portfolio))
+    // const portfolio = await portfolioScripts.getPortfolio()
+    // console.log(JSON.stringify(portfolio))
 
     // const beaconchainValue = await beaconchainScraper.validatorAdjustedBalanceScraper('259846')
     // console.log(`The value of the validator is ${beaconchainValue} ETH`)

@@ -131,6 +131,10 @@
         <div class="overview_title">Delta year to date</div>
         <div id="delta_value" class="overview_value">?</div>
     </div>
+    <div class="overview">
+        <div class="overview_title">Prev Month Delta</div>
+        <div id="prevMonth_delta_value" class="overview_value">?</div>
+    </div>
     <div class="table_view">
         <div class="row">
             <div class="mainrow">
@@ -148,10 +152,6 @@
             <div class="subrow">
                 <div class="subrow_title">MSCI China ETF:</div>
                 <div id="LU1900068914_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Rate swap ETF:</div>
-                <div id="LU0290358497_value" class="subrow_value">?</div>
             </div>
         </div>
         <div class="row">
@@ -186,18 +186,32 @@
                 <div id="liquidity_value" class="row_value">?</div>
             </div>
             <div class="subrow">
-                <div class="subrow_title">Conto Deposito:</div>
+                <div class="subrow_title">ING:</div>
                 <div id="contoDeposito1_value" class="subrow_value">?</div>
             </div>
-        </div>
-        <div class="row">
-            <div class="mainrow">
-                <div class="row_title">Real Estate:</div>
-                <div id="realEstate_value" class="row_value">?</div>
+            <div class="subrow">
+                <div class="subrow_title">Bbva:</div>
+                <div id="contoDeposito2_value" class="subrow_value">?</div>
             </div>
             <div class="subrow">
-                <div class="subrow_title">Casa:</div>
-                <div id="house_value" class="subrow_value">?</div>
+                <div class="subrow_title">Fineco:</div>
+                <div id="contoDeposito3_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Revolut:</div>
+                <div id="contoDeposito4_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Satispay:</div>
+                <div id="contoDeposito5_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Paypal:</div>
+                <div id="contoDeposito6_value" class="subrow_value">?</div>
+            </div>
+            <div class="subrow">
+                <div class="subrow_title">Cash:</div>
+                <div id="contoDeposito7_value" class="subrow_value">?</div>
             </div>
         </div>
     </div>
@@ -229,6 +243,7 @@
     const renderPortfolio = async (refresh) => {
         const portfolio = await getPortfolio(refresh);
         const total = portfolio.total;
+        const prevMonthTotal = portfolio.prevMonthTotal;
         const equity = portfolio.Equity;
         const crypto = portfolio.Crypto;
         const liquidity = portfolio.Liquidity;
@@ -238,6 +253,9 @@
         const delta = total - initYearNetworth;
         const deltaPercentage = (delta / initYearNetworth) * 100;
         const deltaPercentageLabel = deltaPercentage > 0 ? '🚀' : '🔥';
+        const prevMonthdelta = total - prevMonthTotal;
+        const prevMonthdeltaPercentage = (prevMonthdelta / prevMonthTotal) * 100;
+        const prevMonthdeltaPercentageLabel = prevMonthdeltaPercentage > 0 ? '🚀' : '🔥';
 
         const yearGoalTarget = 342857.14;
         const yearGoalDelta = total - yearGoalTarget;
@@ -251,18 +269,23 @@
         document.getElementById('crypto_value').innerHTML = t(crypto.total);
         document.getElementById('cryptoonrisk_value').innerHTML = t(cryptoonrisk);
         document.getElementById('liquidity_value').innerHTML = t(liquidity.total);
-        document.getElementById('realEstate_value').innerHTML = t(realEstate.total);
         document.getElementById('LU1829221024_value').innerHTML = t(equity.details.LU1829221024.total);
         document.getElementById('LU1900068914_value').innerHTML = t(equity.details.LU1900068914.total);
-        document.getElementById('LU0290358497_value').innerHTML = t(equity.details.LU0290358497.total);
         document.getElementById('IE00B4L5Y983_value').innerHTML = t(equity.details.IE00B4L5Y983.total);
         document.getElementById('BTC_value').innerHTML = t(crypto.details.BTC.total);
         document.getElementById('ETH_value').innerHTML = t(crypto.details.ETH.total);
         document.getElementById('USD_value').innerHTML = t(crypto.details.USD.total);
-        document.getElementById('contoDeposito1_value').innerHTML = t(liquidity.details.contoDeposito1.total);
-        document.getElementById('house_value').innerHTML = t(realEstate.details.house.total);
+        document.getElementById('contoDeposito1_value').innerHTML = t(liquidity.details['conto arancio'].total);
+        document.getElementById('contoDeposito2_value').innerHTML = t(liquidity.details.bbva.total);
+        document.getElementById('contoDeposito3_value').innerHTML = t(liquidity.details.fineco.total);
+        document.getElementById('contoDeposito4_value').innerHTML = t(liquidity.details.revolut.total);
+        document.getElementById('contoDeposito5_value').innerHTML = t(liquidity.details.satispay.total);
+        document.getElementById('contoDeposito6_value').innerHTML = t(liquidity.details.paypal.total);
+        document.getElementById('contoDeposito7_value').innerHTML = t(liquidity.details.cash.total);
         document.getElementById('delta_value').innerHTML = t(deltaPercentage) + '%' + deltaPercentageLabel;
         document.getElementById('deltagoal_value').innerHTML = t(yearGoalDelta) + yearGoalLabel;
+        document.getElementById('prevMonth_delta_value').innerHTML = t(prevMonthdeltaPercentage) + '%' + prevMonthdeltaPercentageLabel;
+        
     }
 
     renderPortfolio();

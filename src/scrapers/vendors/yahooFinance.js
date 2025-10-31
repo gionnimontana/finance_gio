@@ -7,12 +7,11 @@ const core = require('../core')
  * @throws {Error} - If the value is not found or not a number or 0
 */
 const cryptoOptionsCreator = (crypto) => {
-    const url = `https://www.xe.com/currencycharts/?from=${crypto}&to=EUR`
-    const logger = (msg) => console.log(`cryptoValueScraper - ${msg}`)
-    const selector = '.mx-2.font-semibold'
+    const url = `https://it.finance.yahoo.com/quote/${crypto}-EUR/`
+    const logger = (msg) => console.log(`yahooFinanceScraper - ${msg}`)
+    const selector = 'span.up1'
     const selectorFunction = (selector) => {
-        const rawValue = document.querySelector(selector).innerText
-        const match = rawValue.match(/\d{1,3}(?:,\d{3})*(?:\.\d+)?(?=\sEUR)/);
+        const match = document.querySelector(selector).innerText
         if (!match) throw new Error('Value not found');
         const numbericValue = parseFloat(match[0].replace(/,/g, ''));
         if (!numbericValue) throw new Error('Value not found');

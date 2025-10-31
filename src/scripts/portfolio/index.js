@@ -61,6 +61,7 @@ const getPortfolio = async (refresh) => {
 
     const totalPortfolio = Object.values(portfolioRow).reduce((acc, asset) => acc + asset.total, 0)
     const portfolio = {
+        prevMonthTotal: assetsSchema.prevMonthTotal,
         total: totalPortfolio,
         ...assetsDetails
     }

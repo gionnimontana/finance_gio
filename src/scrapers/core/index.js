@@ -65,7 +65,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 0, refresh) => {
         await page.waitForSelector(selector, { timeout: 5000 })
 
         const value = await page.evaluate(selectorFunction, selector);
-        if (value === 0 || undefined) throw new Error('Value not found')
+        if (value === 0 || value === undefined) throw new Error('Value not found')
 
         logger('Closing page...')
         await page.close()

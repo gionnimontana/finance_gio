@@ -2,16 +2,21 @@ const getAssetsSchema = async () => {
     return {
         // array of [assetClass,assetId, quantity]
         assets: [
-            ['Equity', 'LU1829221024', 683],
-            ['Equity', 'IE00B4L5Y983', 729],
-            ['Equity', 'LU1900068914', 67],
-            ['Equity', 'LU0290358497', 5],
-            ['Crypto', 'BTC', 0.537],
-            ['Crypto', 'ETH', 13.1],
-            ['Crypto', 'USD', 17317],
-            ['Liquidity', 'contoDeposito1', 15000],
-            ['RealEstate', 'house', 120000],
-        ]
+            ['Equity', 'LU1829221024', 1520],
+            ['Equity', 'IE00B4L5Y983', 1029],
+            ['Equity', 'LU1900068914', 197],
+            ['Crypto', 'BTC', 0.60068],
+            ['Crypto', 'ETH', 13.37],
+            ['Crypto', 'USD', 9951],
+            ['Liquidity', 'conto arancio', 53279],
+            ['Liquidity', 'bbva', 1115],
+            ['Liquidity', 'fineco', 252],
+            ['Liquidity', 'revolut', 2368],
+            ['Liquidity', 'satispay', 67],
+            ['Liquidity', 'paypal', 176],
+            ['Liquidity', 'cash', 110],
+        ],
+        prevMonthTotal: 433918
     }
 }
 
