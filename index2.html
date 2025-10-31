@@ -177,7 +177,7 @@
             </div>
             <div class="subrow">
                 <div class="subrow_title">USDT:</div>
-                <div id="USD_value" class="subrow_value">?</div>
+                <div id="USDT_value" class="subrow_value">?</div>
             </div>
         </div>
         <div class="row">
@@ -218,7 +218,7 @@
 </body>
 <script>
     // fetchData payload Example
-    // {"total":366067.488825,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54},"IE00B4L5Y983":{"quantity":641,"value":101.69,"total":65183.29}}},"Crypto":{"total":109066.65882500002,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.024},"ETH":{"quantity":13.1,"value":2921.86,"total":38276.366},"USD":{"quantity":3365,"value":0.944805,"total":3179.268825}}},"Liquidity":{"total":30000,"details":{"contoDeposito1":{"quantity":1,"value":30000,"total":30000}}},"RealEstate":{"total":120000,"details":{"house":{"quantity":1,"value":120000,"total":120000}}}}
+    // {"total":366067.488825,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54},"IE00B4L5Y983":{"quantity":641,"value":101.69,"total":65183.29}}},"Crypto":{"total":109066.65882500002,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.024},"ETH":{"quantity":13.1,"value":2921.86,"total":38276.366},"USDT":{"quantity":3365,"value":0.944805,"total":3179.268825}}},"Liquidity":{"total":30000,"details":{"contoDeposito1":{"quantity":1,"value":30000,"total":30000}}},"RealEstate":{"total":120000,"details":{"house":{"quantity":1,"value":120000,"total":120000}}}}
     // url = 'http://localhost:8085/portfolio?refresh=true'
     const fetchData = async (refresh) => {
         const response = await fetch('http://localhost:8085/portfolio?refresh=' + refresh);
@@ -261,7 +261,7 @@
         const yearGoalDelta = total - yearGoalTarget;
         const yearGoalLabel = yearGoalDelta > 0 ? '🚀' : '🔥';
 
-        const cryptoonrisk = Math.floor(crypto.total - crypto.details.USD.total);
+        const cryptoonrisk = Math.floor(crypto.total - crypto.details.USDT.total);
         const t = (number) => number.toFixed(2);
 
         document.getElementById('total_value').innerHTML = t(total);
@@ -274,7 +274,7 @@
         document.getElementById('IE00B4L5Y983_value').innerHTML = t(equity.details.IE00B4L5Y983.total);
         document.getElementById('BTC_value').innerHTML = t(crypto.details.BTC.total);
         document.getElementById('ETH_value').innerHTML = t(crypto.details.ETH.total);
-        document.getElementById('USD_value').innerHTML = t(crypto.details.USD.total);
+        document.getElementById('USDT_value').innerHTML = t(crypto.details.USDT.total);
         document.getElementById('contoDeposito1_value').innerHTML = t(liquidity.details['conto arancio'].total);
         document.getElementById('contoDeposito2_value').innerHTML = t(liquidity.details.bbva.total);
         document.getElementById('contoDeposito3_value').innerHTML = t(liquidity.details.fineco.total);

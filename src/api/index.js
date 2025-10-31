@@ -7,7 +7,7 @@ const getAssetsSchema = async () => {
             ['Equity', 'LU1900068914', 197],
             ['Crypto', 'BTC', 0.60068],
             ['Crypto', 'ETH', 13.37],
-            ['Crypto', 'USD', 9951],
+            ['Crypto', 'USDT', 9951],
             ['Liquidity', 'conto arancio', 53279],
             ['Liquidity', 'bbva', 1115],
             ['Liquidity', 'fineco', 252],
