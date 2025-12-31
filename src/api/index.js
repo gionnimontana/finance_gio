@@ -1,22 +1,25 @@
 const getAssetsSchema = async () => {
     return {
-        // array of [assetClass,assetId, quantity]
+        // array of [assetClass, assetId, quantity, displayName]
         assets: [
-            ['Equity', 'LU1829221024', 1520],
-            ['Equity', 'IE00B4L5Y983', 1029],
-            ['Equity', 'LU1900068914', 197],
-            ['Crypto', 'BTC', 0.60068],
-            ['Crypto', 'ETH', 13.37],
-            ['Crypto', 'USDT', 9951],
-            ['Liquidity', 'conto arancio', 53279],
-            ['Liquidity', 'bbva', 1115],
-            ['Liquidity', 'fineco', 252],
-            ['Liquidity', 'revolut', 2368],
-            ['Liquidity', 'satispay', 67],
-            ['Liquidity', 'paypal', 176],
-            ['Liquidity', 'cash', 110],
+            ['Equity', 'LU1829221024', 1520, 'Nasdaq ETF'],
+            ['Equity', 'IE00B4L5Y983', 1029, 'All World ETF'],
+            ['Equity', 'LU1900068914', 197, 'MSCI China ETF'],
+            ['Equity', 'GB00BJYDH287', 60, 'Physical Bitcoin'],
+            ['Equity', 'DE000A2T0VU5', 18, 'Physical Gold'],
+            ['Crypto', 'BTC', 0.69268, 'Bitcoin'],
+            ['Crypto', 'ETH', 13.39, 'Ethereum'],
+            ['Crypto', 'USDT', 462, 'USDT'],
+            ['Liquidity', 'conto arancio', 50764, 'ING'],
+            ['Liquidity', 'bbva', 891, 'Bbva'],
+            ['Liquidity', 'fineco', 8665, 'Fineco'],
+            ['Liquidity', 'revolut', 2945, 'Revolut'],
+            ['Liquidity', 'satispay', 201, 'Satispay'],
+            ['Liquidity', 'paypal', 206, 'Paypal'],
+            ['Liquidity', 'cash', 600, 'Cash'],
+            ['Commodities', 'physical-gold', 100, 'Physical Gold'], // quantity in grams
         ],
-        prevMonthTotal: 433918
+        prevMonthTotal: 424186
     }
 }
 

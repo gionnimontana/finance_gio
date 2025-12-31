@@ -35,57 +35,128 @@ const urlSelectorScraper = async (url, selector, selectorFunction, logger) => {
 }
 
 const values = {}
+const failures = []
+
+/**
+ * Scrape a single option with retry logic
+ * @param {Object} browser - The puppeteer browser instance
+ * @param {string} name - The name of the asset
+ * @param {Object} optionConfig - The scraper config { url, selector, selectorFunction, logger }
+ * @param {number} maxRetries - The number of max retries on failure
+ * @returns {Promise<{value: number|null, failed: boolean}>} - The scraped value and failure status
+ */
+const scrapeWithRetry = async (browser, name, optionConfig, maxRetries = 5) => {
+    const { url, selector, selectorFunction, logger } = optionConfig
+    let page = null
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            logger(`Navigating to ${url}...`)
+            page = await browser.newPage()
+            await page.goto(url, { waitUntil: 'load' })
+
+            logger(`Collecting the stats...`)
+            await page.waitForSelector(selector, { timeout: 5000 })
+
+            const value = await page.evaluate(selectorFunction, selector)
+            if (value === 0 || value === undefined) throw new Error('Value not found')
+
+            logger('Closing page...')
+            await page.close()
+            page = null
+
+            logger(`Scrape done, scraped: ${value}`)
+            return { value, failed: false }
+        } catch (error) {
+            // Always close the page on error
+            if (page) {
+                try {
+                    await page.close()
+                } catch (closeError) {
+                    // Ignore close errors
+                }
+                page = null
+            }
+            logger(`Attempt ${attempt + 1}/${maxRetries + 1} failed: ${error.message}`)
+            if (attempt === maxRetries) {
+                logger(`All retries exhausted for ${name}`)
+                return { value: null, failed: true }
+            }
+        }
+    }
+    return { value: null, failed: true }
+}
+
+// Lock to prevent concurrent scraping
+let isScrapingInProgress = false
+let scrapingPromise = null
 
 /**
  * Scrape the value of multiple urls
  * @param {Array<{ name: { url: string, selector: string, selectorFunction: function, logger: function}}>} options - The options to scrape
- * @param {number} maxRetries - The number of max retries on failure
- * @returns {Promise<{string: number}>} - The values of the selectors
- * @throws {Error} - If the value is not found or not a number or 0
+ * @param {number} maxRetries - The number of max retries on failure per scraper
+ * @returns {Promise<{values: {string: number}, failures: string[]}>} - The values and list of failed scrapers
  */
-const multipleUrlSelectorScraper = async (options, maxRetries = 0, refresh) => {
-    const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    })
-
-    try {
-
-    for (const option of options) {
-        
-        const name = Object.keys(option)[0]
-
-        if (!refresh && values[name]) continue
-        const { url, selector, selectorFunction, logger } = option[name]
-
-        logger(`Navigating to ${url}...`)
-        const page = await browser.newPage()
-        await page.goto(url, { waitUntil: 'load' })
-
-        logger(`Collecting the stats...`)
-        await page.waitForSelector(selector, { timeout: 5000 })
-
-        const value = await page.evaluate(selectorFunction, selector);
-        if (value === 0 || value === undefined) throw new Error('Value not found')
-
-        logger('Closing page...')
-        await page.close()
-
-        values[name] = value
+const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh) => {
+    // If scraping is already in progress, wait for it to complete
+    if (isScrapingInProgress && scrapingPromise) {
+        console.log('Scraping already in progress, waiting for completion...')
+        return scrapingPromise
     }
 
-    await browser.close()
+    isScrapingInProgress = true
+    scrapingPromise = (async () => {
+        const browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        })
 
-    return values
-
-    } catch (error) {
-        if (maxRetries === 0) {
-            await browser.close()
-            throw error
+        // Clear previous failures on refresh
+        if (refresh) {
+            failures.length = 0
         }
-        await browser.close()
-        console.log('multipleUrlSelectorScraper - failed, retrying...')
-        return multipleUrlSelectorScraper(options, maxRetries - 1)
-    }
+
+        try {
+            for (const option of options) {
+                const name = Object.keys(option)[0]
+
+                // Skip if we already have a cached value and not refreshing
+                if (!refresh && values[name]) continue
+
+                const optionConfig = option[name]
+                const result = await scrapeWithRetry(browser, name, optionConfig, maxRetries)
+
+                if (!result.failed && result.value !== null) {
+                    values[name] = result.value
+                    // Remove from failures if it was previously failing
+                    const failureIndex = failures.indexOf(name)
+                    if (failureIndex > -1) failures.splice(failureIndex, 1)
+                } else if (result.failed) {
+                    if (values[name]) {
+                        // Keep the last known value if scraping failed
+                        console.log(`Using cached value for ${name}: ${values[name]}`)
+                    }
+                    // Track the failure
+                    if (!failures.includes(name)) {
+                        failures.push(name)
+                    }
+                    console.warn(`Scraper failed for ${name}`)
+                }
+            }
+
+            await browser.close()
+            return { values, failures: [...failures] }
+
+        } catch (error) {
+            await browser.close()
+            console.error('multipleUrlSelectorScraper - unexpected error:', error.message)
+            return { values, failures: [...failures] }
+        } finally {
+            isScrapingInProgress = false
+            scrapingPromise = null
+        }
+    })()
+
+    return scrapingPromise
 }
 
 module.exports = {

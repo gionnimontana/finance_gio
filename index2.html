@@ -112,12 +112,39 @@
         #refresh_button:disabled {
             background-color: #cccccc;
         }
+
+        .error_banner {
+            background-color: #ffebee;
+            border: 1px solid #f44336;
+            border-radius: 5px;
+            padding: 10px 15px;
+            margin: 20px;
+            color: #c62828;
+            display: none;
+        }
+
+        .error_banner.visible {
+            display: block;
+        }
+
+        .error_title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .error_list {
+            font-size: 14px;
+        }
     </style>
 </header>
 <body>
     <div id="page_title">
         <h1>Networth</h1>
         <button id="refresh_button" onclick="renderPortfolio(true)">Refresh</button>
+    </div>
+    <div id="error_banner" class="error_banner">
+        <div class="error_title">⚠️ Failed to fetch some data:</div>
+        <div id="error_list" class="error_list"></div>
     </div>
     <div class="overview">
         <div class="overview_title">Total:</div>
@@ -135,90 +162,86 @@
         <div class="overview_title">Prev Month Delta</div>
         <div id="prevMonth_delta_value" class="overview_value">?</div>
     </div>
-    <div class="table_view">
-        <div class="row">
-            <div class="mainrow">
-                <div class="row_title">Equity:</div>
-                <div id="equity_value" class="row_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Nasdaq ETF:</div>
-                <div id="LU1829221024_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">All word ETF:</div>
-                <div id="IE00B4L5Y983_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">MSCI China ETF:</div>
-                <div id="LU1900068914_value" class="subrow_value">?</div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="mainrow">
-                <div class="row_title">Crypto:</div>
-                <div class="row_value">
-                    <div class="row_value_withdetails">
-                        <div id="crypto_value" class="row_value">?</div>
-                        <div class="row_value_details">
-                            <div id="cryptoonrisk_value">?</div>🔥
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Bitcoin:</div>
-                <div id="BTC_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Ethereum:</div>
-                <div id="ETH_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">USDT:</div>
-                <div id="USDT_value" class="subrow_value">?</div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="mainrow">
-                <div class="row_title">Liquidity:</div>
-                <div id="liquidity_value" class="row_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">ING:</div>
-                <div id="contoDeposito1_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Bbva:</div>
-                <div id="contoDeposito2_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Fineco:</div>
-                <div id="contoDeposito3_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Revolut:</div>
-                <div id="contoDeposito4_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Satispay:</div>
-                <div id="contoDeposito5_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Paypal:</div>
-                <div id="contoDeposito6_value" class="subrow_value">?</div>
-            </div>
-            <div class="subrow">
-                <div class="subrow_title">Cash:</div>
-                <div id="contoDeposito7_value" class="subrow_value">?</div>
-            </div>
-        </div>
+    <div id="table_view" class="table_view">
+        <!-- Dynamically rendered -->
     </div>
 </body>
 <script>
+    // Configuration for category-specific behavior
+    const categoryConfig = {
+        Equity: {},
+        Crypto: {
+            showRiskValue: true // Special handling for crypto on risk
+        },
+        Liquidity: {},
+        Commodities: {}
+    };
+
+    const t = (number) => number.toFixed(2);
+
+    // Function to render a single category row
+    const renderCategoryRow = (categoryKey, categoryData) => {
+        const config = categoryConfig[categoryKey] || {};
+        if (!categoryData) return '';
+
+        let mainRowValueHtml = t(categoryData.total);
+        
+        // Special handling for Crypto to show risk value
+        if (config.showRiskValue && categoryData.details?.USDT) {
+            const cryptoOnRisk = Math.floor(categoryData.total - categoryData.details.USDT.total);
+            mainRowValueHtml = `
+                <div class="row_value_withdetails">
+                    <div class="row_value">${t(categoryData.total)}</div>
+                    <div class="row_value_details">
+                        <div>${t(cryptoOnRisk)}</div>🔥
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render subrows for details using displayName from API
+        let subrowsHtml = '';
+        if (categoryData.details) {
+            for (const [key, detail] of Object.entries(categoryData.details)) {
+                const label = detail.displayName || key;
+                subrowsHtml += `
+                    <div class="subrow">
+                        <div class="subrow_title">${label}:</div>
+                        <div class="subrow_value">${t(detail.total)}</div>
+                    </div>
+                `;
+            }
+        }
+
+        return `
+            <div class="row">
+                <div class="mainrow">
+                    <div class="row_title">${categoryKey}:</div>
+                    <div class="row_value">${mainRowValueHtml}</div>
+                </div>
+                ${subrowsHtml}
+            </div>
+        `;
+    };
+
+    // Function to render the entire table view
+    const renderTableView = (portfolio) => {
+        const tableView = document.getElementById('table_view');
+        let html = '';
+
+        // Render each category in order
+        const categoryOrder = ['Equity', 'Crypto', 'Liquidity', 'Commodities'];
+        for (const categoryKey of categoryOrder) {
+            if (portfolio[categoryKey]) {
+                html += renderCategoryRow(categoryKey, portfolio[categoryKey]);
+            }
+        }
+
+        tableView.innerHTML = html;
+    };
+
     // fetchData payload Example
-    // {"total":366067.488825,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54},"IE00B4L5Y983":{"quantity":641,"value":101.69,"total":65183.29}}},"Crypto":{"total":109066.65882500002,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.024},"ETH":{"quantity":13.1,"value":2921.86,"total":38276.366},"USDT":{"quantity":3365,"value":0.944805,"total":3179.268825}}},"Liquidity":{"total":30000,"details":{"contoDeposito1":{"quantity":1,"value":30000,"total":30000}}},"RealEstate":{"total":120000,"details":{"house":{"quantity":1,"value":120000,"total":120000}}}}
+    // {"total":366067.48,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54,"displayName":"Nasdaq ETF"}}},"Crypto":{"total":109066.65,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.02,"displayName":"Bitcoin"},"USDT":{"quantity":3365,"value":0.94,"total":3179.26,"displayName":"USDT"}}},"Liquidity":{"total":30000,"details":{"conto arancio":{"quantity":1,"value":30000,"total":30000,"displayName":"ING"}}}}
     // url = 'http://localhost:8085/portfolio?refresh=true'
     const fetchData = async (refresh) => {
         const response = await fetch('http://localhost:8085/portfolio?refresh=' + refresh);
@@ -228,26 +251,40 @@
 
     const getPortfolio = async (refresh) => {
         let portfolio = JSON.parse(localStorage.getItem('portfolio') || null) || null;
-        if (portfolio === null || refresh) {
+        // Force refresh if displayName is missing or categories are missing (cache from old version)
+        const needsRefresh = portfolio && (
+            (portfolio.Equity?.details && Object.values(portfolio.Equity.details).some(d => !d.displayName)) ||
+            !portfolio.Commodities ||
+            !portfolio.Equity
+        );
+        if (portfolio === null || refresh || needsRefresh) {
             const refreshButton = document.getElementById('refresh_button');
             refreshButton.disabled = true;
             refreshButton.innerHTML = 'Refreshing...';
-            portfolio = await fetchData(refresh)
-            localStorage.setItem('portfolio', JSON.stringify(portfolio));
+            const newPortfolio = await fetchData(refresh);
+            localStorage.setItem('portfolio', JSON.stringify(newPortfolio));
             refreshButton.disabled = false;
             refreshButton.innerHTML = 'Refresh';
+            return newPortfolio;
         }
         return portfolio;
     }
 
     const renderPortfolio = async (refresh) => {
-        const portfolio = await getPortfolio(refresh);
+        // Show cached data first (if available) so old values remain visible during refresh
+        let portfolio = JSON.parse(localStorage.getItem('portfolio') || null);
+        if (portfolio) {
+            renderPortfolioData(portfolio);
+        }
+        
+        // Fetch new data if needed
+        portfolio = await getPortfolio(refresh);
+        renderPortfolioData(portfolio);
+    }
+
+    const renderPortfolioData = (portfolio) => {
         const total = portfolio.total;
         const prevMonthTotal = portfolio.prevMonthTotal;
-        const equity = portfolio.Equity;
-        const crypto = portfolio.Crypto;
-        const liquidity = portfolio.Liquidity;
-        const realEstate = portfolio.RealEstate;
 
         const initYearNetworth = 383770.95;
         const delta = total - initYearNetworth;
@@ -261,31 +298,24 @@
         const yearGoalDelta = total - yearGoalTarget;
         const yearGoalLabel = yearGoalDelta > 0 ? '🚀' : '🔥';
 
-        const cryptoonrisk = Math.floor(crypto.total - crypto.details.USDT.total);
-        const t = (number) => number.toFixed(2);
-
+        // Update overview values
         document.getElementById('total_value').innerHTML = t(total);
-        document.getElementById('equity_value').innerHTML = t(equity.total);
-        document.getElementById('crypto_value').innerHTML = t(crypto.total);
-        document.getElementById('cryptoonrisk_value').innerHTML = t(cryptoonrisk);
-        document.getElementById('liquidity_value').innerHTML = t(liquidity.total);
-        document.getElementById('LU1829221024_value').innerHTML = t(equity.details.LU1829221024.total);
-        document.getElementById('LU1900068914_value').innerHTML = t(equity.details.LU1900068914.total);
-        document.getElementById('IE00B4L5Y983_value').innerHTML = t(equity.details.IE00B4L5Y983.total);
-        document.getElementById('BTC_value').innerHTML = t(crypto.details.BTC.total);
-        document.getElementById('ETH_value').innerHTML = t(crypto.details.ETH.total);
-        document.getElementById('USDT_value').innerHTML = t(crypto.details.USDT.total);
-        document.getElementById('contoDeposito1_value').innerHTML = t(liquidity.details['conto arancio'].total);
-        document.getElementById('contoDeposito2_value').innerHTML = t(liquidity.details.bbva.total);
-        document.getElementById('contoDeposito3_value').innerHTML = t(liquidity.details.fineco.total);
-        document.getElementById('contoDeposito4_value').innerHTML = t(liquidity.details.revolut.total);
-        document.getElementById('contoDeposito5_value').innerHTML = t(liquidity.details.satispay.total);
-        document.getElementById('contoDeposito6_value').innerHTML = t(liquidity.details.paypal.total);
-        document.getElementById('contoDeposito7_value').innerHTML = t(liquidity.details.cash.total);
         document.getElementById('delta_value').innerHTML = t(deltaPercentage) + '%' + deltaPercentageLabel;
         document.getElementById('deltagoal_value').innerHTML = t(yearGoalDelta) + yearGoalLabel;
         document.getElementById('prevMonth_delta_value').innerHTML = t(prevMonthdeltaPercentage) + '%' + prevMonthdeltaPercentageLabel;
-        
+
+        // Show/hide error banner based on failures
+        const errorBanner = document.getElementById('error_banner');
+        const errorList = document.getElementById('error_list');
+        if (portfolio.failures && portfolio.failures.length > 0) {
+            errorList.innerHTML = portfolio.failures.join(', ') + ' (using cached values if available)';
+            errorBanner.classList.add('visible');
+        } else {
+            errorBanner.classList.remove('visible');
+        }
+
+        // Render the table view dynamically
+        renderTableView(portfolio);
     }
 
     renderPortfolio();
