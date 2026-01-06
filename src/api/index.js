@@ -9,7 +9,7 @@ const getAssetsSchema = async () => {
             ['Equity', 'GB00BJYDH287', 277, 'ETC Bitcoin', 'Crypto'],
             ['Crypto', 'BTC', 0.68268, 'Bitcoin', 'Crypto'],
             ['Crypto', 'ETH', 13.39, 'Ethereum', 'Crypto'],
-            ['Crypto', 'USDT', 462, 'USDT', 'Crypto'],
+            ['Crypto', 'USDT', 462, 'USDT', 'Liquidity'],
             ['Liquidity', 'bbva', 891, 'Bbva', 'Liquidity'],
             ['Liquidity', 'fineco', 1500, 'Fineco', 'Liquidity'],
             ['Liquidity', 'revolut', 2695, 'Revolut', 'Liquidity'],

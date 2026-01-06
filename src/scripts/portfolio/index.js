@@ -63,12 +63,22 @@ const getPortfolio = async (refresh) => {
     const assetsDetails = Object.keys(viewGroupsMap).reduce((acc, viewGroup) => {
         // Filter assets by viewGroup (index 4)
         const groupAssets = assetsSchema.assets.filter(asset => asset[4] === viewGroup)
-        acc[viewGroup] = groupAssets.reduce((acc, asset) => {
+        const groupData = groupAssets.reduce((acc, asset) => {
             if (!portfolioRow[asset[1]]) return acc // Skip if asset has no value
             acc.details[asset[1]] = portfolioRow[asset[1]]
             acc.total += portfolioRow[asset[1]].total
             return acc
         }, { total: 0, details: {} })
+        
+        // Sort details by total value (descending)
+        const sortedDetails = Object.entries(groupData.details)
+            .sort(([, a], [, b]) => b.total - a.total)
+            .reduce((sorted, [key, value]) => {
+                sorted[key] = value
+                return sorted
+            }, {})
+        
+        acc[viewGroup] = { total: groupData.total, details: sortedDetails }
         return acc
     }, {})
 
