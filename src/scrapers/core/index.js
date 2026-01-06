@@ -11,7 +11,12 @@ const puppeteer = require('puppeteer')
 */
 const urlSelectorScraper = async (url, selector, selectorFunction, logger) => {
     const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+        ],
     })
     
     logger(`Navigating to ${url}...`)
@@ -107,7 +112,12 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh) => {
     isScrapingInProgress = true
     scrapingPromise = (async () => {
         const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+            ],
         })
 
         // Clear previous failures on refresh
