@@ -19,13 +19,30 @@
             color: white;
         }
 
+        .overview_container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .overview_card {
+            flex: 1;
+        }
+
         .overview {
             display: flex;
             justify-content: space-between;
             padding: 10px;
-            background-color: white;
-            margin: 20px;
-            border-radius: 5px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .overview:last-child {
+            border-bottom: none;
         }
 
         .overview_title {
@@ -34,6 +51,12 @@
 
         .overview_value {
             font-weight: bold;
+        }
+
+        .chart_container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .table_view {
@@ -65,14 +88,6 @@
         .row_value {
             text-align: right;
             font-weight: bold;
-        }
-
-        .row_value_details {
-            display: flex;
-            align-items: center;
-            font-size: 1rem;
-            color: red;
-            justify-content: flex-end;
         }
 
         .subrow {
@@ -146,68 +161,63 @@
         <div class="error_title">⚠️ Failed to fetch some data:</div>
         <div id="error_list" class="error_list"></div>
     </div>
-    <div class="overview">
-        <div class="overview_title">Total:</div>
-        <div id="total_value" class="overview_value">?</div>
-    </div>
-    <div class="overview">
-        <div class="overview_title">Delta year to goal</div>
-        <div id="deltagoal_value" class="overview_value">?</div>
-    </div>
-    <div class="overview">
-        <div class="overview_title">Delta year to date</div>
-        <div id="delta_value" class="overview_value">?</div>
-    </div>
-    <div class="overview">
-        <div class="overview_title">Prev Month Delta</div>
-        <div id="prevMonth_delta_value" class="overview_value">?</div>
+    <div class="overview_container">
+        <div class="overview_card">
+            <div class="overview">
+                <div class="overview_title">Total:</div>
+                <div id="total_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title">Delta year to goal</div>
+                <div id="deltagoal_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title">Delta year to date</div>
+                <div id="delta_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title">Prev Month Delta</div>
+                <div id="prevMonth_delta_value" class="overview_value">?</div>
+            </div>
+        </div>
+        <div class="chart_container">
+            <canvas id="portfolio_chart" width="300" height="250"></canvas>
+        </div>
     </div>
     <div id="table_view" class="table_view">
         <!-- Dynamically rendered -->
     </div>
 </body>
+<script src="chart.js"></script>
 <script>
     // Configuration for category-specific behavior
     const categoryConfig = {
         Equity: {},
-        Crypto: {
-            showRiskValue: true // Special handling for crypto on risk
-        },
+        Crypto: {},
         Liquidity: {},
-        Commodities: {}
+        Gold: {}
     };
 
     const t = (number) => number.toFixed(2);
+    const pct = (value, total) => ((value / total) * 100).toFixed(1);
 
     // Function to render a single category row
-    const renderCategoryRow = (categoryKey, categoryData) => {
-        const config = categoryConfig[categoryKey] || {};
+    const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
         if (!categoryData) return '';
 
-        let mainRowValueHtml = t(categoryData.total);
-        
-        // Special handling for Crypto to show risk value
-        if (config.showRiskValue && categoryData.details?.USDT) {
-            const cryptoOnRisk = Math.floor(categoryData.total - categoryData.details.USDT.total);
-            mainRowValueHtml = `
-                <div class="row_value_withdetails">
-                    <div class="row_value">${t(categoryData.total)}</div>
-                    <div class="row_value_details">
-                        <div>${t(cryptoOnRisk)}</div>🔥
-                    </div>
-                </div>
-            `;
-        }
+        const categoryPct = pct(categoryData.total, portfolioTotal);
+        let mainRowValueHtml = `${t(categoryData.total)} (${categoryPct}%)`;
 
         // Render subrows for details using displayName from API
         let subrowsHtml = '';
         if (categoryData.details) {
             for (const [key, detail] of Object.entries(categoryData.details)) {
                 const label = detail.displayName || key;
+                const assetPct = pct(detail.total, portfolioTotal);
                 subrowsHtml += `
                     <div class="subrow">
                         <div class="subrow_title">${label}:</div>
-                        <div class="subrow_value">${t(detail.total)}</div>
+                        <div class="subrow_value">${t(detail.total)} (${assetPct}%)</div>
                     </div>
                 `;
             }
@@ -229,11 +239,11 @@
         const tableView = document.getElementById('table_view');
         let html = '';
 
-        // Render each category in order
-        const categoryOrder = ['Equity', 'Crypto', 'Liquidity', 'Commodities'];
+        // Render each category in order (by viewGroup)
+        const categoryOrder = ['Equity', 'Crypto', 'Liquidity', 'Gold'];
         for (const categoryKey of categoryOrder) {
             if (portfolio[categoryKey]) {
-                html += renderCategoryRow(categoryKey, portfolio[categoryKey]);
+                html += renderCategoryRow(categoryKey, portfolio[categoryKey], portfolio.total);
             }
         }
 
@@ -251,10 +261,10 @@
 
     const getPortfolio = async (refresh) => {
         let portfolio = JSON.parse(localStorage.getItem('portfolio') || null) || null;
-        // Force refresh if displayName is missing or categories are missing (cache from old version)
+        // Force refresh if displayName is missing or viewGroups are missing (cache from old version)
         const needsRefresh = portfolio && (
             (portfolio.Equity?.details && Object.values(portfolio.Equity.details).some(d => !d.displayName)) ||
-            !portfolio.Commodities ||
+            !portfolio.Gold ||
             !portfolio.Equity
         );
         if (portfolio === null || refresh || needsRefresh) {
@@ -316,6 +326,9 @@
 
         // Render the table view dynamically
         renderTableView(portfolio);
+
+        // Render the pie chart
+        ChartModule.renderPieChart('portfolio_chart', portfolio);
     }
 
     renderPortfolio();

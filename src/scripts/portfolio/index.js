@@ -38,7 +38,7 @@ const getPortfolio = async (refresh) => {
     const assetsSchema = await api.getAssetsSchema()
     const { assetValues, failures } = await getAssetsValue(refresh)
 
-    let assetsMap = {}
+    let viewGroupsMap = {}
 
     const portfolioRow = Object.keys(assetValues).reduce((acc, key) => {
         const asset = assetsSchema.assets.find(asset => asset[1] === key)
@@ -47,7 +47,10 @@ const getPortfolio = async (refresh) => {
         const value = assetValues[key]
         if (value === undefined || value === null) return acc // Skip if no value available
         
-        assetsMap[asset[0]] = asset[0]
+        // Use viewGroup (index 4) for grouping
+        const viewGroup = asset[4]
+        viewGroupsMap[viewGroup] = viewGroup
+        
         if (!isDynamicAsset(asset)) {
             acc[key] = { quantity: 1, value, total: value, displayName: asset[3] }
             return acc
@@ -57,9 +60,10 @@ const getPortfolio = async (refresh) => {
         return acc
     }, {})
 
-    const assetsDetails = Object.keys(assetsMap).reduce((acc, key) => {
-        const categoryAssets = assetsSchema.assets.filter(asset => asset[0] === key)
-        acc[key] = categoryAssets.reduce((acc, asset) => {
+    const assetsDetails = Object.keys(viewGroupsMap).reduce((acc, viewGroup) => {
+        // Filter assets by viewGroup (index 4)
+        const groupAssets = assetsSchema.assets.filter(asset => asset[4] === viewGroup)
+        acc[viewGroup] = groupAssets.reduce((acc, asset) => {
             if (!portfolioRow[asset[1]]) return acc // Skip if asset has no value
             acc.details[asset[1]] = portfolioRow[asset[1]]
             acc.total += portfolioRow[asset[1]].total
