@@ -3,6 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const portfolioScripts = require('./src/scripts/portfolio')
+const { getHistoricalData } = require('./src/api')
 
 const app = express()
 const port = 8085
@@ -27,4 +28,9 @@ app.get('/portfolio', async (req, res) => {
   const refresh = params.refresh
   const portfolio = await portfolioScripts.getPortfolio(refresh)
   res.send(portfolio)
+})
+
+app.get('/portfolio/history', async (req, res) => {
+  const history = await getHistoricalData()
+  res.send(history)
 })

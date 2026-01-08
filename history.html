@@ -1,0 +1,255 @@
+<html>
+<header>
+    <title>Portfolio History</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-size: 14px;
+        }
+
+        #page_title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+        }
+
+        #page_title h1 {
+            margin: 0;
+        }
+
+        .nav_link {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            border-radius: 5px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .nav_link:hover {
+            background-color: #1976D2;
+        }
+
+        .nav_link.green {
+            background-color: #4CAF50;
+        }
+
+        .nav_link.green:hover {
+            background-color: #45a049;
+        }
+
+        .nav_link:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .chart_section {
+            margin: 20px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .chart_container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table_section {
+            margin: 20px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .section_title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .history_table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .history_table th,
+        .history_table td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .history_table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .history_table th:first-child,
+        .history_table td:first-child {
+            text-align: left;
+        }
+
+        .history_table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .month_label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .total_cell {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .change_cell {
+            font-weight: bold;
+        }
+
+        .change_cell.positive {
+            color: #4CAF50;
+        }
+
+        .change_cell.negative {
+            color: #f44336;
+        }
+
+        .summary_cards {
+            display: flex;
+            gap: 20px;
+            margin: 20px;
+            flex-wrap: wrap;
+        }
+
+        .summary_card {
+            flex: 1;
+            min-width: 200px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .summary_card_title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary_card_value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .summary_card_value.positive {
+            color: #4CAF50;
+        }
+
+        .summary_card_value.negative {
+            color: #f44336;
+        }
+    </style>
+</header>
+<body>
+    <div id="page_title">
+        <h1>📊 Portfolio History</h1>
+        <a href="index2.html" class="nav_link">💰 Dashboard</a>
+    </div>
+
+    <div class="summary_cards">
+        <div class="summary_card">
+            <div class="summary_card_title">Current Total</div>
+            <div id="current_total" class="summary_card_value">-</div>
+        </div>
+        <div class="summary_card">
+            <div class="summary_card_title">3-Month Change</div>
+            <div id="total_change" class="summary_card_value">-</div>
+        </div>
+        <div class="summary_card">
+            <div class="summary_card_title">Avg Monthly Growth</div>
+            <div id="avg_growth" class="summary_card_value">-</div>
+        </div>
+    </div>
+
+    <div class="chart_section">
+        <div class="chart_container" style="overflow-x: auto;">
+            <canvas id="history_chart" width="1400" height="450"></canvas>
+        </div>
+    </div>
+
+    <div class="table_section">
+        <div class="section_title">Monthly Breakdown</div>
+        <div id="history_table"></div>
+    </div>
+</body>
+<script src="historyChart.js"></script>
+<script>
+    // Fetch historical data from server
+    const fetchHistoricalData = async () => {
+        const response = await fetch('http://localhost:8085/portfolio/history');
+        const data = await response.json();
+        return data;
+    };
+
+    const t = (number) => number.toFixed(2);
+
+    const renderSummaryCards = (historyData) => {
+        if (!historyData || historyData.length === 0) return;
+
+        const latest = historyData[historyData.length - 1];
+        const monthsBack = 3;
+        const baselineIndex = Math.max(0, historyData.length - 1 - monthsBack);
+        const baseline = historyData[baselineIndex];
+        
+        // Current total
+        document.getElementById('current_total').innerHTML = `€${t(latest.total)}`;
+        
+    // Change vs N months back
+    const totalChange = latest.total - baseline.total;
+    const totalChangePct = ((totalChange / baseline.total) * 100).toFixed(1);
+        const changeClass = totalChange >= 0 ? 'positive' : 'negative';
+        const changeSign = totalChange >= 0 ? '+' : '';
+        document.getElementById('total_change').innerHTML = `${changeSign}€${t(totalChange)} (${changeSign}${totalChangePct}%)`;
+        document.getElementById('total_change').className = `summary_card_value ${changeClass}`;
+        
+    // Average monthly change over the same window
+    const avgMonthlyChange = totalChange / monthsBack;
+    const avgMonthlyPct = ((avgMonthlyChange / baseline.total) * 100).toFixed(2);
+        const avgClass = avgMonthlyChange >= 0 ? 'positive' : 'negative';
+        const avgSign = avgMonthlyChange >= 0 ? '+' : '';
+        document.getElementById('avg_growth').innerHTML = `${avgSign}${avgMonthlyPct}%/month`;
+        document.getElementById('avg_growth').className = `summary_card_value ${avgClass}`;
+    };
+
+    const renderHistory = async () => {
+        const historyData = await fetchHistoricalData();
+        
+        // Render summary cards
+        renderSummaryCards(historyData);
+        
+        // Render the column chart
+        HistoryChartModule.renderColumnChart('history_chart', historyData);
+        
+        // Render the detailed table
+        HistoryChartModule.renderHistoryTable('history_table', historyData);
+    };
+
+    renderHistory();
+</script>
+</html>

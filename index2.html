@@ -8,15 +8,55 @@
             margin: 0;
             padding: 0;
             background-color: #f0f0f0;
-            font-size: 20px;
+            font-size: 14px;
         }
 
         #page_title {
             display: flex;
             justify-content: space-between;
-            padding: 10px;
+            align-items: center;
+            padding: 10px 20px;
             background-color: #333;
             color: white;
+        }
+
+        #page_title h1 {
+            margin: 0;
+        }
+
+        .nav_links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .nav_link {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            border-radius: 5px;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .nav_link:hover {
+            background-color: #1976D2;
+        }
+
+        .nav_link.green {
+            background-color: #4CAF50;
+        }
+
+        .nav_link.green:hover {
+            background-color: #45a049;
+        }
+
+        .nav_link:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
 
         .overview_container {
@@ -38,6 +78,7 @@
             display: flex;
             justify-content: space-between;
             padding: 10px;
+            font-size: 16px;
             border-bottom: 1px solid #f0f0f0;
         }
 
@@ -110,24 +151,6 @@
             
         }
 
-        #refresh_button {
-            background-color: #4CAF50;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-            width: 150px;
-        }
-        #refresh_button:disabled {
-            background-color: #cccccc;
-        }
-
         .error_banner {
             background-color: #ffebee;
             border: 1px solid #f44336;
@@ -154,8 +177,11 @@
 </header>
 <body>
     <div id="page_title">
-        <h1>Networth</h1>
-        <button id="refresh_button" onclick="renderPortfolio(true)">Refresh</button>
+        <h1>💰 Networth</h1>
+        <div class="nav_links">
+            <a href="history.html" class="nav_link">📊 History</a>
+            <button id="refresh_button" class="nav_link green" onclick="renderPortfolio(true)">🔄 Refresh</button>
+        </div>
     </div>
     <div id="error_banner" class="error_banner">
         <div class="error_title">⚠️ Failed to fetch some data:</div>
