@@ -1,7 +1,7 @@
 const scrapers = require('../../scrapers');
 const api = require('../../api');
 
-const dynamicCategories = ['Equity', 'Crypto', 'Commodities']
+const dynamicCategories = ['Isin', 'Crypto', 'Gold']
 const isDynamicAsset = (asset) => dynamicCategories.includes(asset[0])
 
 const getAssetsValue = async (refresh) => {
@@ -14,10 +14,10 @@ const getAssetsValue = async (refresh) => {
         if (asset[0] === 'Crypto') {
             const cryptoOption = scrapers.cryptoScraper.cryptoOptionsCreator(asset[1])
             return cryptoOption
-        } else if (asset[0] === 'Equity') {
+        } else if (asset[0] === 'Isin') {
             const etfOption = scrapers.etfScraper.isinOptionCreator(asset[1])
             return etfOption
-        } else if (asset[0] === 'Commodities') {
+        } else if (asset[0] === 'Gold') {
             const goldOption = scrapers.goldScraper.goldOptionsCreator()
             return goldOption
         }

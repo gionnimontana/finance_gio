@@ -1,35 +1,35 @@
 {
   "assets": [
     [
-      "Equity",
+      "Isin",
       "LU1829221024",
       1520,
       "ETF Nasdaq",
       "Equity"
     ],
     [
-      "Equity",
+      "Isin",
       "IE00B4L5Y983",
       1029,
       "ETF All World",
       "Equity"
     ],
     [
-      "Equity",
+      "Isin",
       "LU1900068914",
       197,
       "ETF MSCI China",
       "Equity"
     ],
     [
-      "Equity",
+      "Isin",
       "IE000JJPY166",
       3330,
       "ETF Monetario",
       "Liquidity"
     ],
     [
-      "Equity",
+      "Isin",
       "GB00BJYDH287",
       277,
       "ETC Bitcoin",
@@ -57,7 +57,7 @@
       "Liquidity"
     ],
     [
-      "Commodities",
+      "Gold",
       "physical-gold",
       150,
       "Physical Gold",
