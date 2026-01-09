@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
+const HISTORICAL_DATA_PATH = path.join(__dirname, 'historicalData.json');
+
 const getAssetsSchema = async () => {
     return {
         // array of [assetClass, assetId, quantity, displayName, viewGroup]
@@ -25,6 +30,21 @@ const getAssetsSchema = async () => {
 // Historical data for portfolio history view
 // Format: array of monthly snapshots with viewGroup totals
 const getHistoricalData = async () => {
+    // Try to read from JSON file first
+    try {
+        if (fs.existsSync(HISTORICAL_DATA_PATH)) {
+            const data = fs.readFileSync(HISTORICAL_DATA_PATH, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error reading historical data file:', error);
+    }
+    
+    // Return default data if file doesn't exist or error occurs
+    return getDefaultHistoricalData();
+}
+
+const getDefaultHistoricalData = () => {
     return [
         { label: 'Feb 2023', date: '2023-02', total: 225426, Liquidity: { total: 29752 }, Crypto: { total: 37674 }, Houses: { total: 158000 }, Equity: { total: 0 }, Gold: { total: 0 } },
         { label: 'Mar 2023', date: '2023-03', total: 230635, Liquidity: { total: 30387 }, Crypto: { total: 42248 }, Houses: { total: 158000 }, Equity: { total: 0 }, Gold: { total: 0 } },
@@ -64,7 +84,58 @@ const getHistoricalData = async () => {
     ];
 }
 
+// Update historical data with current month's portfolio values
+// portfolio should have: total, Liquidity, Crypto, Equity, Gold, Houses (with .total for each)
+const updateHistoricalData = async (portfolio) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = `${year}-${month}`;
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const label = `${monthNames[now.getMonth()]} ${year}`;
+    
+    // Create the new month entry from portfolio data
+    const newEntry = {
+        label,
+        date,
+        total: Math.round(portfolio.total * 100) / 100,
+        Liquidity: { total: Math.round((portfolio.Liquidity?.total || 0) * 100) / 100 },
+        Crypto: { total: Math.round((portfolio.Crypto?.total || 0) * 100) / 100 },
+        Houses: { total: Math.round((portfolio.Houses?.total || 0) * 100) / 100 },
+        Equity: { total: Math.round((portfolio.Equity?.total || 0) * 100) / 100 },
+        Gold: { total: Math.round((portfolio.Gold?.total || 0) * 100) / 100 },
+    };
+    
+    // Get current historical data
+    let historicalData = await getHistoricalData();
+    
+    // Find if current month already exists
+    const existingIndex = historicalData.findIndex(entry => entry.date === date);
+    
+    if (existingIndex !== -1) {
+        // Update existing entry
+        historicalData[existingIndex] = newEntry;
+    } else {
+        // Add new entry
+        historicalData.push(newEntry);
+        // Sort by date to maintain chronological order
+        historicalData.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    
+    // Save to file
+    try {
+        fs.writeFileSync(HISTORICAL_DATA_PATH, JSON.stringify(historicalData, null, 2), 'utf8');
+        console.log(`Historical data updated for ${label}`);
+    } catch (error) {
+        console.error('Error writing historical data file:', error);
+    }
+    
+    return historicalData;
+}
+
 module.exports = {
     getAssetsSchema,
     getHistoricalData,
+    updateHistoricalData,
 }

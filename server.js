@@ -3,7 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const portfolioScripts = require('./src/scripts/portfolio')
-const { getHistoricalData } = require('./src/api')
+const { getHistoricalData, updateHistoricalData } = require('./src/api')
 
 const app = express()
 const port = 8085
@@ -27,6 +27,12 @@ app.get('/portfolio', async (req, res) => {
   const params = req.query
   const refresh = params.refresh
   const portfolio = await portfolioScripts.getPortfolio(refresh)
+  
+  // Update historical data with current month values when refresh is triggered
+  if (refresh) {
+    await updateHistoricalData(portfolio)
+  }
+  
   res.send(portfolio)
 })
 
