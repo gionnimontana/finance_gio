@@ -171,7 +171,7 @@ const HistoryChartModule = (() => {
         // Header
         html += '<thead><tr><th>Month</th>';
         viewGroups.forEach(group => {
-            html += `<th>${group}</th>`;
+            html += `<th class="col-${group.toLowerCase()}">${group}</th>`;
         });
         html += '<th>Total</th><th>Change</th></tr></thead>';
 
@@ -190,7 +190,7 @@ const HistoryChartModule = (() => {
             
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
-                html += `<td>${t(value)}</td>`;
+                html += `<td class="col-${group.toLowerCase()}">${t(value)}</td>`;
             });
 
             html += `<td class="total_cell">${t(month.total)}</td>
