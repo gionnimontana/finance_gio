@@ -66,12 +66,14 @@
             margin: 20px;
             background-color: white;
             border-radius: 5px;
-            padding: 0 20px;
+            padding: 20px 20px;
             gap: 20px;
+            flex-wrap: wrap;
         }
 
         .overview_card {
             flex: 1;
+            min-width: 300px;
         }
 
         .overview {
@@ -102,17 +104,17 @@
 
         .table_view {
             display: flex;
+            flex-wrap: wrap;
+            padding: 10px;
         }
 
         .row {
-            margin: 20px;
+            margin: 10px;
             background-color: white;
             border-radius: 5px;
             padding: 10px;
             border-bottom: 1px solid #f0f0f0;
-            width: 100%;
-            min-width: fit-content;
-            flex-wrap: wrap;
+            flex: 1 1 250px;
         }
 
         .mainrow {
@@ -272,9 +274,6 @@
         tableView.innerHTML = html;
     };
 
-    // fetchData payload Example
-    // {"total":366067.48,"Equity":{"total":107000.83,"details":{"LU1829221024":{"quantity":534,"value":78.31,"total":41817.54,"displayName":"Nasdaq ETF"}}},"Crypto":{"total":109066.65,"details":{"BTC":{"quantity":0.78,"value":86680.8,"total":67611.02,"displayName":"Bitcoin"},"USDT":{"quantity":3365,"value":0.94,"total":3179.26,"displayName":"USDT"}}},"Liquidity":{"total":30000,"details":{"conto arancio":{"quantity":1,"value":30000,"total":30000,"displayName":"ING"}}}}
-    // url = 'http://localhost:8085/portfolio?refresh=true'
     const fetchData = async (refresh) => {
         const response = await fetch('http://localhost:8085/portfolio?refresh=' + refresh);
         const data = await response.json();
