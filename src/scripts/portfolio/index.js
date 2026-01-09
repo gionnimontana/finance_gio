@@ -21,10 +21,13 @@ const getAssetsValue = async (refresh) => {
             const goldOption = scrapers.goldScraper.goldOptionsCreator()
             return goldOption
         }
-        return options
+        // Should never happen because we only build options for dynamicCategories.
+        return null
     })
 
-    const scraperResult = await scrapers.multipleScraper(scraperOptions, 5, refresh)
+    const filteredScraperOptions = scraperOptions.filter(Boolean)
+
+    const scraperResult = await scrapers.multipleScraper(filteredScraperOptions, 5, refresh)
 
     const assetValues = { ...scraperResult.values, ...staticAssets.reduce((acc, asset) => {
         acc[asset[1]] = asset[2]

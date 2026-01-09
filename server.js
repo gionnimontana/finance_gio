@@ -3,7 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const portfolioScripts = require('./src/scripts/portfolio')
-const { getHistoricalData, updateHistoricalData } = require('./src/api')
+const { getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema } = require('./src/api')
 
 const app = express()
 const port = 8085
@@ -39,4 +39,19 @@ app.get('/portfolio', async (req, res) => {
 app.get('/portfolio/history', async (req, res) => {
   const history = await getHistoricalData()
   res.send(history)
+})
+
+// Assets schema management
+app.get('/assets/schema', async (req, res) => {
+  const schema = await getAssetsSchema()
+  res.send(schema)
+})
+
+app.put('/assets/schema', async (req, res) => {
+  const result = await updateAssetsSchema(req.body || {})
+  if (!result.ok) {
+    res.status(400).send({ ok: false, error: result.error })
+    return
+  }
+  res.send({ ok: true, assetsSchema: result.assetsSchema })
 })

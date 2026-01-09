@@ -702,21 +702,21 @@
   {
     "label": "Jan 2026",
     "date": "2026-01",
-    "total": 444359.92,
+    "total": 446779.31,
     "Liquidity": {
       "total": 57771.36
     },
     "Crypto": {
-      "total": 93640.49
+      "total": 93695.85
     },
     "Houses": {
       "total": 0
     },
     "Equity": {
-      "total": 274426.07
+      "total": 276623.6
     },
     "Gold": {
-      "total": 18522
+      "total": 18688.5
     }
   }
 ]

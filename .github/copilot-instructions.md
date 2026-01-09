@@ -29,6 +29,8 @@ This is a personal finance portfolio tracker application that:
 ├── server.js              # Express server entry point
 ├── view/                  # Frontend files
 │   ├── dashboard.html     # Main frontend dashboard (Networth)
+│   ├── assets.html        # Assets management UI (CRUD assetsSchema)
+│   ├── assets.js          # Assets management page logic
 │   ├── history.html       # Historical portfolio view
 │   ├── chart.js           # Pie chart module for portfolio visualization
 │   └── historyChart.js    # Column chart module for history view
@@ -56,6 +58,8 @@ This is a personal finance portfolio tracker application that:
 
 - `GET /portfolio?refresh=true|false` - Current portfolio data
 - `GET /portfolio/history` - Historical monthly snapshots
+- `GET /assets/schema` - Read assets schema
+- `PUT /assets/schema` - Replace assets array in assets schema
 
 ## Key Concepts
 
@@ -64,11 +68,11 @@ Assets are defined as arrays with 5 elements:
 ```javascript
 [assetClass, assetId, quantity, displayName, viewGroup]
 ```
-- `assetClass`: Category for scraping logic ('Equity', 'Crypto', 'Commodities', 'Liquidity')
+- `assetClass`: Category for scraping logic (one of: `Isin`, `Crypto`, `Gold`, `Other`)
 - `assetId`: Unique identifier (ISIN for ETFs, symbol for crypto)
 - `quantity`: Number of units owned
 - `displayName`: Human-readable name for UI
-- `viewGroup`: Category for UI grouping (can differ from assetClass)
+- `viewGroup`: Category for UI grouping/charts (e.g. Liquidity, Crypto, Gold, Houses, Equity)
 
 ### Historical Data Schema
 Monthly snapshots with viewGroup totals:

@@ -182,6 +182,7 @@
         <h1>💰 Networth</h1>
         <div class="nav_links">
             <a href="history.html" class="nav_link">📊 History</a>
+                <a href="assets.html" class="nav_link">📈 Assets</a>
             <button id="refresh_button" class="nav_link green" onclick="renderPortfolio(true)">🔄 Refresh</button>
         </div>
     </div>
@@ -290,13 +291,17 @@
         );
         if (portfolio === null || refresh || needsRefresh) {
             const refreshButton = document.getElementById('refresh_button');
+            const originalLabel = refreshButton.innerHTML;
             refreshButton.disabled = true;
             refreshButton.innerHTML = 'Refreshing...';
-            const newPortfolio = await fetchData(refresh);
-            localStorage.setItem('portfolio', JSON.stringify(newPortfolio));
-            refreshButton.disabled = false;
-            refreshButton.innerHTML = 'Refresh';
-            return newPortfolio;
+            try {
+                const newPortfolio = await fetchData(refresh);
+                localStorage.setItem('portfolio', JSON.stringify(newPortfolio));
+                return newPortfolio;
+            } finally {
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = originalLabel;
+            }
         }
         return portfolio;
     }

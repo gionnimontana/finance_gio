@@ -36,6 +36,89 @@ const getAssetsSchema = async () => {
     return DEFAULT_ASSETS_SCHEMA;
 }
 
+const writeAssetsSchema = async (assetsSchema) => {
+    try {
+        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(assetsSchema, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error('Error writing assets schema file:', error);
+        return false;
+    }
+}
+
+const ALLOWED_ASSET_CLASSES = ['Isin', 'Gold', 'Crypto', 'Other'];
+
+const normalizeAssetClass = (assetClass) => {
+    const c = String(assetClass || '').trim();
+    if (ALLOWED_ASSET_CLASSES.includes(c)) return c;
+    // legacy/support classes become Other
+    return 'Other';
+}
+
+const normalizeAssetRow = (asset) => {
+    if (!Array.isArray(asset) || asset.length !== 5) return asset;
+    const [assetClass, assetId, quantity, displayName, viewGroup] = asset;
+    return [normalizeAssetClass(assetClass), assetId, quantity, displayName, viewGroup];
+}
+
+const isValidAssetRow = (asset) => {
+    // Schema: [assetClass, assetId, quantity, displayName, viewGroup]
+    if (!Array.isArray(asset) || asset.length !== 5) return false;
+    const [assetClass, assetId, quantity, displayName, viewGroup] = asset;
+    if (typeof assetClass !== 'string' || assetClass.trim() === '') return false;
+    if (!ALLOWED_ASSET_CLASSES.includes(assetClass.trim())) return false;
+    if (typeof assetId !== 'string' || assetId.trim() === '') return false;
+    if (typeof quantity !== 'number' || Number.isNaN(quantity)) return false;
+    if (typeof displayName !== 'string' || displayName.trim() === '') return false;
+    if (typeof viewGroup !== 'string' || viewGroup.trim() === '') return false;
+    return true;
+}
+
+const normalizeAssetsSchema = (schema) => {
+    const base = {
+        assets: [],
+        prevMonthTotal: null,
+        initYearNetworth: null
+    };
+
+    if (!schema || typeof schema !== 'object') return base;
+    return {
+        assets: Array.isArray(schema.assets) ? schema.assets : [],
+        prevMonthTotal: schema.prevMonthTotal ?? null,
+        initYearNetworth: schema.initYearNetworth ?? null,
+    };
+}
+
+// Replace assets array with provided one (preserves prevMonthTotal/initYearNetworth)
+const updateAssetsSchema = async ({ assets }) => {
+    if (!Array.isArray(assets)) {
+        return { ok: false, error: 'Invalid payload: assets must be an array' };
+    }
+
+    // Normalize legacy assetClass values to the new enum.
+    const normalizedAssets = assets.map(normalizeAssetRow);
+
+    const invalidIndex = normalizedAssets.findIndex(a => !isValidAssetRow(a));
+    if (invalidIndex !== -1) {
+        return { ok: false, error: `Invalid asset row at index ${invalidIndex}` };
+    }
+
+    const assetIds = normalizedAssets.map(a => String(a[1]));
+    const duplicates = assetIds.filter((id, idx) => assetIds.indexOf(id) !== idx);
+    if (duplicates.length) {
+        return { ok: false, error: `Duplicate assetId(s): ${Array.from(new Set(duplicates)).join(', ')}` };
+    }
+
+    const existing = normalizeAssetsSchema(await getAssetsSchema());
+    const next = {
+        ...existing,
+    assets: normalizedAssets
+    };
+    const wrote = await writeAssetsSchema(next);
+    if (!wrote) return { ok: false, error: 'Failed to persist assets schema' };
+    return { ok: true, assetsSchema: next };
+}
+
 // Historical data for portfolio history view
 // Format: array of monthly snapshots with viewGroup totals
 const getHistoricalData = async () => {
@@ -167,6 +250,7 @@ const updateHistoricalData = async (portfolio) => {
 
 module.exports = {
     getAssetsSchema,
+    updateAssetsSchema,
     getHistoricalData,
     updateHistoricalData,
     updatePrevMonthTotal,
