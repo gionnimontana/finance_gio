@@ -1,5 +1,13 @@
 # Copilot Instructions for Personal Finance Bot
 
+## ⚠️ Instruction Maintenance
+
+After ANY codebase modification, review and update this file:
+- Add new files, endpoints, schemas, or patterns
+- Remove references to deleted/renamed items
+- Keep examples accurate and minimal
+- No verbose explanations—be concise
+
 ## Project Overview
 
 This is a personal finance portfolio tracker application that:
@@ -19,10 +27,11 @@ This is a personal finance portfolio tracker application that:
 
 ```
 ├── server.js              # Express server entry point
-├── dashboard.html         # Main frontend dashboard (Networth)
-├── history.html           # Historical portfolio view
-├── chart.js               # Pie chart module for portfolio visualization
-├── historyChart.js        # Column chart module for history view
+├── view/                  # Frontend files
+│   ├── dashboard.html     # Main frontend dashboard (Networth)
+│   ├── history.html       # Historical portfolio view
+│   ├── chart.js           # Pie chart module for portfolio visualization
+│   └── historyChart.js    # Column chart module for history view
 ├── src/
 │   ├── api/
 │   │   └── index.js       # Asset schema + historical data definitions
@@ -81,7 +90,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Use localStorage for caching portfolio data
 - Show cached data immediately while refreshing
 - Display error banner when scrapers fail
-- Keep chart logic in separate modules (`chart.js`, `historyChart.js`)
+- Keep chart logic in separate modules (`view/chart.js`, `view/historyChart.js`)
 - Use consistent `.nav_link` class for all navigation/action buttons
 
 History page notes:

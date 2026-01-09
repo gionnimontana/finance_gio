@@ -11,7 +11,7 @@ const port = 8085
 app.use(cors())
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true}))
-app.use(express.static(__dirname)) // Serve static files from root
+app.use(express.static(__dirname + '/view')) // Serve static files from view folder
 app.listen(port, () => { console.log(`Personal finance bot listening on port ${port}`)})
 
 app.use((err, req, res, next) => {
