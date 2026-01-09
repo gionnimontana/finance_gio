@@ -194,10 +194,6 @@
                 <div id="total_value" class="overview_value">?</div>
             </div>
             <div class="overview">
-                <div class="overview_title">Delta year to goal</div>
-                <div id="deltagoal_value" class="overview_value">?</div>
-            </div>
-            <div class="overview">
                 <div class="overview_title">Delta year to date</div>
                 <div id="delta_value" class="overview_value">?</div>
             </div>
@@ -321,8 +317,8 @@
     const renderPortfolioData = (portfolio) => {
         const total = portfolio.total;
         const prevMonthTotal = portfolio.prevMonthTotal;
+        const initYearNetworth = portfolio.initYearNetworth;
 
-        const initYearNetworth = 423221.53;
         const delta = total - initYearNetworth;
         const deltaPercentage = (delta / initYearNetworth) * 100;
         const deltaPercentageLabel = deltaPercentage > 0 ? '🚀' : '🔥';
@@ -330,15 +326,10 @@
         const prevMonthdeltaPercentage = (prevMonthdelta / prevMonthTotal) * 100;
         const prevMonthdeltaPercentageLabel = prevMonthdeltaPercentage > 0 ? '🚀' : '🔥';
 
-        const yearGoalTarget = 382142.86;
-        const yearGoalDelta = total - yearGoalTarget;
-        const yearGoalLabel = yearGoalDelta > 0 ? '🚀' : '🔥';
-
         // Update overview values
         document.getElementById('total_value').innerHTML = t(total);
-        document.getElementById('delta_value').innerHTML = t(deltaPercentage) + '%' + deltaPercentageLabel;
-        document.getElementById('deltagoal_value').innerHTML = t(yearGoalDelta) + yearGoalLabel;
-        document.getElementById('prevMonth_delta_value').innerHTML = t(prevMonthdeltaPercentage) + '%' + prevMonthdeltaPercentageLabel;
+        document.getElementById('delta_value').innerHTML = `${t(delta)} (${t(deltaPercentage)}%) ${deltaPercentageLabel}`;
+        document.getElementById('prevMonth_delta_value').innerHTML = `${t(prevMonthdelta)} (${t(prevMonthdeltaPercentage)}%) ${prevMonthdeltaPercentageLabel}`;
 
         // Show/hide error banner based on failures
         const errorBanner = document.getElementById('error_banner');

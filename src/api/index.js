@@ -8,7 +8,8 @@ const ASSETS_SCHEMA_PATH = path.join(DATA_DIR, 'assetsSchema.json');
 // Default assets schema used when JSON file doesn't exist
 const DEFAULT_ASSETS_SCHEMA = {
     assets: [],
-    prevMonthTotal: 0
+    prevMonthTotal: null,
+    initYearNetworth: null
 };
 
 // Default historical data used when JSON file doesn't exist
@@ -87,6 +88,33 @@ const updatePrevMonthTotal = async () => {
     return prevMonthTotal;
 }
 
+// Update initYearNetworth in assets schema based on historical data
+// Gets the total from December of the previous year
+const updateInitYearNetworth = async () => {
+    const now = new Date();
+    const prevYear = now.getFullYear() - 1;
+    const decemberDate = `${prevYear}-12`;
+    
+    const historicalData = await getHistoricalData();
+    const decemberEntry = historicalData.find(entry => entry.date === decemberDate);
+    
+    // If no December data exists, leave initYearNetworth empty (null)
+    const initYearNetworth = decemberEntry ? Math.round(decemberEntry.total) : null;
+    
+    // Update assets schema with initYearNetworth
+    const assetsSchema = await getAssetsSchema();
+    assetsSchema.initYearNetworth = initYearNetworth;
+    
+    try {
+        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(assetsSchema, null, 2), 'utf8');
+        console.log(`Updated initYearNetworth to ${initYearNetworth}`);
+    } catch (error) {
+        console.error('Error updating initYearNetworth:', error);
+    }
+    
+    return initYearNetworth;
+}
+
 // Update historical data with current month's portfolio values
 // portfolio should have: total, Liquidity, Crypto, Equity, Gold, Houses (with .total for each)
 const updateHistoricalData = async (portfolio) => {
@@ -142,4 +170,5 @@ module.exports = {
     getHistoricalData,
     updateHistoricalData,
     updatePrevMonthTotal,
+    updateInitYearNetworth,
 }

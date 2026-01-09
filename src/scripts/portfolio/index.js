@@ -35,9 +35,10 @@ const getAssetsValue = async (refresh) => {
 }
 
 const getPortfolio = async (refresh) => {
-    // Update prevMonthTotal from historical data when refreshing
+    // Update prevMonthTotal and initYearNetworth from historical data when refreshing
     if (refresh) {
         await api.updatePrevMonthTotal()
+        await api.updateInitYearNetworth()
     }
     
     const assetsSchema = await api.getAssetsSchema()
@@ -97,6 +98,7 @@ const getPortfolio = async (refresh) => {
 
     const portfolio = {
         prevMonthTotal: assetsSchema.prevMonthTotal,
+        initYearNetworth: assetsSchema.initYearNetworth,
         total: totalPortfolio,
         failures: failedAssets,
         ...assetsDetails
