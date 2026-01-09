@@ -19,7 +19,7 @@ This is a personal finance portfolio tracker application that:
 
 ```
 ├── server.js              # Express server entry point
-├── index2.html            # Main frontend dashboard (Networth)
+├── dashboard.html         # Main frontend dashboard (Networth)
 ├── history.html           # Historical portfolio view
 ├── chart.js               # Pie chart module for portfolio visualization
 ├── historyChart.js        # Column chart module for history view
@@ -108,7 +108,7 @@ npm install
 node server.js
 
 # Access dashboard
-open http://localhost:8085/index2.html
+open http://localhost:8085/dashboard.html
 ```
 
 ## Environment Variables
