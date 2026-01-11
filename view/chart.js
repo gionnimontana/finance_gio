@@ -10,6 +10,18 @@ const ChartModule = (() => {
 
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
 
+    const hashToColor = (label) => {
+        // Deterministic, pleasant-ish HSL color from a string label
+        const str = String(label || '');
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 65%, 55%)`;
+    };
+
     /**
      * Render a pie chart showing viewGroup distribution
      * @param {string} canvasId - The ID of the canvas element
@@ -27,14 +39,16 @@ const ChartModule = (() => {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Get viewGroup data
-        const viewGroups = ['Equity', 'Crypto', 'Liquidity', 'Gold'];
+        const viewGroups = Array.isArray(portfolio?.viewGroups) && portfolio.viewGroups.length
+            ? portfolio.viewGroups
+            : Object.keys(portfolio).filter(k => portfolio[k] && typeof portfolio[k] === 'object' && typeof portfolio[k].total === 'number');
+
         const data = viewGroups
             .filter(group => portfolio[group] && portfolio[group].total > 0)
             .map(group => ({
                 label: group,
                 value: portfolio[group].total,
-                color: viewGroupColors[group] || defaultColor
+                color: viewGroupColors[group] || hashToColor(group) || defaultColor
             }));
 
         if (data.length === 0) return;

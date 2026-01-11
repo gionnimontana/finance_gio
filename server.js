@@ -3,7 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const portfolioScripts = require('./src/scripts/portfolio')
-const { getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema } = require('./src/api')
+const { getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema, updateViewGroups } = require('./src/api')
 
 const app = express()
 const port = 8085
@@ -49,6 +49,16 @@ app.get('/assets/schema', async (req, res) => {
 
 app.put('/assets/schema', async (req, res) => {
   const result = await updateAssetsSchema(req.body || {})
+  if (!result.ok) {
+    res.status(400).send({ ok: false, error: result.error })
+    return
+  }
+  res.send({ ok: true, assetsSchema: result.assetsSchema })
+})
+
+// View groups management
+app.put('/assets/view-groups', async (req, res) => {
+  const result = await updateViewGroups(req.body || {})
   if (!result.ok) {
     res.status(400).send({ ok: false, error: result.error })
     return

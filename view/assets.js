@@ -19,7 +19,7 @@ const ASSET_CLASSES = [
     'Other'
 ];
 
-const VIEW_GROUPS = [
+const DEFAULT_VIEW_GROUPS = [
     'Liquidity',
     'Crypto',
     'Gold',
@@ -101,6 +101,30 @@ const setButtonsDisabled = (disabled) => {
     el('reload_btn').disabled = disabled;
     el('add_btn').disabled = disabled;
     el('save_btn').disabled = disabled;
+    el('groups_reload_btn').disabled = disabled;
+    el('groups_add_btn').disabled = disabled;
+    el('groups_save_btn').disabled = disabled;
+};
+
+const getViewGroups = () => {
+    const groups = assetsSchema?.viewGroups;
+    if (Array.isArray(groups) && groups.length) return groups;
+    return DEFAULT_VIEW_GROUPS.slice();
+};
+
+const uniq = (arr) => Array.from(new Set(arr.map(v => String(v))));
+
+const getGroupUsageCounts = () => {
+    const counts = {};
+    const assets = assetsSchema?.assets || [];
+    for (const a of assets) {
+        if (Array.isArray(a) && a.length === 5) {
+            const g = String(a[4] ?? '').trim();
+            if (!g) continue;
+            counts[g] = (counts[g] || 0) + 1;
+        }
+    }
+    return counts;
 };
 
 const renderTable = () => {
@@ -108,6 +132,7 @@ const renderTable = () => {
     tbody.innerHTML = '';
 
     const assets = (assetsSchema?.assets || []).slice();
+    const viewGroups = getViewGroups();
 
     assets.forEach((asset, idx) => {
         const [assetClass, assetId, quantity, displayName, viewGroup] = asset;
@@ -127,7 +152,9 @@ const renderTable = () => {
         tdName.innerHTML = `<input value="${escapeHtml(displayName)}" onchange="onAssetChange(${idx}, 3, this.value)" />`;
 
         const tdGroup = document.createElement('td');
-        tdGroup.innerHTML = renderSelect(VIEW_GROUPS, viewGroup, `onAssetChange(${idx}, 4, this.value)`);
+    // Ensure the currently selected group is always available even if schema groups are outdated.
+    const vgOptions = uniq([...(viewGroups || []), String(viewGroup || '').trim()].filter(Boolean));
+    tdGroup.innerHTML = renderSelect(vgOptions, viewGroup, `onAssetChange(${idx}, 4, this.value)`);
 
         const tdActions = document.createElement('td');
         tdActions.className = 'actions';
@@ -150,6 +177,38 @@ const renderTable = () => {
     });
 };
 
+const renderGroupsTable = () => {
+    const tbody = el('groups_tbody');
+    tbody.innerHTML = '';
+
+    const groups = getViewGroups().slice();
+    const usage = getGroupUsageCounts();
+
+    groups.forEach((groupName, idx) => {
+        const tr = document.createElement('tr');
+
+        const tdName = document.createElement('td');
+        tdName.innerHTML = `<input value="${escapeHtml(groupName)}" onchange="onGroupNameChange(${idx}, this.value)" />`;
+
+        const tdCount = document.createElement('td');
+        tdCount.textContent = String(usage[groupName] || 0);
+
+        const tdActions = document.createElement('td');
+        tdActions.className = 'actions';
+        const inUse = (usage[groupName] || 0) > 0;
+        tdActions.innerHTML = `
+            <div class="inline">
+                <button class="btn danger" onclick="deleteGroup(${idx})" ${inUse ? 'disabled title="Group in use"' : ''}>Delete</button>
+            </div>
+        `;
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdCount);
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
+    });
+};
+
 window.onAssetChange = (rowIndex, fieldIndex, value) => {
     clearError();
     clearSuccess();
@@ -160,6 +219,7 @@ window.onAssetChange = (rowIndex, fieldIndex, value) => {
     next.assets[rowIndex][fieldIndex] = value;
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
 };
 
 window.onAssetQuantityChange = (rowIndex, rawValue) => {
@@ -177,6 +237,7 @@ window.onAssetQuantityChange = (rowIndex, rawValue) => {
     next.assets[rowIndex][2] = n;
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
 };
 
 window.deleteRow = (rowIndex) => {
@@ -188,6 +249,7 @@ window.deleteRow = (rowIndex) => {
     next.assets.splice(rowIndex, 1);
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
 };
 
 window.moveRow = (rowIndex, delta) => {
@@ -204,6 +266,7 @@ window.moveRow = (rowIndex, delta) => {
     next.assets[nextIndex] = tmp;
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
 };
 
 window.addNewRow = () => {
@@ -212,9 +275,12 @@ window.addNewRow = () => {
     if (!assetsSchema) return;
 
     const next = JSON.parse(JSON.stringify(assetsSchema));
-    next.assets.push(['Liquidity', `new-asset-${Date.now()}`, 0, 'New Asset', 'Liquidity']);
+    const groups = getViewGroups();
+    const defaultGroup = groups.includes('Liquidity') ? 'Liquidity' : (groups[0] || 'Liquidity');
+    next.assets.push(['Liquidity', `new-asset-${Date.now()}`, 0, 'New Asset', defaultGroup]);
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
 };
 
 const fetchSchema = async () => {
@@ -237,6 +303,20 @@ const putSchema = async (payload) => {
     return json;
 };
 
+const putViewGroups = async (payload) => {
+    const res = await fetch(`${API_BASE}/assets/view-groups`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+        const msg = (json && json.error) ? json.error : `Failed to save view groups (${res.status})`;
+        throw new Error(msg);
+    }
+    return json;
+};
+
 window.loadSchema = async () => {
     clearError();
     clearSuccess();
@@ -245,6 +325,7 @@ window.loadSchema = async () => {
     try {
         assetsSchema = await fetchSchema();
         renderTable();
+    renderGroupsTable();
     } catch (e) {
         showError(e.message || String(e));
     } finally {
@@ -269,7 +350,107 @@ window.saveAll = async () => {
         const result = await putSchema({ assets });
         assetsSchema = result.assetsSchema;
         renderTable();
+        renderGroupsTable();
         showSuccess('Saved');
+    } catch (e) {
+        showError(e.message || String(e));
+    } finally {
+        setButtonsDisabled(false);
+    }
+};
+
+window.onGroupNameChange = (groupIndex, value) => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const name = String(value ?? '').trim();
+    if (!name) {
+        showError('Group name is required');
+        return;
+    }
+
+    const next = JSON.parse(JSON.stringify(assetsSchema));
+    next.viewGroups = Array.isArray(next.viewGroups) ? next.viewGroups : DEFAULT_VIEW_GROUPS.slice();
+    next.viewGroups[groupIndex] = name;
+    // Keep ordering stable; only trim and drop empties here.
+    next.viewGroups = next.viewGroups.map(g => String(g).trim()).filter(Boolean);
+    assetsSchema = next;
+    renderTable();
+    renderGroupsTable();
+};
+
+window.addGroup = () => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const next = JSON.parse(JSON.stringify(assetsSchema));
+    const groups = Array.isArray(next.viewGroups) ? next.viewGroups.slice() : DEFAULT_VIEW_GROUPS.slice();
+    const base = 'NewGroup';
+    let candidate = base;
+    let i = 1;
+    while (groups.includes(candidate)) {
+        candidate = `${base}${i++}`;
+    }
+    groups.push(candidate);
+    next.viewGroups = groups;
+    assetsSchema = next;
+    renderTable();
+    renderGroupsTable();
+};
+
+window.deleteGroup = (groupIndex) => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const groups = getViewGroups();
+    const groupName = groups[groupIndex];
+    const usage = getGroupUsageCounts();
+    if ((usage[groupName] || 0) > 0) {
+        showError(`Can't delete '${groupName}' because it's used by ${usage[groupName]} asset(s)`);
+        return;
+    }
+
+    const next = JSON.parse(JSON.stringify(assetsSchema));
+    next.viewGroups = groups.slice();
+    next.viewGroups.splice(groupIndex, 1);
+    assetsSchema = next;
+    renderTable();
+    renderGroupsTable();
+};
+
+window.saveGroups = async () => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const groups = getViewGroups().map(g => String(g).trim()).filter(Boolean);
+    if (!groups.length) {
+        showError('You must have at least 1 view group');
+        return;
+    }
+
+    // Block duplicates client-side to avoid ambiguous migrations.
+    const dupCheck = new Set();
+    const dups = [];
+    for (const g of groups) {
+        if (dupCheck.has(g)) dups.push(g);
+        dupCheck.add(g);
+    }
+    if (dups.length) {
+        showError(`Duplicate group name(s): ${uniq(dups).join(', ')}`);
+        return;
+    }
+
+    setButtonsDisabled(true);
+    try {
+    const result = await putViewGroups({ viewGroups: groups });
+        assetsSchema = result.assetsSchema;
+        renderTable();
+        renderGroupsTable();
+        showSuccess('Groups saved');
     } catch (e) {
         showError(e.message || String(e));
     } finally {

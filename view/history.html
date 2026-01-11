@@ -246,9 +246,26 @@
 </body>
 <script src="historyChart.js"></script>
 <script>
+    const API_BASE = (() => {
+        try {
+            if (window.location && window.location.protocol === 'file:') {
+                return 'http://localhost:8085';
+            }
+            return window.location.origin;
+        } catch (e) {
+            return 'http://localhost:8085';
+        }
+    })();
+
     // Fetch historical data from server
     const fetchHistoricalData = async () => {
-        const response = await fetch('http://localhost:8085/portfolio/history');
+        const response = await fetch(`${API_BASE}/portfolio/history`);
+        const data = await response.json();
+        return data;
+    };
+
+    const fetchAssetsSchema = async () => {
+        const response = await fetch(`${API_BASE}/assets/schema`);
         const data = await response.json();
         return data;
     };
@@ -288,15 +305,17 @@
 
     const renderHistory = async () => {
         const historyData = await fetchHistoricalData();
+    const schema = await fetchAssetsSchema().catch(() => null);
+    const viewGroups = Array.isArray(schema?.viewGroups) ? schema.viewGroups : null;
         
         // Render summary cards
         renderSummaryCards(historyData);
         
         // Render the column chart
-        HistoryChartModule.renderColumnChart('history_chart', historyData);
+    HistoryChartModule.renderColumnChart('history_chart', historyData, viewGroups);
         
         // Render the detailed table
-        HistoryChartModule.renderHistoryTable('history_table', historyData);
+    HistoryChartModule.renderHistoryTable('history_table', historyData, viewGroups);
     };
 
     renderHistory();

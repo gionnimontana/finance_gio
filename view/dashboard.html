@@ -215,12 +215,21 @@
 </body>
 <script src="chart.js"></script>
 <script>
-    // Configuration for category-specific behavior
-    const categoryConfig = {
-        Equity: {},
-        Crypto: {},
-        Liquidity: {},
-        Gold: {}
+    const API_BASE = (() => {
+        try {
+            if (window.location && window.location.protocol === 'file:') {
+                return 'http://localhost:8085';
+            }
+            return window.location.origin;
+        } catch (e) {
+            return 'http://localhost:8085';
+        }
+    })();
+
+    const fetchAssetsSchema = async () => {
+        const res = await fetch(`${API_BASE}/assets/schema`);
+        if (!res.ok) throw new Error(`Failed to load assets schema (${res.status})`);
+        return await res.json();
     };
 
     const t = (number) => number.toFixed(2);
@@ -264,11 +273,13 @@
         const tableView = document.getElementById('table_view');
         let html = '';
 
-        // Render each category in order (by viewGroup)
-        const categoryOrder = ['Equity', 'Crypto', 'Liquidity', 'Gold'];
-        for (const categoryKey of categoryOrder) {
-            if (portfolio[categoryKey]) {
-                html += renderCategoryRow(categoryKey, portfolio[categoryKey], portfolio.total);
+        const viewGroupsOrder = Array.isArray(portfolio.viewGroups) && portfolio.viewGroups.length
+            ? portfolio.viewGroups
+            : Object.keys(portfolio).filter(k => portfolio[k] && typeof portfolio[k] === 'object' && typeof portfolio[k].total === 'number');
+
+        for (const viewGroup of viewGroupsOrder) {
+            if (portfolio[viewGroup]) {
+                html += renderCategoryRow(viewGroup, portfolio[viewGroup], portfolio.total);
             }
         }
 
@@ -276,7 +287,7 @@
     };
 
     const fetchData = async (refresh) => {
-        const response = await fetch('http://localhost:8085/portfolio?refresh=' + refresh);
+    const response = await fetch(`${API_BASE}/portfolio?refresh=` + refresh);
         const data = await response.json();
         return data;
     }
@@ -306,6 +317,69 @@
         return portfolio;
     }
 
+    const mergeViewGroupsIntoPortfolio = async (portfolio) => {
+        // Keep older cached portfolio working, but ensure we always render with the latest group labels/order.
+        try {
+            const schema = await fetchAssetsSchema();
+            if (schema && Array.isArray(schema.viewGroups)) {
+                const migratePortfolioViewGroups = (p, nextGroups) => {
+                    if (!p || typeof p !== 'object') return p;
+
+                    const reserved = new Set(['total', 'prevMonthTotal', 'initYearNetworth', 'failures', 'viewGroups']);
+                    const groupKeys = Object.keys(p).filter(k => {
+                        if (reserved.has(k)) return false;
+                        const v = p[k];
+                        return v && typeof v === 'object' && typeof v.total === 'number';
+                    });
+
+                    // No groups in cache => nothing to migrate.
+                    if (!groupKeys.length) return { ...p, viewGroups: nextGroups };
+
+                    // If the cached group keys already match the schema groups (set-wise), we're done.
+                    const cachedSet = new Set(groupKeys);
+                    const nextSet = new Set(nextGroups);
+                    const sameSet = groupKeys.length === nextGroups.length && groupKeys.every(k => nextSet.has(k));
+                    if (sameSet) return { ...p, viewGroups: nextGroups };
+
+                    // Heuristic rename detection: if schema has exactly one added and one removed group,
+                    // treat it as rename and remap the cached portfolio key.
+                    const removed = groupKeys.filter(g => !nextSet.has(g));
+                    const added = nextGroups.filter(g => !cachedSet.has(g));
+
+                    if (removed.length === 1 && added.length === 1) {
+                        const from = removed[0];
+                        const to = added[0];
+
+                        const migrated = { ...p };
+                        if (migrated[from] && !migrated[to]) {
+                            migrated[to] = migrated[from];
+                            delete migrated[from];
+                        }
+                        migrated.viewGroups = nextGroups;
+                        return migrated;
+                    }
+
+                    // Fallback: just update ordering/labels. Data will refresh on next fetch.
+                    return { ...p, viewGroups: nextGroups };
+                };
+
+                const migrated = migratePortfolioViewGroups(portfolio, schema.viewGroups);
+
+                // Persist migration so the first render (cached) doesn't show stale keys next time.
+                try {
+                    localStorage.setItem('portfolio', JSON.stringify(migrated));
+                } catch (e) {
+                    // ignore
+                }
+
+                return migrated;
+            }
+        } catch (e) {
+            // ignore schema fetch errors; portfolio can still render
+        }
+        return portfolio;
+    };
+
     const renderPortfolio = async (refresh) => {
         // Show cached data first (if available) so old values remain visible during refresh
         let portfolio = JSON.parse(localStorage.getItem('portfolio') || null);
@@ -314,8 +388,9 @@
         }
         
         // Fetch new data if needed
-        portfolio = await getPortfolio(refresh);
-        renderPortfolioData(portfolio);
+    portfolio = await getPortfolio(refresh);
+    portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
+    renderPortfolioData(portfolio);
     }
 
     const renderPortfolioData = (portfolio) => {

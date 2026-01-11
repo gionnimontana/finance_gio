@@ -11,12 +11,35 @@ const HistoryChartModule = (() => {
 
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
 
+    const hashToColor = (label) => {
+        const str = String(label || '');
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 65%, 55%)`;
+    };
+
+    const inferViewGroupsFromHistory = (historyData) => {
+        const keys = new Set();
+        (historyData || []).forEach(m => {
+            if (!m || typeof m !== 'object') return;
+            Object.keys(m).forEach(k => {
+                if (k === 'label' || k === 'date' || k === 'total') return;
+                if (m[k] && typeof m[k] === 'object' && typeof m[k].total === 'number') keys.add(k);
+            });
+        });
+        return Array.from(keys);
+    };
+
     /**
      * Render a stacked column chart showing monthly viewGroup distribution
      * @param {string} canvasId - The ID of the canvas element
      * @param {Array} historyData - Array of monthly portfolio snapshots
      */
-    const renderColumnChart = (canvasId, historyData) => {
+    const renderColumnChart = (canvasId, historyData, viewGroupsOverride) => {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
@@ -28,8 +51,16 @@ const HistoryChartModule = (() => {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Bottom -> top stacking order (matches previous chart v2 intent)
-    const viewGroups = ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'];
+        // Bottom -> top stacking order
+        const detected = inferViewGroupsFromHistory(historyData);
+        const viewGroups = Array.isArray(viewGroupsOverride) && viewGroupsOverride.length
+            ? viewGroupsOverride
+            : (detected.length ? detected : ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity']);
+
+        // Stable stacking: keep existing order when provided, else sort detected list
+        if (!(Array.isArray(viewGroupsOverride) && viewGroupsOverride.length) && detected.length) {
+            viewGroups.sort((a, b) => a.localeCompare(b));
+        }
         const numMonths = historyData.length;
     const columnWidth = Math.min(60, (chartWidth / numMonths) * 0.7);
     const columnSpacing = (chartWidth - (columnWidth * numMonths)) / (numMonths + 1);
@@ -83,7 +114,7 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 if (month[group] && month[group].total > 0) {
                     const segmentHeight = month[group].total * scale;
-                    const color = viewGroupColors[group] || defaultColor;
+                    const color = viewGroupColors[group] || hashToColor(group) || defaultColor;
 
                     ctx.fillStyle = color;
                     ctx.fillRect(x, currentY - segmentHeight, columnWidth, segmentHeight);
@@ -126,7 +157,7 @@ const HistoryChartModule = (() => {
         let legendX = legendStartX;
 
         viewGroups.forEach(group => {
-            const color = viewGroupColors[group] || defaultColor;
+            const color = viewGroupColors[group] || hashToColor(group) || defaultColor;
 
             // Color box
             ctx.fillStyle = color;
@@ -158,11 +189,18 @@ const HistoryChartModule = (() => {
      * @param {string} containerId - The ID of the container element
      * @param {Array} historyData - Array of monthly portfolio snapshots
      */
-    const renderHistoryTable = (containerId, historyData) => {
+    const renderHistoryTable = (containerId, historyData, viewGroupsOverride) => {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-    const viewGroups = ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'];
+        const detected = inferViewGroupsFromHistory(historyData);
+        const viewGroups = Array.isArray(viewGroupsOverride) && viewGroupsOverride.length
+            ? viewGroupsOverride
+            : (detected.length ? detected : ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity']);
+
+        if (!(Array.isArray(viewGroupsOverride) && viewGroupsOverride.length) && detected.length) {
+            viewGroups.sort((a, b) => a.localeCompare(b));
+        }
         const t = (num) => num.toFixed(2);
         const pct = (value, total) => ((value / total) * 100).toFixed(1);
 
@@ -171,7 +209,9 @@ const HistoryChartModule = (() => {
         // Header
         html += '<thead><tr><th>Month</th>';
         viewGroups.forEach(group => {
-            html += `<th class="col-${group.toLowerCase()}">${group}</th>`;
+            // Keep class friendly even with spaces
+            const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+            html += `<th class="col-${cls}">${group}</th>`;
         });
         html += '<th>Total</th><th>Change</th></tr></thead>';
 
@@ -190,7 +230,8 @@ const HistoryChartModule = (() => {
             
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
-                html += `<td class="col-${group.toLowerCase()}">${t(value)}</td>`;
+                const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+                html += `<td class="col-${cls}">${t(value)}</td>`;
             });
 
             html += `<td class="total_cell">${t(month.total)}</td>

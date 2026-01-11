@@ -238,6 +238,28 @@
         </div>
     </div>
 
+    <div class="container">
+        <div class="section_title">Manage view groups</div>
+        <div class="toolbar">
+            <button id="groups_reload_btn" class="btn primary" onclick="loadSchema()">Reload</button>
+            <button id="groups_add_btn" class="btn success" onclick="addGroup()">Add group</button>
+            <button id="groups_save_btn" class="btn primary" onclick="saveGroups()">Save groups</button>
+        </div>
+        <div class="hint">Groups referenced by at least one asset can’t be deleted until assets are moved to another group.</div>
+        <div style="margin-top: 15px; overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width: 260px;">Group name</th>
+                        <th style="min-width: 120px;"># Assets</th>
+                        <th style="min-width: 200px; text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="groups_tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
     <script src="assets.js"></script>
 </body>
 </html>

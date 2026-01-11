@@ -106,6 +106,13 @@
       "Liquidity"
     ]
   ],
+  "viewGroups": [
+    "Liquidity",
+    "Crypto",
+    "Gold",
+    "Houses",
+    "Equity"
+  ],
   "prevMonthTotal": 421122,
   "initYearNetworth": 421122
 }

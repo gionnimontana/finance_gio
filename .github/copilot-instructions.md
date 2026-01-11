@@ -60,6 +60,7 @@ This is a personal finance portfolio tracker application that:
 - `GET /portfolio/history` - Historical monthly snapshots
 - `GET /assets/schema` - Read assets schema
 - `PUT /assets/schema` - Replace assets array in assets schema
+- `PUT /assets/view-groups` - Replace view groups list (cannot remove groups currently referenced by an asset)
 
 ## Key Concepts
 
@@ -73,6 +74,11 @@ Assets are defined as arrays with 5 elements:
 - `quantity`: Number of units owned
 - `displayName`: Human-readable name for UI
 - `viewGroup`: Category for UI grouping/charts (e.g. Liquidity, Crypto, Gold, Houses, Equity)
+
+Assets schema also contains a `viewGroups` array used to drive the Assets UI dropdown and grouping:
+```json
+{ "assets": [...], "viewGroups": ["Liquidity", "Crypto", "Gold", "Houses", "Equity"], "prevMonthTotal": null, "initYearNetworth": null }
+```
 
 ### Historical Data Schema
 Monthly snapshots with viewGroup totals:
