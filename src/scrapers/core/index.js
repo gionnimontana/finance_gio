@@ -100,9 +100,11 @@ let scrapingPromise = null
  * Scrape the value of multiple urls
  * @param {Array<{ name: { url: string, selector: string, selectorFunction: function, logger: function}}>} options - The options to scrape
  * @param {number} maxRetries - The number of max retries on failure per scraper
+ * @param {boolean} refresh - Whether to refresh cached values
+ * @param {function} onProgress - Optional callback called after each asset is scraped: onProgress({ name, value, failed, index, total })
  * @returns {Promise<{values: {string: number}, failures: string[]}>} - The values and list of failed scrapers
  */
-const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh) => {
+const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh, onProgress = null) => {
     // If scraping is already in progress, wait for it to complete
     if (isScrapingInProgress && scrapingPromise) {
         console.log('Scraping already in progress, waiting for completion...')
@@ -125,12 +127,22 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh) => {
             failures.length = 0
         }
 
+        const totalAssets = options.length
+        let currentIndex = 0
+
         try {
             for (const option of options) {
                 const name = Object.keys(option)[0]
+                currentIndex++
 
                 // Skip if we already have a cached value and not refreshing
-                if (!refresh && values[name]) continue
+                if (!refresh && values[name]) {
+                    // Still emit progress for cached values
+                    if (onProgress) {
+                        onProgress({ name, value: values[name], failed: false, index: currentIndex, total: totalAssets, cached: true })
+                    }
+                    continue
+                }
 
                 const optionConfig = option[name]
                 const result = await scrapeWithRetry(browser, name, optionConfig, maxRetries)
@@ -150,6 +162,18 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh) => {
                         failures.push(name)
                     }
                     console.warn(`Scraper failed for ${name}`)
+                }
+
+                // Emit progress after each asset is scraped
+                if (onProgress) {
+                    onProgress({ 
+                        name, 
+                        value: values[name] || null, 
+                        failed: result.failed, 
+                        index: currentIndex, 
+                        total: totalAssets,
+                        cached: false
+                    })
                 }
             }
 

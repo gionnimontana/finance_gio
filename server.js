@@ -22,6 +22,31 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
+// SSE endpoint for streaming portfolio refresh
+app.get('/portfolio/stream', async (req, res) => {
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.flushHeaders()
+
+  // Helper to send SSE events
+  const sendEvent = (eventType, data) => {
+    res.write(`event: ${eventType}\n`)
+    res.write(`data: ${JSON.stringify(data)}\n\n`)
+  }
+
+  try {
+    await portfolioScripts.streamPortfolio(sendEvent)
+  } catch (error) {
+    console.error('Stream portfolio error:', error)
+    sendEvent('error', { message: error.message })
+  }
+
+  res.end()
+})
+
 // add support for refresh url param
 app.get('/portfolio', async (req, res) => {
   const params = req.query

@@ -57,6 +57,7 @@ This is a personal finance portfolio tracker application that:
 ## API Endpoints
 
 - `GET /portfolio?refresh=true|false` - Current portfolio data
+- `GET /portfolio/stream` - SSE endpoint for real-time refresh with progress updates
 - `GET /portfolio/history` - Historical monthly snapshots
 - `GET /assets/schema` - Read assets schema
 - `PUT /assets/schema` - Replace assets array in assets schema
@@ -98,6 +99,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Close browser pages in both success and error paths
 - Use cached values when scraping fails
 - Track failures and report them to the frontend
+- `multipleUrlSelectorScraper` supports `onProgress` callback for streaming updates
 
 ### Frontend
 - Use localStorage for caching portfolio data
@@ -105,6 +107,8 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Display error banner when scrapers fail
 - Keep chart logic in separate modules (`view/chart.js`, `view/historyChart.js`)
 - Use consistent `.nav_link` class for all navigation/action buttons
+- Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
+- Progress banner shows: asset name, value, running portfolio delta vs prev month
 
 History page notes:
 - `3-Month Change` is computed vs the value 3 months earlier (not vs the first datapoint)
