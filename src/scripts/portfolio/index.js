@@ -4,8 +4,8 @@ const api = require('../../api');
 const dynamicCategories = ['Isin', 'Crypto', 'Gold']
 const isDynamicAsset = (asset) => dynamicCategories.includes(asset[0])
 
-const getAssetsValue = async (refresh, onProgress = null) => {
-    const assetsSchema = await api.getAssetsSchema()
+const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
+    const assetsSchema = await api.getAssetsSchema(passwordHash)
 
     const dynamicAssets = assetsSchema.assets.filter(asset => isDynamicAsset(asset))
     const staticAssets = assetsSchema.assets.filter(asset => !isDynamicAsset(asset))
@@ -37,15 +37,15 @@ const getAssetsValue = async (refresh, onProgress = null) => {
     return { assetValues, failures: scraperResult.failures }
 }
 
-const getPortfolio = async (refresh) => {
+const getPortfolio = async (passwordHash, refresh) => {
     // Update prevMonthTotal and initYearNetworth from historical data when refreshing
     if (refresh) {
-        await api.updatePrevMonthTotal()
-        await api.updateInitYearNetworth()
+        await api.updatePrevMonthTotal(passwordHash)
+        await api.updateInitYearNetworth(passwordHash)
     }
     
-    const assetsSchema = await api.getAssetsSchema()
-    const { assetValues, failures } = await getAssetsValue(refresh)
+    const assetsSchema = await api.getAssetsSchema(passwordHash)
+    const { assetValues, failures } = await getAssetsValue(passwordHash, refresh)
 
     let viewGroupsMap = {}
 
@@ -112,14 +112,15 @@ const getPortfolio = async (refresh) => {
 
 /**
  * Stream portfolio data with progress updates
+ * @param {string} passwordHash - The hashed password identifying the user
  * @param {function} sendEvent - Function to send SSE events: sendEvent(eventType, data)
  */
-const streamPortfolio = async (sendEvent) => {
+const streamPortfolio = async (passwordHash, sendEvent) => {
     // Update prevMonthTotal and initYearNetworth from historical data
-    await api.updatePrevMonthTotal()
-    await api.updateInitYearNetworth()
+    await api.updatePrevMonthTotal(passwordHash)
+    await api.updateInitYearNetworth(passwordHash)
     
-    const assetsSchema = await api.getAssetsSchema()
+    const assetsSchema = await api.getAssetsSchema(passwordHash)
     
     // Build asset lookup map for quick access
     const assetLookup = {}
@@ -182,7 +183,7 @@ const streamPortfolio = async (sendEvent) => {
     }
 
     // Get asset values with progress callback
-    const { assetValues, failures } = await getAssetsValue(true, onProgress)
+    const { assetValues, failures } = await getAssetsValue(passwordHash, true, onProgress)
 
     // Build final portfolio (same logic as getPortfolio)
     let viewGroupsMap = {}
@@ -242,7 +243,7 @@ const streamPortfolio = async (sendEvent) => {
     }
 
     // Update historical data
-    await api.updateHistoricalData(finalPortfolio)
+    await api.updateHistoricalData(passwordHash, finalPortfolio)
 
     // Send complete event with final portfolio
     sendEvent('complete', finalPortfolio)

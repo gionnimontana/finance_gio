@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Personal Finance Bot</title>
+    <link rel="stylesheet" href="../commons/styles.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login_container">
+        <h1>🔐 Personal Finance Bot</h1>
+        
+        <div id="login_form" class="login_form">
+            <div class="form_group">
+                <label for="password_input">Enter your password</label>
+                <input 
+                    type="text" 
+                    id="password_input" 
+                    placeholder="parola-gatto-tavolo-libro-fiore"
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+            </div>
+            
+            <button id="login_btn" class="btn primary full_width">Login</button>
+            
+            <div class="divider">
+                <span>or</span>
+            </div>
+            
+            <button id="generate_btn" class="btn secondary full_width">Generate New Password</button>
+        </div>
+        
+        <div id="generated_password" class="generated_password hidden">
+            <div class="warning_banner">
+                ⚠️ <strong>Save this password!</strong> There is no recovery option.
+            </div>
+            
+            <div class="password_display">
+                <code id="new_password"></code>
+                <button id="copy_btn" class="btn small">Copy</button>
+            </div>
+            
+            <button id="continue_btn" class="btn primary full_width">I saved it - Continue to Dashboard</button>
+        </div>
+        
+        <div id="error_banner" class="error_banner"></div>
+    </div>
+    
+    <script src="../commons/utils.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

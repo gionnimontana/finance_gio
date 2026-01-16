@@ -1,8 +1,13 @@
 // History page script
 
+// Require authentication
+if (!requireAuth()) {
+    throw new Error('Not authenticated');
+}
+
 // Fetch historical data from server
 const fetchHistoricalData = async () => {
-    const response = await fetch(`${API_BASE}/portfolio/history`);
+    const response = await authFetch(`${API_BASE}/portfolio/history`);
     const data = await response.json();
     return data;
 };

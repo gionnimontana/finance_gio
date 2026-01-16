@@ -12,6 +12,61 @@ const API_BASE = (() => {
     }
 })();
 
+// Password storage key
+const PASSWORD_KEY = 'userPassword';
+
+// Get stored password
+const getPassword = () => localStorage.getItem(PASSWORD_KEY);
+
+// Store password
+const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
+
+// Clear password (logout)
+const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
+
+// Logout and redirect to login
+const logout = () => {
+    clearPassword();
+    localStorage.removeItem('portfolio'); // Clear cached portfolio data
+    window.location.href = '/login/';
+};
+
+// Check if authenticated and redirect to login if not
+const requireAuth = () => {
+    const password = getPassword();
+    if (!password) {
+        window.location.href = '/login/';
+        return false;
+    }
+    return true;
+};
+
+// Authenticated fetch wrapper - adds X-User-Password header
+const authFetch = async (url, options = {}) => {
+    const password = getPassword();
+    if (!password) {
+        window.location.href = '/login/';
+        throw new Error('Not authenticated');
+    }
+    
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'X-User-Password': password
+        }
+    });
+    
+    // If 401, redirect to login
+    if (response.status === 401) {
+        clearPassword();
+        window.location.href = '/login/';
+        throw new Error('Authentication expired');
+    }
+    
+    return response;
+};
+
 // Format number to 2 decimal places
 const t = (number) => number.toFixed(2);
 
@@ -33,7 +88,7 @@ const escapeHtml = (unsafe) => {
 
 // Fetch assets schema from API
 const fetchAssetsSchema = async () => {
-    const res = await fetch(`${API_BASE}/assets/schema`);
+    const res = await authFetch(`${API_BASE}/assets/schema`);
     if (!res.ok) throw new Error(`Failed to load assets schema (${res.status})`);
     return await res.json();
 };

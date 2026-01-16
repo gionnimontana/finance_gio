@@ -30,7 +30,11 @@ This is a personal finance portfolio tracker application that:
 ├── view/                  # Frontend files
 │   ├── commons/           # Shared resources across all pages
 │   │   ├── styles.css     # Common CSS classes (body, nav, banners, buttons, tables)
-│   │   └── utils.js       # Common JS utilities (API_BASE, t(), pct(), el(), etc.)
+│   │   └── utils.js       # Common JS utilities (API_BASE, authFetch, t(), pct(), el(), etc.)
+│   ├── login/             # Login/authentication page
+│   │   ├── index.html     # Login page
+│   │   ├── styles.css     # Login-specific styles
+│   │   └── script.js      # Login/generate password logic
 │   ├── dashboard/         # Main dashboard (Networth)
 │   │   ├── index.html     # Dashboard page
 │   │   ├── styles.css     # Dashboard-specific styles (overview, progress banner)
@@ -45,10 +49,14 @@ This is a personal finance portfolio tracker application that:
 │       ├── styles.css     # History-specific styles (history table colors)
 │       ├── chart.js       # Column chart module for history view
 │       └── script.js      # History rendering logic
-├── data/                  # JSON data files
-│   ├── assetsSchema.json    # Asset definitions and quantities
-│   └── historicalData.json  # Historical portfolio snapshots
+├── data/                  # JSON data files (per-user in data/users/{hash}/)
+│   └── users/             # User-specific data folders (named by password hash)
+│       └── {hash}/        # Each user's data directory
+│           ├── assetsSchema.json    # User's asset definitions
+│           └── historicalData.json  # User's historical snapshots
 ├── src/
+│   ├── auth/
+│   │   └── index.js       # Authentication: password generation, hashing, middleware
 │   ├── api/
 │   │   └── index.js       # API logic for assets and historical data
 │   ├── scrapers/
@@ -67,12 +75,17 @@ This is a personal finance portfolio tracker application that:
 
 ## API Endpoints
 
+### Authentication (no auth required)
+- `POST /auth/generate` - Generate new 5-word Italian password, creates user folder
+- `POST /auth/validate` - Validate password exists: `{ password }` → `{ valid: boolean }`
+
+### Protected endpoints (require `X-User-Password` header)
 - `GET /portfolio?refresh=true|false` - Current portfolio data
-- `GET /portfolio/stream` - SSE endpoint for real-time refresh with progress updates
+- `GET /portfolio/stream?password=...` - SSE endpoint (password in query param)
 - `GET /portfolio/history` - Historical monthly snapshots
 - `GET /assets/schema` - Read assets schema
 - `PUT /assets/schema` - Replace assets array in assets schema
-- `PUT /assets/view-groups` - Replace view groups list (cannot remove groups currently referenced by an asset)
+- `PUT /assets/view-groups` - Replace view groups list
 
 ## Key Concepts
 
@@ -103,6 +116,14 @@ Used for UI display and charts: Liquidity, Crypto, Gold, Houses, Equity
 
 History chart stacking order (bottom → top): Liquidity → Crypto → Gold → Houses → Equity
 
+### Multi-User Authentication
+- Each user has a unique password: 5 random Italian words joined by dashes (e.g. `casa-luna-libro-mare-sole`)
+- Passwords are hashed (SHA-256) to create folder names in `data/users/{hash}/`
+- No recovery mechanism - lost password = lost data
+- Password stored in `localStorage.userPassword` on frontend
+- Frontend uses `authFetch()` wrapper to add `X-User-Password` header
+- SSE streams use password as query param (headers unreliable for SSE)
+
 ## Coding Guidelines
 
 ### Scrapers
@@ -113,12 +134,14 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - `multipleUrlSelectorScraper` supports `onProgress` callback for streaming updates
 
 ### Frontend
-- Use localStorage for caching portfolio data
+- Use localStorage for caching portfolio data and user password
+- All API calls use `authFetch()` from utils.js (adds X-User-Password header)
+- Each protected page calls `requireAuth()` at start to redirect to login if needed
 - Show cached data immediately while refreshing
 - Display error banner when scrapers fail
 - Common CSS in `view/commons/styles.css`, page-specific CSS in each route folder
-- Common JS utilities in `view/commons/utils.js` (API_BASE, t(), pct(), el(), escapeHtml(), etc.)
-- Each route has its own folder: `dashboard/`, `assets/`, `history/`
+- Common JS utilities in `view/commons/utils.js` (API_BASE, authFetch, getPassword, etc.)
+- Each route has its own folder: `login/`, `dashboard/`, `assets/`, `history/`
 - Use consistent `.nav_link` class for all navigation/action buttons
 - Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
 - Progress banner shows: asset name, value, running portfolio delta vs prev month
@@ -147,8 +170,8 @@ npm install
 # Start server
 node server.js
 
-# Access dashboard
-open http://localhost:8085/dashboard/
+# Access login page (generates password or enter existing)
+open http://localhost:8085/login/
 ```
 
 ## Environment Variables

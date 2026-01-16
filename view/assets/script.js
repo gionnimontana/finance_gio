@@ -1,5 +1,10 @@
 // Assets management script
 
+// Require authentication
+if (!requireAuth()) {
+    throw new Error('Not authenticated');
+}
+
 let assetsSchema = null;
 
 const ASSET_CLASSES = [
@@ -236,13 +241,13 @@ window.addNewRow = () => {
 };
 
 const fetchSchema = async () => {
-    const res = await fetch(`${API_BASE}/assets/schema`);
+    const res = await authFetch(`${API_BASE}/assets/schema`);
     if (!res.ok) throw new Error(`Failed to load schema (${res.status})`);
     return await res.json();
 };
 
 const putSchema = async (payload) => {
-    const res = await fetch(`${API_BASE}/assets/schema`, {
+    const res = await authFetch(`${API_BASE}/assets/schema`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -256,7 +261,7 @@ const putSchema = async (payload) => {
 };
 
 const putViewGroups = async (payload) => {
-    const res = await fetch(`${API_BASE}/assets/view-groups`, {
+    const res = await authFetch(`${API_BASE}/assets/view-groups`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

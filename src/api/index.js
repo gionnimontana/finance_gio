@@ -1,9 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-const HISTORICAL_DATA_PATH = path.join(DATA_DIR, 'historicalData.json');
-const ASSETS_SCHEMA_PATH = path.join(DATA_DIR, 'assetsSchema.json');
+const { getUserDataDir } = require('../auth');
 
 // Default assets schema used when JSON file doesn't exist
 const DEFAULT_ASSETS_SCHEMA = {
@@ -16,10 +13,24 @@ const DEFAULT_ASSETS_SCHEMA = {
 // Default historical data used when JSON file doesn't exist
 const DEFAULT_HISTORICAL_DATA = [];
 
-const getAssetsSchema = async () => {
+/**
+ * Get data file paths for a specific user
+ * @param {string} passwordHash - The hashed password identifying the user
+ * @returns {{ assetsPath: string, historyPath: string }}
+ */
+const getUserDataPaths = (passwordHash) => {
+    const userDir = getUserDataDir(passwordHash);
+    return {
+        assetsPath: path.join(userDir, 'assetsSchema.json'),
+        historyPath: path.join(userDir, 'historicalData.json')
+    };
+};
+
+const getAssetsSchema = async (passwordHash) => {
+    const { assetsPath } = getUserDataPaths(passwordHash);
     try {
-        if (fs.existsSync(ASSETS_SCHEMA_PATH)) {
-            const data = fs.readFileSync(ASSETS_SCHEMA_PATH, 'utf8');
+        if (fs.existsSync(assetsPath)) {
+            const data = fs.readFileSync(assetsPath, 'utf8');
             return JSON.parse(data);
         }
     } catch (error) {
@@ -28,7 +39,7 @@ const getAssetsSchema = async () => {
     
     // Create file with default data if it doesn't exist
     try {
-        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(DEFAULT_ASSETS_SCHEMA, null, 2), 'utf8');
+        fs.writeFileSync(assetsPath, JSON.stringify(DEFAULT_ASSETS_SCHEMA, null, 2), 'utf8');
         console.log('Created new assets schema file with default data');
     } catch (error) {
         console.error('Error creating assets schema file:', error);
@@ -37,9 +48,10 @@ const getAssetsSchema = async () => {
     return DEFAULT_ASSETS_SCHEMA;
 }
 
-const writeAssetsSchema = async (assetsSchema) => {
+const writeAssetsSchema = async (passwordHash, assetsSchema) => {
+    const { assetsPath } = getUserDataPaths(passwordHash);
     try {
-        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(assetsSchema, null, 2), 'utf8');
+        fs.writeFileSync(assetsPath, JSON.stringify(assetsSchema, null, 2), 'utf8');
         return true;
     } catch (error) {
         console.error('Error writing assets schema file:', error);
@@ -47,9 +59,10 @@ const writeAssetsSchema = async (assetsSchema) => {
     }
 }
 
-const writeHistoricalData = async (historicalData) => {
+const writeHistoricalData = async (passwordHash, historicalData) => {
+    const { historyPath } = getUserDataPaths(passwordHash);
     try {
-        fs.writeFileSync(HISTORICAL_DATA_PATH, JSON.stringify(historicalData, null, 2), 'utf8');
+        fs.writeFileSync(historyPath, JSON.stringify(historicalData, null, 2), 'utf8');
         return true;
     } catch (error) {
         console.error('Error writing historical data file:', error);
@@ -144,7 +157,7 @@ const validateViewGroupsPayload = (viewGroups) => {
 }
 
 // Replace assets array with provided one (preserves prevMonthTotal/initYearNetworth)
-const updateAssetsSchema = async ({ assets }) => {
+const updateAssetsSchema = async (passwordHash, { assets }) => {
     if (!Array.isArray(assets)) {
         return { ok: false, error: 'Invalid payload: assets must be an array' };
     }
@@ -163,7 +176,7 @@ const updateAssetsSchema = async ({ assets }) => {
         return { ok: false, error: `Duplicate assetId(s): ${Array.from(new Set(duplicates)).join(', ')}` };
     }
 
-    const existing = normalizeAssetsSchema(await getAssetsSchema());
+    const existing = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
     const next = {
         ...existing,
         assets: normalizedAssets,
@@ -173,14 +186,14 @@ const updateAssetsSchema = async ({ assets }) => {
             ...computeViewGroupsFromAssets(normalizedAssets)
         ])
     };
-    const wrote = await writeAssetsSchema(next);
+    const wrote = await writeAssetsSchema(passwordHash, next);
     if (!wrote) return { ok: false, error: 'Failed to persist assets schema' };
     return { ok: true, assetsSchema: next };
 }
 
 // Replace viewGroups array (cannot remove groups that are referenced by any asset)
-const updateViewGroups = async ({ viewGroups }) => {
-    const existing = normalizeAssetsSchema(await getAssetsSchema());
+const updateViewGroups = async (passwordHash, { viewGroups }) => {
+    const existing = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
 
     const validation = validateViewGroupsPayload(viewGroups);
     if (!validation.ok) return { ok: false, error: validation.error };
@@ -200,7 +213,7 @@ const updateViewGroups = async ({ viewGroups }) => {
     const isSimpleRename = missingReferenced.length === 1 && added.length === 1;
 
     let migratedAssets = existing.assets;
-    let historicalData = await getHistoricalData();
+    let historicalData = await getHistoricalData(passwordHash);
 
     if (missingReferenced.length && isSimpleRename) {
         const from = missingReferenced[0];
@@ -244,10 +257,10 @@ const updateViewGroups = async ({ viewGroups }) => {
         viewGroups: nextGroups
     };
 
-    const wroteSchema = await writeAssetsSchema(next);
+    const wroteSchema = await writeAssetsSchema(passwordHash, next);
     if (!wroteSchema) return { ok: false, error: 'Failed to persist assets schema' };
 
-    const wroteHistory = await writeHistoricalData(historicalData);
+    const wroteHistory = await writeHistoricalData(passwordHash, historicalData);
     if (!wroteHistory) return { ok: false, error: 'Failed to persist historical data' };
 
     return { ok: true, assetsSchema: next };
@@ -255,10 +268,11 @@ const updateViewGroups = async ({ viewGroups }) => {
 
 // Historical data for portfolio history view
 // Format: array of monthly snapshots with viewGroup totals
-const getHistoricalData = async () => {
+const getHistoricalData = async (passwordHash) => {
+    const { historyPath } = getUserDataPaths(passwordHash);
     try {
-        if (fs.existsSync(HISTORICAL_DATA_PATH)) {
-            const data = fs.readFileSync(HISTORICAL_DATA_PATH, 'utf8');
+        if (fs.existsSync(historyPath)) {
+            const data = fs.readFileSync(historyPath, 'utf8');
             return JSON.parse(data);
         }
     } catch (error) {
@@ -267,7 +281,7 @@ const getHistoricalData = async () => {
     
     // Create file with default data if it doesn't exist
     try {
-        fs.writeFileSync(HISTORICAL_DATA_PATH, JSON.stringify(DEFAULT_HISTORICAL_DATA, null, 2), 'utf8');
+        fs.writeFileSync(historyPath, JSON.stringify(DEFAULT_HISTORICAL_DATA, null, 2), 'utf8');
         console.log('Created new historical data file with default data');
     } catch (error) {
         console.error('Error creating historical data file:', error);
@@ -278,25 +292,26 @@ const getHistoricalData = async () => {
 
 // Update prevMonthTotal in assets schema based on historical data
 // Gets the total from the previous month's entry in historical data
-const updatePrevMonthTotal = async () => {
+const updatePrevMonthTotal = async (passwordHash) => {
+    const { assetsPath } = getUserDataPaths(passwordHash);
     const now = new Date();
     const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const year = prevMonth.getFullYear();
     const month = String(prevMonth.getMonth() + 1).padStart(2, '0');
     const prevMonthDate = `${year}-${month}`;
     
-    const historicalData = await getHistoricalData();
+    const historicalData = await getHistoricalData(passwordHash);
     const prevMonthEntry = historicalData.find(entry => entry.date === prevMonthDate);
     
     // If no previous month data exists, leave prevMonthTotal empty (null)
     const prevMonthTotal = prevMonthEntry ? Math.round(prevMonthEntry.total) : null;
     
     // Update assets schema with prevMonthTotal
-    const assetsSchema = await getAssetsSchema();
+    const assetsSchema = await getAssetsSchema(passwordHash);
     assetsSchema.prevMonthTotal = prevMonthTotal;
     
     try {
-        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(assetsSchema, null, 2), 'utf8');
+        fs.writeFileSync(assetsPath, JSON.stringify(assetsSchema, null, 2), 'utf8');
         console.log(`Updated prevMonthTotal to ${prevMonthTotal}`);
     } catch (error) {
         console.error('Error updating prevMonthTotal:', error);
@@ -307,23 +322,24 @@ const updatePrevMonthTotal = async () => {
 
 // Update initYearNetworth in assets schema based on historical data
 // Gets the total from December of the previous year
-const updateInitYearNetworth = async () => {
+const updateInitYearNetworth = async (passwordHash) => {
+    const { assetsPath } = getUserDataPaths(passwordHash);
     const now = new Date();
     const prevYear = now.getFullYear() - 1;
     const decemberDate = `${prevYear}-12`;
     
-    const historicalData = await getHistoricalData();
+    const historicalData = await getHistoricalData(passwordHash);
     const decemberEntry = historicalData.find(entry => entry.date === decemberDate);
     
     // If no December data exists, leave initYearNetworth empty (null)
     const initYearNetworth = decemberEntry ? Math.round(decemberEntry.total) : null;
     
     // Update assets schema with initYearNetworth
-    const assetsSchema = await getAssetsSchema();
+    const assetsSchema = await getAssetsSchema(passwordHash);
     assetsSchema.initYearNetworth = initYearNetworth;
     
     try {
-        fs.writeFileSync(ASSETS_SCHEMA_PATH, JSON.stringify(assetsSchema, null, 2), 'utf8');
+        fs.writeFileSync(assetsPath, JSON.stringify(assetsSchema, null, 2), 'utf8');
         console.log(`Updated initYearNetworth to ${initYearNetworth}`);
     } catch (error) {
         console.error('Error updating initYearNetworth:', error);
@@ -334,7 +350,8 @@ const updateInitYearNetworth = async () => {
 
 // Update historical data with current month's portfolio values
 // portfolio should have: total, Liquidity, Crypto, Equity, Gold, Houses (with .total for each)
-const updateHistoricalData = async (portfolio) => {
+const updateHistoricalData = async (passwordHash, portfolio) => {
+    const { historyPath } = getUserDataPaths(passwordHash);
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -356,7 +373,7 @@ const updateHistoricalData = async (portfolio) => {
     };
     
     // Get current historical data
-    let historicalData = await getHistoricalData();
+    let historicalData = await getHistoricalData(passwordHash);
     
     // Find if current month already exists
     const existingIndex = historicalData.findIndex(entry => entry.date === date);
@@ -373,7 +390,7 @@ const updateHistoricalData = async (portfolio) => {
     
     // Save to file
     try {
-        fs.writeFileSync(HISTORICAL_DATA_PATH, JSON.stringify(historicalData, null, 2), 'utf8');
+        fs.writeFileSync(historyPath, JSON.stringify(historicalData, null, 2), 'utf8');
         console.log(`Historical data updated for ${label}`);
     } catch (error) {
         console.error('Error writing historical data file:', error);

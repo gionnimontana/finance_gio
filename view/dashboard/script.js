@@ -1,5 +1,10 @@
 // Dashboard script - Portfolio overview and refresh logic
 
+// Require authentication
+if (!requireAuth()) {
+    throw new Error('Not authenticated');
+}
+
 // Progress state
 let initialPortfolioTotal = null;
 let previousAssetValues = {}; // Map of assetId -> previous total value
@@ -113,7 +118,8 @@ const streamPortfolioRefresh = () => {
 
         showProgressBanner();
 
-        const eventSource = new EventSource(`${API_BASE}/portfolio/stream`);
+        const password = getPassword();
+        const eventSource = new EventSource(`${API_BASE}/portfolio/stream?password=${encodeURIComponent(password)}`);
 
         eventSource.addEventListener('progress', (event) => {
             const data = JSON.parse(event.data);
@@ -219,7 +225,7 @@ const renderTableView = (portfolio) => {
 };
 
 const fetchData = async (refresh) => {
-    const response = await fetch(`${API_BASE}/portfolio?refresh=` + refresh);
+    const response = await authFetch(`${API_BASE}/portfolio?refresh=` + refresh);
     const data = await response.json();
     return data;
 }
