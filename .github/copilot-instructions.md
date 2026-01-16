@@ -45,12 +45,12 @@ This is a personal finance portfolio tracker application that:
 │       ├── styles.css     # History-specific styles (history table colors)
 │       ├── chart.js       # Column chart module for history view
 │       └── script.js      # History rendering logic
+├── data/                  # JSON data files
+│   ├── assetsSchema.json    # Asset definitions and quantities
+│   └── historicalData.json  # Historical portfolio snapshots
 ├── src/
 │   ├── api/
 │   │   └── index.js       # API logic for assets and historical data
-│   ├── data/              # JSON data files
-│   │   ├── assetsSchema.json    # Asset definitions and quantities
-│   │   └── historicalData.json  # Historical portfolio snapshots
 │   ├── scrapers/
 │   │   ├── core/
 │   │   │   └── index.js   # Core scraping logic with retry and caching
@@ -130,13 +130,13 @@ History page notes:
 ## Common Tasks
 
 ### Adding a New Asset
-1. Add entry to `src/data/assetsSchema.json` with correct assetClass and viewGroup
+1. Add entry to `data/assetsSchema.json` with correct assetClass and viewGroup
 2. If new assetClass, create scraper in `src/scrapers/vendors/`
 3. Export scraper in `src/scrapers/index.js`
 4. Add scraper logic to `src/scripts/portfolio/index.js`
 
 ### Adding Historical Data
-Add monthly snapshot to `src/data/historicalData.json` (or let the app auto-update it)
+Add monthly snapshot to `data/historicalData.json` (or let the app auto-update it)
 
 ## Running the App
 
