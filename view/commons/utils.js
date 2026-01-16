@@ -1,12 +1,16 @@
 // Common utilities shared across all pages
 
+// Base path for the app (for nginx deployment at /financegio)
+const BASE_PATH = '/financegio';
+
 const API_BASE = (() => {
     try {
         // If opened from file://, relative fetch('/...') becomes file:///..., so default to server.
         if (window.location && window.location.protocol === 'file:') {
             return 'http://localhost:8085';
         }
-        return window.location.origin;
+        // In production, use the proxied API path
+        return window.location.origin + BASE_PATH + '/api';
     } catch (e) {
         return 'http://localhost:8085';
     }
@@ -28,14 +32,14 @@ const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
 const logout = () => {
     clearPassword();
     localStorage.removeItem('portfolio'); // Clear cached portfolio data
-    window.location.href = '/login/';
+    window.location.href = BASE_PATH + '/login/';
 };
 
 // Check if authenticated and redirect to login if not
 const requireAuth = () => {
     const password = getPassword();
     if (!password) {
-        window.location.href = '/login/';
+        window.location.href = BASE_PATH + '/login/';
         return false;
     }
     return true;
@@ -45,8 +49,8 @@ const requireAuth = () => {
 const authFetch = async (url, options = {}) => {
     const password = getPassword();
     if (!password) {
-        window.location.href = '/login/';
-        throw new Error('Not authenticated');
+        window.location.href = BASE_PATH + '/login/';
+        throw new Error('Not authenticated';
     }
     
     const response = await fetch(url, {
@@ -60,7 +64,7 @@ const authFetch = async (url, options = {}) => {
     // If 401, redirect to login
     if (response.status === 401) {
         clearPassword();
-        window.location.href = '/login/';
+        window.location.href = BASE_PATH + '/login/';
         throw new Error('Authentication expired');
     }
     
