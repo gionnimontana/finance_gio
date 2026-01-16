@@ -181,6 +181,7 @@ open http://localhost:8085/login/
 - Nginx serves the frontend from `/var/www/finance.gingergio.it` and proxies API requests to port 8085.
 - `deploy.sh` copies `view/` into `/var/www/finance.gingergio.it` after pull.
 - `deploy.sh` provisions a systemd service (`finance-bot`) for auto-restart and logs via journald.
+- `deploy.sh` installs system libraries required by Puppeteer.
 
 ## Environment Variables
 

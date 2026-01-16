@@ -17,6 +17,13 @@ git pull origin main
 echo "📦 Installing dependencies..."
 npm install
 
+echo "🧩 Installing system packages for Puppeteer..."
+sudo apt-get update
+sudo apt-get install -y \
+	libatk-bridge2.0-0 libatk1.0-0 libcups2 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 \
+	libxss1 libxtst6 libnss3 libasound2 libpangocairo-1.0-0 libpango-1.0-0 \
+	libgtk-3-0 libgbm1 libdrm2 libxshmfence1
+
 echo "📂 Deploying frontend to nginx..."
 sudo rm -rf /var/www/finance.gingergio.it/*
 sudo mkdir -p /var/www/finance.gingergio.it
