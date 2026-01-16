@@ -174,6 +174,12 @@ node server.js
 open http://localhost:8085/login/
 ```
 
+## Deployment Notes
+
+- Nginx serves the frontend from `/financegio` via `/var/www/financegio`.
+- Frontend uses `BASE_PATH = '/financegio'` and calls the API through `/financegio/api` (nginx proxy to port 8085).
+- `deploy.sh` copies `view/` into `/var/www/financegio` after pull.
+
 ## Environment Variables
 
 Uses `.env` file for configuration (loaded via dotenv).

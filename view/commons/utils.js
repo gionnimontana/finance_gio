@@ -50,7 +50,7 @@ const authFetch = async (url, options = {}) => {
     const password = getPassword();
     if (!password) {
         window.location.href = BASE_PATH + '/login/';
-        throw new Error('Not authenticated';
+        throw new Error('Not authenticated');
     }
     
     const response = await fetch(url, {
