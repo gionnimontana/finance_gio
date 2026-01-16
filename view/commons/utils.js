@@ -1,16 +1,7 @@
 // Common utilities shared across all pages
 
-// Base path for the app (for nginx deployment at /financegio)
-const BASE_PATH = (() => {
-    try {
-        if (window.location && window.location.pathname.startsWith('/financegio')) {
-            return '/financegio';
-        }
-    } catch (e) {
-        // ignore
-    }
-    return '';
-})();
+// Base path for the app (root deployment)
+const BASE_PATH = '';
 
 const API_BASE = (() => {
     try {
@@ -18,11 +9,6 @@ const API_BASE = (() => {
         if (window.location && window.location.protocol === 'file:') {
             return 'http://localhost:8085';
         }
-        // In production, use the proxied API path
-        if (BASE_PATH) {
-            return window.location.origin + BASE_PATH + '/api';
-        }
-        // Local dev without nginx proxy
         return window.location.origin;
     } catch (e) {
         return 'http://localhost:8085';

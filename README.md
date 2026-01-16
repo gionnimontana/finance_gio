@@ -86,6 +86,12 @@ The app runs on `http://localhost:8085`
 
 Create a `.env` file for configuration (loaded via dotenv).
 
+## Deployment Notes
+
+- The app is served from the root of the subdomain (e.g. https://finance.gingergio.it/).
+- Nginx can serve the frontend from `/var/www/finance.gingergio.it` and proxy API requests to port 8085.
+- `deploy.sh` copies `view/` into `/var/www/finance.gingergio.it` after pull.
+
 ## License
 
 MIT

@@ -15,10 +15,10 @@ echo "📦 Installing dependencies..."
 npm install
 
 echo "📂 Deploying frontend to nginx..."
-sudo rm -rf /var/www/financegio/*
-sudo mkdir -p /var/www/financegio
-sudo cp -r view/* /var/www/financegio/
-sudo chown -R www-data:www-data /var/www/financegio
+sudo rm -rf /var/www/finance.gingergio.it/*
+sudo mkdir -p /var/www/finance.gingergio.it
+sudo cp -r view/* /var/www/finance.gingergio.it/
+sudo chown -R www-data:www-data /var/www/finance.gingergio.it
 
 echo "🔄 Restarting server..."
 # Kill existing node process if running
