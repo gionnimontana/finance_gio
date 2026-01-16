@@ -78,6 +78,8 @@ This is a personal finance portfolio tracker application that:
 ### Authentication (no auth required)
 - `POST /auth/generate` - Generate new 5-word Italian password, creates user folder
 - `POST /auth/validate` - Validate password exists: `{ password }` → `{ valid: boolean }`
+- `POST /financegio/api/auth/generate` - Same as `/auth/generate` when using `/financegio` base path
+- `POST /financegio/api/auth/validate` - Same as `/auth/validate` when using `/financegio` base path
 
 ### Protected endpoints (require `X-User-Password` header)
 - `GET /portfolio?refresh=true|false` - Current portfolio data
@@ -180,6 +182,7 @@ open http://localhost:8085/login/
 - Nginx serves the frontend from `/financegio` via `/var/www/financegio`.
 - Frontend uses `BASE_PATH = '/financegio'` and calls the API through `/financegio/api` (nginx proxy to port 8085).
 - `deploy.sh` copies `view/` into `/var/www/financegio` after pull.
+- Local dev supports `/financegio/*` via server rewrite to root API routes; `BASE_PATH` auto-detects by URL path and uses direct API origin when no base path.
 
 ## Environment Variables
 

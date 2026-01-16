@@ -13,18 +13,32 @@ app.use(cors())
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true}))
 app.use(express.static(__dirname + '/view')) // Serve static files from view folder
+app.use('/financegio', express.static(__dirname + '/view')) // Serve static files with /financegio base path
+
+// Rewrite /financegio/api/* to match root API routes (local dev without nginx)
+app.use('/financegio/api', (req, res, next) => {
+  req.url = req.url.replace(/^\/financegio\/api/, '')
+  next()
+})
 
 // Auth routes (no authentication required)
 app.post('/auth/generate', handleGenerate)
 app.post('/auth/validate', handleValidate)
+app.post('/financegio/api/auth/generate', handleGenerate)
+app.post('/financegio/api/auth/validate', handleValidate)
 
 // Redirect old URLs to new folder structure
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard/'))
 app.get('/assets.html', (req, res) => res.redirect('/assets/'))
 app.get('/history.html', (req, res) => res.redirect('/history/'))
+app.get('/financegio/dashboard.html', (req, res) => res.redirect('/financegio/dashboard/'))
+app.get('/financegio/assets.html', (req, res) => res.redirect('/financegio/assets/'))
+app.get('/financegio/history.html', (req, res) => res.redirect('/financegio/history/'))
 
 // Default route redirects to login (which will redirect to dashboard if authenticated)
 app.get('/', (req, res) => res.redirect('/login/'))
+app.get('/financegio', (req, res) => res.redirect('/financegio/login/'))
+app.get('/financegio/', (req, res) => res.redirect('/financegio/login/'))
 
 app.listen(port, () => { console.log(`Personal finance bot listening on port ${port}`)})
 
