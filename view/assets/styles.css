@@ -1,0 +1,7 @@
+/* Assets page specific styles */
+
+td.actions {
+    width: 260px;
+    white-space: nowrap;
+    text-align: right;
+}

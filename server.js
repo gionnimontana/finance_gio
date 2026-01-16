@@ -12,6 +12,15 @@ app.use(cors())
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true}))
 app.use(express.static(__dirname + '/view')) // Serve static files from view folder
+
+// Redirect old URLs to new folder structure
+app.get('/dashboard.html', (req, res) => res.redirect('/dashboard/'))
+app.get('/assets.html', (req, res) => res.redirect('/assets/'))
+app.get('/history.html', (req, res) => res.redirect('/history/'))
+
+// Default route redirects to dashboard
+app.get('/', (req, res) => res.redirect('/dashboard/'))
+
 app.listen(port, () => { console.log(`Personal finance bot listening on port ${port}`)})
 
 app.use((err, req, res, next) => {

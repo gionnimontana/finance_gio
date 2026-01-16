@@ -1,0 +1,100 @@
+/* History page specific styles */
+
+.chart_section {
+    margin: 20px;
+    background-color: white;
+    border-radius: 5px;
+    padding: 20px;
+}
+
+.table_section {
+    margin: 20px;
+    background-color: white;
+    border-radius: 5px;
+    padding: 20px;
+}
+
+/* History Table */
+.history_table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.history_table th,
+.history_table td {
+    padding: 12px 15px;
+    text-align: right;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.history_table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    color: #333;
+}
+
+/* ViewGroup column colors - lighter versions of chart colors */
+.history_table th.col-equity,
+.history_table td.col-equity {
+    background-color: rgba(76, 175, 80, 0.15);
+}
+
+.history_table th.col-crypto,
+.history_table td.col-crypto {
+    background-color: rgba(255, 152, 0, 0.15);
+}
+
+.history_table th.col-liquidity,
+.history_table td.col-liquidity {
+    background-color: rgba(33, 150, 243, 0.15);
+}
+
+.history_table th.col-gold,
+.history_table td.col-gold {
+    background-color: rgba(255, 215, 0, 0.15);
+}
+
+.history_table th.col-houses,
+.history_table td.col-houses {
+    background-color: rgba(156, 39, 176, 0.15);
+}
+
+.history_table tbody tr:hover td.col-equity {
+    background-color: rgba(76, 175, 80, 0.25);
+}
+
+.history_table tbody tr:hover td.col-crypto {
+    background-color: rgba(255, 152, 0, 0.25);
+}
+
+.history_table tbody tr:hover td.col-liquidity {
+    background-color: rgba(33, 150, 243, 0.25);
+}
+
+.history_table tbody tr:hover td.col-gold {
+    background-color: rgba(255, 215, 0, 0.25);
+}
+
+.history_table tbody tr:hover td.col-houses {
+    background-color: rgba(156, 39, 176, 0.25);
+}
+
+.history_table th:first-child,
+.history_table td:first-child {
+    text-align: left;
+}
+
+.history_table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+.month_label {
+    font-weight: bold;
+    color: #333;
+}
+
+.total_cell {
+    font-weight: bold;
+    color: #333;
+}

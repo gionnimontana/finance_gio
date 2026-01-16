@@ -44,7 +44,7 @@ const HistoryChartModule = (() => {
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
-    const padding = { top: 40, right: 30, bottom: 120, left: 80 };
+        const padding = { top: 40, right: 30, bottom: 120, left: 80 };
         const chartWidth = canvas.width - padding.left - padding.right;
         const chartHeight = canvas.height - padding.top - padding.bottom;
 
@@ -62,8 +62,8 @@ const HistoryChartModule = (() => {
             viewGroups.sort((a, b) => a.localeCompare(b));
         }
         const numMonths = historyData.length;
-    const columnWidth = Math.min(60, (chartWidth / numMonths) * 0.7);
-    const columnSpacing = (chartWidth - (columnWidth * numMonths)) / (numMonths + 1);
+        const columnWidth = Math.min(60, (chartWidth / numMonths) * 0.7);
+        const columnSpacing = (chartWidth - (columnWidth * numMonths)) / (numMonths + 1);
 
         // Calculate max total for scaling
         const maxTotal = Math.max(...historyData.map(month => month.total));

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assets Management</title>
+    <link rel="stylesheet" href="../commons/styles.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="page_title">
+        <h1>💼 Assets</h1>
+        <div class="nav_links">
+            <a href="../dashboard/" class="nav_link">🏠 Dashboard</a>
+            <a href="../history/" class="nav_link">📊 History</a>
+        </div>
+    </div>
+
+    <div id="error_banner" class="error_banner"></div>
+    <div id="success_banner" class="success_banner"></div>
+
+    <div class="container">
+        <div class="section_title">Manage assets</div>
+        <div class="toolbar">
+            <button id="reload_btn" class="btn primary" onclick="loadSchema()">Reload</button>
+            <button id="add_btn" class="btn success" onclick="addNewRow()">Add asset</button>
+            <button id="save_btn" class="btn primary" onclick="saveAll()">Save all</button>
+        </div>
+        <div style="margin-top: 15px; overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width: 130px;">Asset class</th>
+                        <th style="min-width: 180px;">Asset ID</th>
+                        <th style="min-width: 120px;">Quantity</th>
+                        <th style="min-width: 220px;">Display name</th>
+                        <th style="min-width: 140px;">View group</th>
+                        <th style="min-width: 200px; text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="assets_tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section_title">Manage view groups</div>
+        <div class="toolbar">
+            <button id="groups_reload_btn" class="btn primary" onclick="loadSchema()">Reload</button>
+            <button id="groups_add_btn" class="btn success" onclick="addGroup()">Add group</button>
+            <button id="groups_save_btn" class="btn primary" onclick="saveGroups()">Save groups</button>
+        </div>
+        <div class="hint">Groups referenced by at least one asset can't be deleted until assets are moved to another group.</div>
+        <div style="margin-top: 15px; overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width: 260px;">Group name</th>
+                        <th style="min-width: 120px;"># Assets</th>
+                        <th style="min-width: 200px; text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="groups_tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="../commons/utils.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

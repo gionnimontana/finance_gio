@@ -1,16 +1,6 @@
-let assetsSchema = null;
+// Assets management script
 
-const API_BASE = (() => {
-    try {
-        // If opened from file://, relative fetch('/...') becomes file:///..., so default to server.
-        if (window.location && window.location.protocol === 'file:') {
-            return 'http://localhost:8085';
-        }
-        return window.location.origin;
-    } catch (e) {
-        return 'http://localhost:8085';
-    }
-})();
+let assetsSchema = null;
 
 const ASSET_CLASSES = [
     'Isin',
@@ -26,44 +16,6 @@ const DEFAULT_VIEW_GROUPS = [
     'Houses',
     'Equity'
 ];
-
-const el = (id) => document.getElementById(id);
-
-const showError = (message) => {
-    const banner = el('error_banner');
-    banner.textContent = message;
-    banner.classList.add('visible');
-};
-
-const clearError = () => {
-    const banner = el('error_banner');
-    banner.textContent = '';
-    banner.classList.remove('visible');
-};
-
-const showSuccess = (message) => {
-    const banner = el('success_banner');
-    banner.textContent = message;
-    banner.classList.add('visible');
-    window.setTimeout(() => {
-        banner.classList.remove('visible');
-    }, 2500);
-};
-
-const clearSuccess = () => {
-    const banner = el('success_banner');
-    banner.textContent = '';
-    banner.classList.remove('visible');
-};
-
-const escapeHtml = (unsafe) => {
-    return String(unsafe)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-};
 
 const renderSelect = (options, value, onChange) => {
     const opts = options.map(o => `<option value="${escapeHtml(o)}" ${o === value ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
@@ -152,9 +104,9 @@ const renderTable = () => {
         tdName.innerHTML = `<input value="${escapeHtml(displayName)}" onchange="onAssetChange(${idx}, 3, this.value)" />`;
 
         const tdGroup = document.createElement('td');
-    // Ensure the currently selected group is always available even if schema groups are outdated.
-    const vgOptions = uniq([...(viewGroups || []), String(viewGroup || '').trim()].filter(Boolean));
-    tdGroup.innerHTML = renderSelect(vgOptions, viewGroup, `onAssetChange(${idx}, 4, this.value)`);
+        // Ensure the currently selected group is always available even if schema groups are outdated.
+        const vgOptions = uniq([...(viewGroups || []), String(viewGroup || '').trim()].filter(Boolean));
+        tdGroup.innerHTML = renderSelect(vgOptions, viewGroup, `onAssetChange(${idx}, 4, this.value)`);
 
         const tdActions = document.createElement('td');
         tdActions.className = 'actions';
@@ -325,7 +277,7 @@ window.loadSchema = async () => {
     try {
         assetsSchema = await fetchSchema();
         renderTable();
-    renderGroupsTable();
+        renderGroupsTable();
     } catch (e) {
         showError(e.message || String(e));
     } finally {
@@ -446,7 +398,7 @@ window.saveGroups = async () => {
 
     setButtonsDisabled(true);
     try {
-    const result = await putViewGroups({ viewGroups: groups });
+        const result = await putViewGroups({ viewGroups: groups });
         assetsSchema = result.assetsSchema;
         renderTable();
         renderGroupsTable();

@@ -28,12 +28,23 @@ This is a personal finance portfolio tracker application that:
 ```
 ├── server.js              # Express server entry point
 ├── view/                  # Frontend files
-│   ├── dashboard.html     # Main frontend dashboard (Networth)
-│   ├── assets.html        # Assets management UI (CRUD assetsSchema)
-│   ├── assets.js          # Assets management page logic
-│   ├── history.html       # Historical portfolio view
-│   ├── chart.js           # Pie chart module for portfolio visualization
-│   └── historyChart.js    # Column chart module for history view
+│   ├── commons/           # Shared resources across all pages
+│   │   ├── styles.css     # Common CSS classes (body, nav, banners, buttons, tables)
+│   │   └── utils.js       # Common JS utilities (API_BASE, t(), pct(), el(), etc.)
+│   ├── dashboard/         # Main dashboard (Networth)
+│   │   ├── index.html     # Dashboard page
+│   │   ├── styles.css     # Dashboard-specific styles (overview, progress banner)
+│   │   ├── chart.js       # Pie chart module for portfolio visualization
+│   │   └── script.js      # Dashboard logic (SSE refresh, rendering)
+│   ├── assets/            # Assets management UI
+│   │   ├── index.html     # Assets management page
+│   │   ├── styles.css     # Assets-specific styles
+│   │   └── script.js      # Assets CRUD logic
+│   └── history/           # Historical portfolio view
+│       ├── index.html     # History page
+│       ├── styles.css     # History-specific styles (history table colors)
+│       ├── chart.js       # Column chart module for history view
+│       └── script.js      # History rendering logic
 ├── src/
 │   ├── api/
 │   │   └── index.js       # API logic for assets and historical data
@@ -105,10 +116,13 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Use localStorage for caching portfolio data
 - Show cached data immediately while refreshing
 - Display error banner when scrapers fail
-- Keep chart logic in separate modules (`view/chart.js`, `view/historyChart.js`)
+- Common CSS in `view/commons/styles.css`, page-specific CSS in each route folder
+- Common JS utilities in `view/commons/utils.js` (API_BASE, t(), pct(), el(), escapeHtml(), etc.)
+- Each route has its own folder: `dashboard/`, `assets/`, `history/`
 - Use consistent `.nav_link` class for all navigation/action buttons
 - Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
 - Progress banner shows: asset name, value, running portfolio delta vs prev month
+- Old URLs (dashboard.html, assets.html, history.html) redirect to new folder structure
 
 History page notes:
 - `3-Month Change` is computed vs the value 3 months earlier (not vs the first datapoint)
@@ -134,7 +148,7 @@ npm install
 node server.js
 
 # Access dashboard
-open http://localhost:8085/dashboard.html
+open http://localhost:8085/dashboard/
 ```
 
 ## Environment Variables

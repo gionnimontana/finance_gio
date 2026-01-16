@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio History</title>
+    <link rel="stylesheet" href="../commons/styles.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="page_title">
+        <h1>📊 Portfolio History</h1>
+        <a href="../dashboard/" class="nav_link">💰 Dashboard</a>
+    </div>
+
+    <div class="summary_cards">
+        <div class="summary_card">
+            <div class="summary_card_title">Current Total</div>
+            <div id="current_total" class="summary_card_value">-</div>
+        </div>
+        <div class="summary_card">
+            <div class="summary_card_title">Avg Monthly Growth</div>
+            <div id="avg_growth" class="summary_card_value">-</div>
+        </div>
+        <div class="summary_card">
+            <div class="summary_card_title">3-Month Change</div>
+            <div id="total_change" class="summary_card_value">-</div>
+        </div>
+    </div>
+
+    <div class="chart_section">
+        <div class="chart_container" style="overflow-x: auto;">
+            <canvas id="history_chart" width="1400" height="450"></canvas>
+        </div>
+    </div>
+
+    <div class="table_section">
+        <div class="section_title">Monthly Breakdown</div>
+        <div id="history_table"></div>
+    </div>
+
+    <script src="../commons/utils.js"></script>
+    <script src="chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

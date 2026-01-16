@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Finance App</title>
+    <link rel="stylesheet" href="../commons/styles.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="page_title">
+        <h1>💰 Networth</h1>
+        <div class="nav_links">
+            <a href="../history/" class="nav_link">📊 History</a>
+            <a href="../assets/" class="nav_link">📈 Assets</a>
+            <button id="refresh_button" class="nav_link green" onclick="renderPortfolio(true)">🔄 Refresh</button>
+        </div>
+    </div>
+    <div id="error_banner" class="error_banner">
+        <div class="error_title">⚠️ Failed to fetch some data:</div>
+        <div id="error_list" class="error_list"></div>
+    </div>
+    <div id="progress_banner" class="progress_banner">
+        <div class="progress_header">
+            <div id="progress_title" class="progress_title">🔄 Refreshing Portfolio...</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div id="progress_counter" class="progress_counter">0/0</div>
+                <button id="progress_close" class="progress_close" onclick="hideProgressBanner()" style="display: none;">✕</button>
+            </div>
+        </div>
+        <div class="progress_bar_container">
+            <div id="progress_bar" class="progress_bar"></div>
+        </div>
+        <div id="progress_assets_list" class="progress_assets_list"></div>
+        <div id="progress_delta" class="progress_delta"></div>
+    </div>
+    <div class="overview_container">
+        <div class="overview_card">
+            <div class="overview">
+                <div class="overview_title">Total:</div>
+                <div id="total_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title">Delta year to date</div>
+                <div id="delta_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title">Prev Month Delta</div>
+                <div id="prevMonth_delta_value" class="overview_value">?</div>
+            </div>
+        </div>
+        <div class="chart_container">
+            <canvas id="portfolio_chart" width="300" height="250"></canvas>
+        </div>
+    </div>
+    <div id="table_view" class="table_view">
+        <!-- Dynamically rendered -->
+    </div>
+    <script src="../commons/utils.js"></script>
+    <script src="chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
