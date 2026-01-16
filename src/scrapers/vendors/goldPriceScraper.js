@@ -6,8 +6,9 @@ const core = require('../core')
  * @throws {Error} - If the value is not found or not a number or 0
  */
 const goldOptionsCreator = () => {
-    // Gold price per gram in EUR from gold.de (German gold price portal)
-    const url = 'https://www.gold.de/kurse/goldpreis/'
+    // Gold price per gram in EUR from goldpreis.de (German gold price portal)
+    // Note: gold.de was previously used but is experiencing technical issues
+    const url = 'https://www.goldpreis.de/'
     const logger = (msg) => console.log(`goldPriceScraper - ${msg}`)
     // Selector for the gold price per gram in the table
     const selector = 'table'
@@ -20,9 +21,10 @@ const goldOptionsCreator = () => {
                 const cells = row.querySelectorAll('td')
                 if (cells.length >= 2) {
                     const label = cells[0]?.innerText?.trim() || ''
-                    if (label.includes('1 Gramm') || label.includes('1 g)')) {
-                        const priceText = cells[1]?.innerText?.trim() || ''
-                        // Extract number from format like "118,78 EUR"
+                    if (label.includes('1 Gramm') || label.includes('1 g')) {
+                        // Get the last cell which contains the EUR price
+                        const priceText = cells[cells.length - 1]?.innerText?.trim() || ''
+                        // Extract number from format like "127,60 EUR"
                         const match = priceText.match(/([\d.,]+)\s*EUR/)
                         if (match) {
                             // Convert German number format (comma as decimal) to standard
