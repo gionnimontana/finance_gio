@@ -139,6 +139,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Each protected page calls `requireAuth()` at start to redirect to login if needed
 - Show cached data immediately while refreshing
 - Display error banner when scrapers fail
+- Ensure HTML pages include UTF-8 meta charset
 - Common CSS in `view/commons/styles.css`, page-specific CSS in each route folder
 - Common JS utilities in `view/commons/utils.js` (API_BASE, authFetch, getPassword, etc.)
 - Each route has its own folder: `login/`, `dashboard/`, `assets/`, `history/`
