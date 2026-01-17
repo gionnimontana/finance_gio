@@ -7,6 +7,18 @@
     padding: 20px;
 }
 
+.chart_section .chart_container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: center;
+}
+
+.chart_section canvas {
+    display: block;
+    min-width: 100%;
+}
+
 .table_section {
     margin: 20px;
     background-color: white;
@@ -105,6 +117,16 @@
 }
 
 @media (max-width: 768px) {
+    .chart_section {
+        margin: 10px;
+        padding: 10px;
+    }
+
+    .chart_section .chart_container {
+        justify-content: flex-start;
+        align-items: stretch;
+    }
+
     .table_section {
         padding: 10px;
         margin: 10px;

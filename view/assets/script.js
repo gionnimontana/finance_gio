@@ -274,6 +274,66 @@ const putViewGroups = async (payload) => {
     return json;
 };
 
+const initExportPassword = () => {
+    const input = el('export_password');
+    const copyBtn = el('export_password_btn');
+    const toggleBtn = el('toggle_password_btn');
+    if (!input || !copyBtn || !toggleBtn) return;
+
+    const password = getPassword();
+    if (!password) {
+        input.value = '';
+        input.placeholder = 'No password found';
+        copyBtn.disabled = true;
+        toggleBtn.disabled = true;
+        return;
+    }
+
+    input.value = password;
+    copyBtn.disabled = false;
+    toggleBtn.disabled = false;
+};
+
+window.copyPassword = async () => {
+    clearError();
+    clearSuccess();
+
+    const password = getPassword();
+    if (!password) {
+        showError('No password found');
+        return;
+    }
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(password);
+        } else {
+            const input = el('export_password');
+            if (input) {
+                input.type = 'text';
+                input.select();
+                document.execCommand('copy');
+                input.type = 'password';
+            } else {
+                throw new Error('Clipboard not available');
+            }
+        }
+        showSuccess('Password copied to clipboard');
+    } catch (e) {
+        showError('Failed to copy password');
+    }
+};
+
+window.togglePasswordVisibility = () => {
+    const input = el('export_password');
+    const toggleBtn = el('toggle_password_btn');
+    if (!input || !toggleBtn) return;
+
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    toggleBtn.textContent = isHidden ? '🙈' : '👁️';
+};
+
 window.loadSchema = async () => {
     clearError();
     clearSuccess();
@@ -418,4 +478,5 @@ window.saveGroups = async () => {
 // initial load
 window.addEventListener('load', () => {
     loadSchema();
+    initExportPassword();
 });

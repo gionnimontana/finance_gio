@@ -148,10 +148,12 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Progress banner shows: asset name, value, running portfolio delta vs prev month
 - Dashboard deltas show `—` for percent when baseline total is missing or zero
 - Old URLs (dashboard.html, assets.html, history.html) redirect to new folder structure
+- Assets page includes an Export password action (masked input by default, copy to clipboard)
 
 History page notes:
 - `3-Month Change` is computed vs the value 3 months earlier (not vs the first datapoint)
 - History summary percentages show `—` when baseline totals are missing or zero
+- History chart uses horizontal scroll; on mobile the chart container left-aligns to keep earliest months reachable
 
 ## Common Tasks
 

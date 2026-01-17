@@ -702,12 +702,12 @@
   {
     "label": "Jan 2026",
     "date": "2026-01",
-    "total": 453029.11,
+    "total": 452891.15,
     "Liquidity": {
       "total": 57804.66
     },
     "Crypto": {
-      "total": 99702.68
+      "total": 99564.72
     },
     "Houses": {
       "total": 0

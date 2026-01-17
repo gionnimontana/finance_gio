@@ -5,3 +5,37 @@ td.actions {
     white-space: nowrap;
     text-align: right;
 }
+
+.footer_actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.password_export {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.password_export input {
+    width: 220px;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.footer_actions .nav_link,
+.password_export .btn {
+    height: 38px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    line-height: 1;
+}
