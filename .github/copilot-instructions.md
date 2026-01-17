@@ -146,10 +146,12 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Use consistent `.nav_link` class for all navigation/action buttons
 - Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
 - Progress banner shows: asset name, value, running portfolio delta vs prev month
+- Dashboard deltas show `—` for percent when baseline total is missing or zero
 - Old URLs (dashboard.html, assets.html, history.html) redirect to new folder structure
 
 History page notes:
 - `3-Month Change` is computed vs the value 3 months earlier (not vs the first datapoint)
+- History summary percentages show `—` when baseline totals are missing or zero
 
 ## Common Tasks
 

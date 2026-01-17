@@ -343,16 +343,18 @@ const renderPortfolioData = (portfolio) => {
     const initYearNetworth = portfolio.initYearNetworth;
 
     const delta = total - initYearNetworth;
-    const deltaPercentage = (delta / initYearNetworth) * 100;
-    const deltaPercentageLabel = deltaPercentage > 0 ? '🚀' : '🔥';
+    const hasInitYear = typeof initYearNetworth === 'number' && initYearNetworth > 0;
+    const deltaPercentage = hasInitYear ? (delta / initYearNetworth) * 100 : null;
+    const deltaPercentageLabel = delta >= 0 ? '🚀' : '🔥';
     const prevMonthdelta = total - prevMonthTotal;
-    const prevMonthdeltaPercentage = (prevMonthdelta / prevMonthTotal) * 100;
-    const prevMonthdeltaPercentageLabel = prevMonthdeltaPercentage > 0 ? '🚀' : '🔥';
+    const hasPrevMonth = typeof prevMonthTotal === 'number' && prevMonthTotal > 0;
+    const prevMonthdeltaPercentage = hasPrevMonth ? (prevMonthdelta / prevMonthTotal) * 100 : null;
+    const prevMonthdeltaPercentageLabel = prevMonthdelta >= 0 ? '🚀' : '🔥';
 
     // Update overview values
     document.getElementById('total_value').innerHTML = t(total);
-    document.getElementById('delta_value').innerHTML = `${t(delta)} (${t(deltaPercentage)}%) ${deltaPercentageLabel}`;
-    document.getElementById('prevMonth_delta_value').innerHTML = `${t(prevMonthdelta)} (${t(prevMonthdeltaPercentage)}%) ${prevMonthdeltaPercentageLabel}`;
+    document.getElementById('delta_value').innerHTML = `${t(delta)} (${deltaPercentage === null ? '—' : t(deltaPercentage) + '%'}) ${deltaPercentageLabel}`;
+    document.getElementById('prevMonth_delta_value').innerHTML = `${t(prevMonthdelta)} (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'}) ${prevMonthdeltaPercentageLabel}`;
 
     // Show/hide error banner based on failures
     const errorBanner = document.getElementById('error_banner');
