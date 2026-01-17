@@ -3,7 +3,7 @@
 # Personal Finance Bot - Deploy Script
 # Pulls latest changes, copies frontend to nginx, and restarts the server
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -25,9 +25,8 @@ sudo apt-get install -y \
 	libgtk-3-0 libgbm1 libdrm2 libxshmfence1
 
 echo "📂 Deploying frontend to nginx..."
-sudo rm -rf /var/www/finance.gingergio.it/*
 sudo mkdir -p /var/www/finance.gingergio.it
-sudo cp -r view/* /var/www/finance.gingergio.it/
+sudo rsync -a --delete view/ /var/www/finance.gingergio.it/
 sudo chown -R www-data:www-data /var/www/finance.gingergio.it
 
 echo "🛠️  Ensuring systemd service exists..."
