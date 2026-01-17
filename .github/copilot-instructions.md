@@ -183,6 +183,7 @@ open http://localhost:8085/login/
 - `deploy.sh` uses `rsync -a --delete` to keep nginx frontend in sync with `view/`.
 - `deploy.sh` provisions a systemd service (`finance-bot`) for auto-restart and logs via journald.
 - `deploy.sh` installs system libraries required by Puppeteer.
+- Ubuntu 24.04 uses `libasound2t64` (not `libasound2`).
 
 ## Environment Variables
 
