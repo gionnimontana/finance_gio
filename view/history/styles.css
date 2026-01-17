@@ -98,3 +98,43 @@
     font-weight: bold;
     color: #333;
 }
+
+#history_table {
+    overflow-x: auto;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .table_section {
+        padding: 10px;
+        margin: 10px;
+    }
+    
+    .history_table th, 
+    .history_table td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    /* Sticky first column on mobile */
+    .history_table th:first-child,
+    .history_table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        border-right: 1px solid #ddd;
+    }
+
+    .history_table th:first-child {
+        background-color: #f5f5f5;
+    }
+
+    .history_table td:first-child {
+        background-color: #fff;
+    }
+
+    /* Fix hover state for sticky column */
+    .history_table tbody tr:hover td:first-child {
+        background-color: #f9f9f9;
+    }
+}

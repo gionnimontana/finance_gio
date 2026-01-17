@@ -285,7 +285,7 @@ input, select {
 /* Mobile Bottom Navigation */
 @media (max-width: 768px) {
     body {
-        padding-bottom: 80px; /* Space for bottom nav */
+        padding-bottom: calc(70px + env(safe-area-inset-bottom)); /* Ensure content isn't hidden */
     }
 
     #page_title {
@@ -297,13 +297,15 @@ input, select {
         position: fixed;
         bottom: 0;
         left: 0;
-        right: 0;
+        width: 100%; /* Ensure full width */
         background-color: #333;
-        padding: 10px;
-        justify-content: space-around;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) 10px; /* Safe area padding */
+        display: flex;
+        justify-content: space-evenly; /* Even spacing */
         align-items: center;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        z-index: 9999; /* High z-index to overlay everything */
+        box-sizing: border-box; /* Include padding in width */
     }
 
     .nav_link {
@@ -315,6 +317,7 @@ input, select {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 120px; /* Prevent single buttons from being too wide */
     }
 
     /* Adjust specific buttons on mobile if needed */
