@@ -281,3 +281,44 @@ input, select {
 .change_cell.negative {
     color: #f44336;
 }
+
+/* Mobile Bottom Navigation */
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+
+    #page_title {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .nav_links {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #333;
+        padding: 10px;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        z-index: 1000;
+    }
+
+    .nav_link {
+        flex: 1;
+        text-align: center;
+        margin: 0 4px;
+        font-size: 12px;
+        padding: 8px 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Adjust specific buttons on mobile if needed */
+    .nav_link.danger {
+        /* Logout button style adjustments if it were here */
+    }
+}
