@@ -1,6 +1,6 @@
-# Personal Finance Bot
+# Billy Tracker 🕵
 
-A personal finance portfolio tracker that scrapes real-time asset prices and displays an interactive dashboard with portfolio visualization.
+A financial asset tracker that scrapes real-time asset prices and displays an interactive dashboard with portfolio visualization.
 
 ## Features
 
