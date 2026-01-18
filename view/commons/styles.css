@@ -9,6 +9,19 @@ body {
     font-size: 14px;
 }
 
+/* Site Footer */
+.site_footer {
+    margin: 30px 20px 20px;
+    padding: 14px 16px;
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    background-color: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 5px;
+}
+
 /* Page Title / Header */
 #page_title {
     display: flex;

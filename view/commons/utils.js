@@ -1,5 +1,8 @@
 // Common utilities shared across all pages
 
+// Shared footer copy
+const FOOTER_COPY = 'This site does not track any user activity, and all sections are completely anonymous.';
+
 // Base path for the app (root deployment)
 const BASE_PATH = '';
 
@@ -134,3 +137,16 @@ const clearSuccess = (bannerId = 'success_banner') => {
         banner.classList.remove('visible');
     }
 };
+
+const renderSiteFooter = () => {
+    const footers = document.querySelectorAll('.site_footer');
+    footers.forEach((footer) => {
+        footer.textContent = FOOTER_COPY;
+    });
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderSiteFooter);
+} else {
+    renderSiteFooter();
+}

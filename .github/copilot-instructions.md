@@ -144,6 +144,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Common JS utilities in `view/commons/utils.js` (API_BASE, authFetch, getPassword, etc.)
 - Each route has its own folder: `login/`, `dashboard/`, `assets/`, `history/`
 - Use consistent `.nav_link` class for all navigation/action buttons
+- All pages include a `.site_footer` privacy notice footer (copy injected from `view/commons/utils.js`)
 - Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
 - Progress banner shows: asset name, value, running portfolio delta vs prev month
 - Dashboard deltas show `—` for percent when baseline total is missing or zero
