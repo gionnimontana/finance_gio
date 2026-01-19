@@ -88,6 +88,15 @@ body {
     cursor: not-allowed;
 }
 
+#abs_toggle_btn {
+    background-color: #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#abs_toggle_btn:hover {
+    background-color: #444;
+}
+
 /* Containers */
 .container {
     margin: 20px;
@@ -362,6 +371,8 @@ body.hide_absolute .pct_placeholder {
         width: auto;
         max-width: none;
         padding: 8px 10px;
+        background-color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         z-index: 10000;
     }
 
