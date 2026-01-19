@@ -60,13 +60,13 @@ const updateProgress = (data) => {
         const diffPct = prevValue !== 0 ? (diff / prevValue) * 100 : 0;
         const sign = diff >= 0 ? '+' : '';
         const diffClass = diff >= 0 ? 'positive' : 'negative';
-        diffHtml = `<span class="asset_diff ${diffClass}">${sign}€${t(diff)} (${sign}${t(diffPct)}%)</span>`;
+        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${t(diff)}</span><span class="pct_value"> (${sign}${t(diffPct)}%)</span></span>`;
     }
 
     // Append asset to list
     const valueDisplay = failed 
         ? '<span class="asset_value failed">❌ Failed</span>'
-        : `<span class="asset_value">€${t(assetTotal || 0)} ✓</span>${diffHtml}`;
+        : `<span class="asset_value"><span class="abs_value">€${t(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
     
     const assetRow = document.createElement('div');
     assetRow.className = 'progress_asset_row';
@@ -84,7 +84,7 @@ const updateProgress = (data) => {
         const emoji = runningDelta >= 0 ? '🚀' : '🔥';
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.textContent = `${sign}€${t(runningDelta)} (${sign}${t(deltaPercentage)}%) ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${sign}€${t(runningDelta)}</span><span class="pct_value"> (${sign}${t(deltaPercentage)}%)</span> ${emoji}`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
@@ -178,7 +178,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
-    let mainRowValueHtml = `${t(categoryData.total)} (${categoryPct}%)`;
+    let mainRowValueHtml = `<span class="abs_value">${t(categoryData.total)}</span><span class="pct_value"> (${categoryPct}%)</span>`;
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';
@@ -189,7 +189,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
             subrowsHtml += `
                 <div class="subrow">
                     <div class="subrow_title">${label}:</div>
-                    <div class="subrow_value">${t(detail.total)} (${assetPct}%)</div>
+                    <div class="subrow_value"><span class="abs_value">${t(detail.total)}</span><span class="pct_value"> (${assetPct}%)</span></div>
                 </div>
             `;
         }
@@ -352,9 +352,17 @@ const renderPortfolioData = (portfolio) => {
     const prevMonthdeltaPercentageLabel = prevMonthdelta >= 0 ? '🚀' : '🔥';
 
     // Update overview values
-    document.getElementById('total_value').innerHTML = t(total);
-    document.getElementById('delta_value').innerHTML = `${t(delta)} (${deltaPercentage === null ? '—' : t(deltaPercentage) + '%'}) ${deltaPercentageLabel}`;
-    document.getElementById('prevMonth_delta_value').innerHTML = `${t(prevMonthdelta)} (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'}) ${prevMonthdeltaPercentageLabel}`;
+    document.getElementById('total_value').innerHTML = `<span class="abs_value">${t(total)}</span><span class="pct_value pct_placeholder">—</span>`;
+    document.getElementById('delta_value').innerHTML = `
+        <span class="abs_value">${t(delta)}</span>
+        <span class="pct_value"> (${deltaPercentage === null ? '—' : t(deltaPercentage) + '%'})</span>
+        ${deltaPercentageLabel}
+    `;
+    document.getElementById('prevMonth_delta_value').innerHTML = `
+        <span class="abs_value">${t(prevMonthdelta)}</span>
+        <span class="pct_value"> (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'})</span>
+        ${prevMonthdeltaPercentageLabel}
+    `;
 
     // Show/hide error banner based on failures
     const errorBanner = document.getElementById('error_banner');
@@ -372,6 +380,13 @@ const renderPortfolioData = (portfolio) => {
     // Render the pie chart
     ChartModule.renderPieChart('portfolio_chart', portfolio);
 }
+
+window.addEventListener('absolute-visibility-change', () => {
+    const cached = JSON.parse(localStorage.getItem('portfolio') || 'null');
+    if (cached) {
+        renderPortfolioData(cached);
+    }
+});
 
 // Initialize on page load
 renderPortfolio();

@@ -21,7 +21,7 @@ const renderSummaryCards = (historyData) => {
     const baseline = historyData[baselineIndex];
     
     // Current total
-    document.getElementById('current_total').innerHTML = `€${t(latest.total)}`;
+    document.getElementById('current_total').innerHTML = `<span class="abs_value">€${t(latest.total)}</span><span class="pct_value pct_placeholder">—</span>`;
     
     // Change vs N months back
     const totalChange = latest.total - baseline.total;
@@ -29,7 +29,10 @@ const renderSummaryCards = (historyData) => {
     const totalChangePct = hasBaseline ? ((totalChange / baseline.total) * 100).toFixed(1) : null;
     const changeClass = totalChange >= 0 ? 'positive' : 'negative';
     const changeSign = totalChange >= 0 ? '+' : '';
-    document.getElementById('total_change').innerHTML = `${changeSign}€${t(totalChange)} (${totalChangePct === null ? '—' : changeSign + totalChangePct + '%'})`;
+    document.getElementById('total_change').innerHTML = `
+        <span class="abs_value">${changeSign}€${t(totalChange)}</span>
+        <span class="pct_value"> (${totalChangePct === null ? '—' : changeSign + totalChangePct + '%'})</span>
+    `;
     document.getElementById('total_change').className = `summary_card_value ${changeClass}`;
     
     // Average monthly growth over entire history
@@ -41,14 +44,20 @@ const renderSummaryCards = (historyData) => {
     const avgMonthlyGrowthPct = hasHistoryBaseline ? ((avgMonthlyGrowth / first.total) * 100).toFixed(2) : null;
     const avgClass = totalGrowth >= 0 ? 'positive' : 'negative';
     const avgSign = totalGrowth >= 0 ? '+' : '';
-    document.getElementById('avg_growth').innerHTML = `${avgMonthlyGrowthPct === null ? '—' : avgSign + avgMonthlyGrowthPct + '%'}`;
+    document.getElementById('avg_growth').innerHTML = `<span class="pct_value">${avgMonthlyGrowthPct === null ? '—' : avgSign + avgMonthlyGrowthPct + '%'}</span>`;
     document.getElementById('avg_growth').className = `summary_card_value ${avgClass}`;
 };
+
+let cachedHistoryData = null;
+let cachedHistoryViewGroups = null;
 
 const renderHistory = async () => {
     const historyData = await fetchHistoricalData();
     const schema = await fetchAssetsSchema().catch(() => null);
     const viewGroups = Array.isArray(schema?.viewGroups) ? schema.viewGroups : null;
+
+    cachedHistoryData = historyData;
+    cachedHistoryViewGroups = viewGroups;
     
     // Render summary cards
     renderSummaryCards(historyData);
@@ -59,5 +68,12 @@ const renderHistory = async () => {
     // Render the detailed table
     HistoryChartModule.renderHistoryTable('history_table', historyData, viewGroups);
 };
+
+window.addEventListener('absolute-visibility-change', () => {
+    if (!cachedHistoryData) return;
+    renderSummaryCards(cachedHistoryData);
+    HistoryChartModule.renderColumnChart('history_chart', cachedHistoryData, cachedHistoryViewGroups);
+    HistoryChartModule.renderHistoryTable('history_table', cachedHistoryData, cachedHistoryViewGroups);
+});
 
 renderHistory();

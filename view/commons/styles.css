@@ -246,6 +246,28 @@ input, select {
     margin-top: 6px;
 }
 
+/* Privacy toggle (hide absolute values) */
+.abs_value {
+    display: inline;
+}
+
+.pct_value {
+    display: inline;
+}
+
+.pct_placeholder {
+    display: none;
+    color: #777;
+}
+
+body.hide_absolute .abs_value {
+    display: none !important;
+}
+
+body.hide_absolute .pct_placeholder {
+    display: inline;
+}
+
 /* Summary Cards (used in history, can be shared) */
 .summary_cards {
     display: flex;
@@ -331,6 +353,16 @@ input, select {
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 120px; /* Prevent single buttons from being too wide */
+    }
+
+    #abs_toggle_btn {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+        padding: 8px 10px;
+        z-index: 10000;
     }
 
     /* Adjust specific buttons on mobile if needed */

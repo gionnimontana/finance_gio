@@ -44,6 +44,7 @@ const HistoryChartModule = (() => {
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
+        const hideAbsolute = typeof window.isAbsoluteHidden === 'function' && window.isAbsoluteHidden();
         const padding = { top: 40, right: 30, bottom: 120, left: 80 };
         const chartWidth = canvas.width - padding.left - padding.right;
         const chartHeight = canvas.height - padding.top - padding.bottom;
@@ -100,9 +101,11 @@ const HistoryChartModule = (() => {
             ctx.stroke();
 
             // Label
-            ctx.fillStyle = '#333';
-            const labelValue = value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0);
-            ctx.fillText(labelValue, padding.left - 10, y);
+            if (!hideAbsolute) {
+                ctx.fillStyle = '#333';
+                const labelValue = value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0);
+                ctx.fillText(labelValue, padding.left - 10, y);
+            }
         }
 
         // Draw columns
@@ -142,12 +145,14 @@ const HistoryChartModule = (() => {
             ctx.restore();
 
             // Draw total value on top of column
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 11px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            const totalLabel = month.total >= 1000 ? `${(month.total / 1000).toFixed(1)}k` : month.total.toFixed(0);
-            ctx.fillText(totalLabel, x + columnWidth / 2, currentY - 5);
+            if (!hideAbsolute) {
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 11px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                const totalLabel = month.total >= 1000 ? `${(month.total / 1000).toFixed(1)}k` : month.total.toFixed(0);
+                ctx.fillText(totalLabel, x + columnWidth / 2, currentY - 5);
+            }
         });
 
         // Draw legend
@@ -222,7 +227,7 @@ const HistoryChartModule = (() => {
             const change = prevTotal ? month.total - prevTotal : null;
             const changeClass = change !== null ? (change >= 0 ? 'positive' : 'negative') : '';
             const changeLabel = change !== null 
-                ? `${change >= 0 ? '+' : ''}${t(change)} (${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%)`
+                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${t(change)}</span><span class="pct_value"> (${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%)</span>`
                 : '-';
 
             html += `<tr>
@@ -231,10 +236,10 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
                 const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                html += `<td class="col-${cls}">${t(value)}</td>`;
+                html += `<td class="col-${cls}"><span class="abs_value">${t(value)}</span><span class="pct_value pct_placeholder">—</span></td>`;
             });
 
-            html += `<td class="total_cell">${t(month.total)}</td>
+            html += `<td class="total_cell"><span class="abs_value">${t(month.total)}</span><span class="pct_value pct_placeholder">—</span></td>
                 <td class="change_cell ${changeClass}">${changeLabel}</td>
             </tr>`;
         });

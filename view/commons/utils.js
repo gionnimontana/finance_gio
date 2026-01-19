@@ -21,6 +21,9 @@ const API_BASE = (() => {
 // Password storage key
 const PASSWORD_KEY = 'userPassword';
 
+// Absolute values visibility key
+const ABS_VISIBILITY_KEY = 'hideAbsoluteValues';
+
 // Get stored password
 const getPassword = () => localStorage.getItem(PASSWORD_KEY);
 
@@ -29,6 +32,30 @@ const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
 
 // Clear password (logout)
 const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
+
+// Absolute values visibility helpers
+const isAbsoluteHidden = () => localStorage.getItem(ABS_VISIBILITY_KEY) === '1';
+
+const updateAbsoluteToggleButton = (hidden) => {
+    const btn = el('abs_toggle_btn');
+    if (!btn) return;
+    btn.innerHTML = hidden ? '🙈' : '👁️';
+    btn.title = hidden ? 'Show absolute values' : 'Hide absolute values';
+    btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+};
+
+const applyAbsoluteVisibility = (hidden = isAbsoluteHidden()) => {
+    document.body.classList.toggle('hide_absolute', hidden);
+    updateAbsoluteToggleButton(hidden);
+    window.dispatchEvent(new CustomEvent('absolute-visibility-change', { detail: { hidden } }));
+};
+
+const setAbsoluteHidden = (hidden) => {
+    localStorage.setItem(ABS_VISIBILITY_KEY, hidden ? '1' : '0');
+    applyAbsoluteVisibility(hidden);
+};
+
+const toggleAbsoluteVisibility = () => setAbsoluteHidden(!isAbsoluteHidden());
 
 // Logout and redirect to login
 const logout = () => {
@@ -150,3 +177,19 @@ if (document.readyState === 'loading') {
 } else {
     renderSiteFooter();
 }
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        applyAbsoluteVisibility();
+        const btn = el('abs_toggle_btn');
+        if (btn) btn.addEventListener('click', toggleAbsoluteVisibility);
+    });
+} else {
+    applyAbsoluteVisibility();
+    const btn = el('abs_toggle_btn');
+    if (btn) btn.addEventListener('click', toggleAbsoluteVisibility);
+}
+
+window.isAbsoluteHidden = isAbsoluteHidden;
+window.applyAbsoluteVisibility = applyAbsoluteVisibility;
+window.toggleAbsoluteVisibility = toggleAbsoluteVisibility;
