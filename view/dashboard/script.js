@@ -10,6 +10,7 @@ let initialPortfolioTotal = null;
 let previousAssetValues = {}; // Map of assetId -> previous total value
 let previousCachedTotal = null; // Total from cached portfolio for delta calculation
 let runningDelta = 0; // Accumulated delta from individual asset changes
+const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 
 // Show progress banner
 const showProgressBanner = () => {
@@ -135,6 +136,7 @@ const streamPortfolioRefresh = () => {
             refreshButton.innerHTML = originalLabel;
 
             localStorage.setItem('portfolio', JSON.stringify(portfolio));
+            setLastUpdateNow();
             resolve(portfolio);
         });
 
@@ -152,6 +154,7 @@ const streamPortfolioRefresh = () => {
             // Fallback to regular fetch on error
             fetchData(true).then(portfolio => {
                 localStorage.setItem('portfolio', JSON.stringify(portfolio));
+                setLastUpdateNow();
                 resolve(portfolio);
             }).catch(reject);
         });
@@ -167,6 +170,7 @@ const streamPortfolioRefresh = () => {
             // Fallback to regular fetch
             fetchData(true).then(portfolio => {
                 localStorage.setItem('portfolio', JSON.stringify(portfolio));
+                setLastUpdateNow();
                 resolve(portfolio);
             }).catch(reject);
         };
@@ -251,6 +255,7 @@ const getPortfolio = async (refresh) => {
             try {
                 const newPortfolio = await fetchData(false);
                 localStorage.setItem('portfolio', JSON.stringify(newPortfolio));
+                setLastUpdateNow();
                 return newPortfolio;
             } finally {
                 refreshButton.disabled = false;
@@ -363,6 +368,7 @@ const renderPortfolioData = (portfolio) => {
         <span class="pct_value"> (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'})</span>
         ${prevMonthdeltaPercentageLabel}
     `;
+    renderLastUpdate();
 
     // Show/hide error banner based on failures
     const errorBanner = document.getElementById('error_banner');
@@ -380,6 +386,34 @@ const renderPortfolioData = (portfolio) => {
     // Render the pie chart
     ChartModule.renderPieChart('portfolio_chart', portfolio);
 }
+
+const renderLastUpdate = () => {
+    const el = document.getElementById('last_update_value');
+    if (!el) return;
+
+    const raw = localStorage.getItem(LAST_UPDATE_KEY);
+    if (!raw) {
+        el.textContent = '—';
+        return;
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        el.textContent = '—';
+        return;
+    }
+
+    el.textContent = date.toLocaleString();
+};
+
+const setLastUpdateNow = () => {
+    try {
+        localStorage.setItem(LAST_UPDATE_KEY, new Date().toISOString());
+    } catch (e) {
+        // ignore
+    }
+    renderLastUpdate();
+};
 
 window.addEventListener('absolute-visibility-change', () => {
     const cached = JSON.parse(localStorage.getItem('portfolio') || 'null');

@@ -136,6 +136,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 ### Frontend
 - Use localStorage for caching portfolio data and user password
 - Absolute-value privacy toggle uses localStorage key `hideAbsoluteValues` and body class `hide_absolute`
+- Dashboard refresh stores last update timestamp in localStorage key `portfolioLastUpdate`
 - Wrap absolute values in `.abs_value` and percentages in `.pct_value` (use `.pct_placeholder` where no percent)
 - All API calls use `authFetch()` from utils.js (adds X-User-Password header)
 - Each protected page calls `requireAuth()` at start to redirect to login if needed
