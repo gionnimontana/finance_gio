@@ -138,6 +138,8 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Absolute-value privacy toggle uses localStorage key `hideAbsoluteValues` and body class `hide_absolute`
 - Dashboard refresh stores last update timestamp in localStorage key `portfolioLastUpdate`
 - Wrap absolute values in `.abs_value` and percentages in `.pct_value` (use `.pct_placeholder` where no percent)
+- History monthly breakdown shows per-column percentages so hidden mode still displays values
+- History hides Current Total card and Total column when absolute values are hidden
 - All API calls use `authFetch()` from utils.js (adds X-User-Password header)
 - Each protected page calls `requireAuth()` at start to redirect to login if needed
 - Show cached data immediately while refreshing

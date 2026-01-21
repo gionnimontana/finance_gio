@@ -207,7 +207,16 @@ const HistoryChartModule = (() => {
             viewGroups.sort((a, b) => a.localeCompare(b));
         }
         const t = (num) => num.toFixed(2);
-        const pct = (value, total) => ((value / total) * 100).toFixed(1);
+        const pct = (value, total) => {
+            if (!total || total <= 0) return null;
+            return ((value / total) * 100).toFixed(1);
+        };
+        const pctSpan = (value, total) => {
+            const p = pct(value, total);
+            return p === null
+                ? '<span class="pct_value pct_placeholder">—</span>'
+                : `<span class="pct_value"> (${p}%)</span>`;
+        };
 
         let html = '<table class="history_table">';
         
@@ -218,7 +227,7 @@ const HistoryChartModule = (() => {
             const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
             html += `<th class="col-${cls}">${group}</th>`;
         });
-        html += '<th>Total</th><th>Change</th></tr></thead>';
+        html += '<th class="total_column">Total</th><th>Change</th></tr></thead>';
 
         // Body
         html += '<tbody>';
@@ -236,10 +245,10 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
                 const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                html += `<td class="col-${cls}"><span class="abs_value">${t(value)}</span><span class="pct_value pct_placeholder">—</span></td>`;
+                html += `<td class="col-${cls}"><span class="abs_value">${t(value)}</span>${pctSpan(value, month.total)}</td>`;
             });
 
-            html += `<td class="total_cell"><span class="abs_value">${t(month.total)}</span><span class="pct_value pct_placeholder">—</span></td>
+            html += `<td class="total_cell total_column"><span class="abs_value">${t(month.total)}</span>${pctSpan(month.total, month.total)}</td>
                 <td class="change_cell ${changeClass}">${changeLabel}</td>
             </tr>`;
         });

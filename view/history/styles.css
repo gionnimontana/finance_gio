@@ -116,6 +116,15 @@
     width: 100%;
 }
 
+body.hide_absolute .hide_when_hidden {
+    display: none !important;
+}
+
+body.hide_absolute .history_table th.total_column,
+body.hide_absolute .history_table td.total_column {
+    display: none !important;
+}
+
 @media (max-width: 768px) {
     .chart_section {
         margin: 10px;
