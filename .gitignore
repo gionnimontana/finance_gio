@@ -1,5 +1,4 @@
 node_modules
 /.env
-data/users/*/assetsSchema.json
-data/users/*/historicalData.json
+data/*/*/*
 server.log
