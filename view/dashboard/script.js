@@ -11,6 +11,7 @@ let previousAssetValues = {}; // Map of assetId -> previous total value
 let previousCachedTotal = null; // Total from cached portfolio for delta calculation
 let runningDelta = 0; // Accumulated delta from individual asset changes
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
+const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 
 // Show progress banner
 const showProgressBanner = () => {
@@ -35,12 +36,79 @@ const hideProgressBanner = () => {
     banner.classList.remove('completed');
 };
 
+const clearProgressBannerState = () => {
+    try {
+        localStorage.removeItem(PROGRESS_BANNER_KEY);
+    } catch (e) {
+        // ignore
+    }
+};
+
+// Close progress banner (keeps last update timestamp in dashboard card)
+const closeProgressBanner = () => {
+    hideProgressBanner();
+    clearProgressBannerState();
+};
+
+// Format date for progress banner title
+const formatProgressBannerTitle = () => {
+    const raw = localStorage.getItem(LAST_UPDATE_KEY);
+    if (!raw) return '✅ Refresh Complete';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return '✅ Refresh Complete';
+    return `✅ Updated: ${date.toLocaleString()}`;
+};
+
 // Mark progress as complete (keep visible with close button)
 const completeProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('completed');
-    document.getElementById('progress_title').textContent = '✅ Refresh Complete';
+    document.getElementById('progress_title').textContent = formatProgressBannerTitle();
     document.getElementById('progress_close').style.display = 'block';
+    
+    // Save progress banner state for persistence across page refresh
+    saveProgressBannerState();
+};
+
+// Save progress banner state to localStorage
+const saveProgressBannerState = () => {
+    try {
+        const state = {
+            assetsListHtml: document.getElementById('progress_assets_list').innerHTML,
+            deltaHtml: document.getElementById('progress_delta').innerHTML,
+            deltaClass: document.getElementById('progress_delta').className,
+            counter: document.getElementById('progress_counter').textContent
+        };
+        localStorage.setItem(PROGRESS_BANNER_KEY, JSON.stringify(state));
+    } catch (e) {
+        // ignore
+    }
+};
+
+// Restore progress banner from localStorage
+const restoreProgressBanner = () => {
+    try {
+        const raw = localStorage.getItem(PROGRESS_BANNER_KEY);
+        if (!raw) return false;
+        
+        const state = JSON.parse(raw);
+        if (!state || !state.assetsListHtml) return false;
+        
+        const banner = document.getElementById('progress_banner');
+        banner.classList.add('visible');
+        banner.classList.add('completed');
+        document.getElementById('progress_title').textContent = formatProgressBannerTitle();
+        document.getElementById('progress_close').style.display = 'block';
+        document.getElementById('progress_bar').style.width = '100%';
+        document.getElementById('progress_counter').textContent = state.counter || '';
+        document.getElementById('progress_assets_list').innerHTML = state.assetsListHtml;
+        document.getElementById('progress_delta').innerHTML = state.deltaHtml || '';
+        document.getElementById('progress_delta').className = state.deltaClass || 'progress_delta';
+        
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 // Update progress display
@@ -423,4 +491,6 @@ window.addEventListener('absolute-visibility-change', () => {
 });
 
 // Initialize on page load
+renderLastUpdate();
+restoreProgressBanner();
 renderPortfolio();

@@ -702,21 +702,41 @@
   {
     "label": "Jan 2026",
     "date": "2026-01",
-    "total": 435568.15,
+    "total": 440339.23,
     "Liquidity": {
       "total": 57804.66
     },
     "Crypto": {
-      "total": 89935.87
+      "total": 90131.95
     },
     "Houses": {
       "total": 0
     },
     "Equity": {
-      "total": 267786.12
+      "total": 272170.62
     },
     "Gold": {
-      "total": 20041.5
+      "total": 20232
+    }
+  },
+  {
+    "label": "Feb 2026",
+    "date": "2026-02",
+    "total": 423205.87,
+    "Liquidity": {
+      "total": 57837.96
+    },
+    "Crypto": {
+      "total": 74755.13
+    },
+    "Houses": {
+      "total": 0
+    },
+    "Equity": {
+      "total": 270643.28
+    },
+    "Gold": {
+      "total": 19969.5
     }
   }
 ]
