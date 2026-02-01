@@ -165,13 +165,13 @@ History page notes:
 ## Common Tasks
 
 ### Adding a New Asset
-1. Add entry to `data/assetsSchema.json` with correct assetClass and viewGroup
+1. Add entry to `data/users/{hash}/assetsSchema.json` with correct assetClass and viewGroup
 2. If new assetClass, create scraper in `src/scrapers/vendors/`
 3. Export scraper in `src/scrapers/index.js`
 4. Add scraper logic to `src/scripts/portfolio/index.js`
 
 ### Adding Historical Data
-Add monthly snapshot to `data/historicalData.json` (or let the app auto-update it)
+Add monthly snapshot to `data/users/{hash}/historicalData.json` (or let the app auto-update it)
 
 ## Running the App
 
