@@ -76,7 +76,7 @@ This is a personal finance portfolio tracker application that:
 ## API Endpoints
 
 ### Authentication (no auth required)
-- `POST /auth/generate` - Generate new 5-word Italian password, creates user folder
+- `POST /auth/generate` - Generate new 5-word Italian password, creates user folder, globally limited to 5 successful creations every 30 minutes per app instance (`429` + `retryAfterSeconds` when saturated)
 - `POST /auth/validate` - Validate password exists: `{ password }` → `{ valid: boolean }`
 
 ### Protected endpoints (require `X-User-Password` header)
@@ -120,6 +120,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - Each user has a unique password: 5 random Italian words joined by dashes (e.g. `casa-luna-libro-mare-sole`)
 - Passwords are hashed (SHA-256) to create folder names in `data/users/{hash}/`
 - No recovery mechanism - lost password = lost data
+- Account generation is protected by an in-memory global rolling limit: max 5 successful creations every 30 minutes per app instance
 - Password stored in `localStorage.userPassword` on frontend
 - Frontend uses `authFetch()` wrapper to add `X-User-Password` header
 - SSE streams use password as query param (headers unreliable for SSE)
@@ -142,6 +143,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - History hides Current Total card and Total column when absolute values are hidden
 - All API calls use `authFetch()` from utils.js (adds X-User-Password header)
 - Each protected page calls `requireAuth()` at start to redirect to login if needed
+- Login page should surface `429` account-generation responses with the backend-provided retry hint
 - Show cached data immediately while refreshing
 - Display error banner when scrapers fail
 - Ensure HTML pages include UTF-8 meta charset

@@ -53,7 +53,7 @@ The app runs on `http://localhost:8085`
 ## API Endpoints
 
 ### Public
-- `POST /auth/generate` - Generate new password
+- `POST /auth/generate` - Generate new password (globally limited to 5 successful account creations every 30 minutes per app instance; returns `429` with `retryAfterSeconds` when saturated)
 - `POST /auth/validate` - Validate existing password
 
 ### Protected (requires `X-User-Password` header)
@@ -91,6 +91,11 @@ Create a `.env` file for configuration (loaded via dotenv).
 - The app is served from the root of the subdomain (e.g. https://finance.gingergio.it/).
 - Nginx can serve the frontend from `/var/www/finance.gingergio.it` and proxy API requests to port 8085.
 - `deploy.sh` copies `view/` into `/var/www/finance.gingergio.it` after pull.
+
+## Operational Notes
+
+- `POST /auth/generate` uses an in-memory rolling window and allows at most 5 successful account creations every 30 minutes on a single Node.js instance.
+- The account-creation limiter resets on process restart because it is intentionally instance-local and does not use shared storage.
 
 ## License
 

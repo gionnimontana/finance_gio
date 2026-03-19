@@ -43,12 +43,44 @@ const generateNewPassword = async () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
+
         const data = await res.json();
-        return data.password || null;
+
+        if (!res.ok) {
+            return {
+                password: null,
+                error: data?.error || 'Failed to generate password',
+                code: data?.code || null,
+                retryAfterSeconds: data?.retryAfterSeconds || 0
+            };
+        }
+
+        return {
+            password: data.password || null,
+            error: null,
+            code: null,
+            retryAfterSeconds: 0
+        };
     } catch (error) {
         console.error('Generation failed:', error);
-        return null;
+        return {
+            password: null,
+            error: 'Failed to generate password. Please try again.',
+            code: null,
+            retryAfterSeconds: 0
+        };
     }
+};
+
+const formatRetryAfterMessage = (retryAfterSeconds) => {
+    if (!retryAfterSeconds) {
+        return 'Account creation is temporarily unavailable. Please try again later.';
+    }
+
+    const retryAfterMinutes = Math.ceil(retryAfterSeconds / 60);
+    const minuteLabel = retryAfterMinutes === 1 ? 'minute' : 'minutes';
+
+    return `Account creation is temporarily unavailable. Please try again in about ${retryAfterMinutes} ${minuteLabel}.`;
 };
 
 // Show error message
@@ -97,18 +129,23 @@ const handleGenerate = async () => {
     el('generate_btn').disabled = true;
     el('generate_btn').textContent = 'Generating...';
     
-    const password = await generateNewPassword();
+    const result = await generateNewPassword();
     
-    if (password) {
+    if (result.password) {
         // Store the password immediately
-        setPassword(password);
+        setPassword(result.password);
         
         // Show the generated password screen
         el('login_form').style.display = 'none';
         el('generated_password').classList.remove('hidden');
-        el('new_password').textContent = password;
+        el('new_password').textContent = result.password;
     } else {
-        showLoginError('Failed to generate password. Please try again.');
+        if (result.code === 'ACCOUNT_GENERATION_RATE_LIMITED') {
+            showLoginError(formatRetryAfterMessage(result.retryAfterSeconds));
+        } else {
+            showLoginError(result.error || 'Failed to generate password. Please try again.');
+        }
+
         el('generate_btn').disabled = false;
         el('generate_btn').textContent = 'Generate New Password';
     }

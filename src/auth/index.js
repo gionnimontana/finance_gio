@@ -56,6 +56,10 @@ const ITALIAN_WORDS = [
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const USERS_DIR = path.join(DATA_DIR, 'users');
+const ACCOUNT_CREATION_LIMIT = 5;
+const ACCOUNT_CREATION_WINDOW_MS = 30 * 60 * 1000;
+
+let recentAccountCreationTimestamps = [];
 
 // Default templates for new users
 const DEFAULT_ASSETS_SCHEMA = {
@@ -66,6 +70,34 @@ const DEFAULT_ASSETS_SCHEMA = {
 };
 
 const DEFAULT_HISTORICAL_DATA = [];
+
+const pruneExpiredAccountCreationTimestamps = (now = Date.now()) => {
+    recentAccountCreationTimestamps = recentAccountCreationTimestamps.filter(
+        (timestamp) => now - timestamp < ACCOUNT_CREATION_WINDOW_MS
+    );
+    return recentAccountCreationTimestamps;
+};
+
+const getAccountCreationRateLimit = (now = Date.now()) => {
+    const timestamps = pruneExpiredAccountCreationTimestamps(now);
+    const remaining = Math.max(0, ACCOUNT_CREATION_LIMIT - timestamps.length);
+    const oldestTimestamp = timestamps[0];
+    const retryAfterSeconds = oldestTimestamp
+        ? Math.max(1, Math.ceil((ACCOUNT_CREATION_WINDOW_MS - (now - oldestTimestamp)) / 1000))
+        : 0;
+
+    return {
+        limit: ACCOUNT_CREATION_LIMIT,
+        remaining,
+        retryAfterSeconds,
+        isLimited: timestamps.length >= ACCOUNT_CREATION_LIMIT
+    };
+};
+
+const recordSuccessfulAccountCreation = (now = Date.now()) => {
+    pruneExpiredAccountCreationTimestamps(now);
+    recentAccountCreationTimestamps.push(now);
+};
 
 /**
  * Generate a password of 5 random Italian words joined by dashes
@@ -128,6 +160,22 @@ const createUser = (passwordHash) => {
  */
 const handleGenerate = (req, res) => {
     try {
+        const rateLimit = getAccountCreationRateLimit();
+
+        if (rateLimit.isLimited) {
+            if (rateLimit.retryAfterSeconds > 0) {
+                res.set('Retry-After', String(rateLimit.retryAfterSeconds));
+            }
+
+            return res.status(429).json({
+                error: 'Account creation temporarily unavailable. Please try again later.',
+                code: 'ACCOUNT_GENERATION_RATE_LIMITED',
+                limit: rateLimit.limit,
+                windowMinutes: ACCOUNT_CREATION_WINDOW_MS / (60 * 1000),
+                retryAfterSeconds: rateLimit.retryAfterSeconds
+            });
+        }
+
         const password = generatePassword();
         const passwordHash = hashPassword(password);
         
@@ -143,6 +191,7 @@ const handleGenerate = (req, res) => {
         }
         
         createUser(passwordHash);
+        recordSuccessfulAccountCreation();
         
         res.json({ password });
     } catch (error) {
@@ -205,5 +254,7 @@ module.exports = {
     handleGenerate,
     handleValidate,
     authMiddleware,
-    USERS_DIR
+    USERS_DIR,
+    ACCOUNT_CREATION_LIMIT,
+    ACCOUNT_CREATION_WINDOW_MS
 };
