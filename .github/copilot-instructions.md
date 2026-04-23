@@ -154,7 +154,7 @@ History chart stacking order (bottom → top): Liquidity → Crypto → Gold →
 - All pages include a `.site_footer` privacy notice footer (copy injected from `view/commons/utils.js`)
 - Assets page includes a hint explaining ISIN/GOLD/CRYPTO refresh behavior and OTHER values in €
 - Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
-- Progress banner shows: asset name, value, running portfolio delta vs prev month
+- Progress banner shows: asset name, value, running absolute delta, and latest asset change percent vs that asset's previous value
 - Dashboard deltas show `—` for percent when baseline total is missing or zero
 - Old URLs (dashboard.html, assets.html, history.html) redirect to new folder structure
 - Assets page includes an Export password action (masked input by default, copy to clipboard)

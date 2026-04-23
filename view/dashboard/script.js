@@ -114,6 +114,7 @@ const restoreProgressBanner = () => {
 // Update progress display
 const updateProgress = (data) => {
     const { assetName, assetId, value, assetTotal, failed, index, total, currentPortfolioTotal, prevMonthTotal } = data;
+    let latestAssetDiff = null;
     
     // Update progress bar
     const percentage = (index / total) * 100;
@@ -126,10 +127,12 @@ const updateProgress = (data) => {
         const prevValue = previousAssetValues[assetId];
         const diff = assetTotal - prevValue;
         runningDelta += diff; // Accumulate delta
-        const diffPct = prevValue !== 0 ? (diff / prevValue) * 100 : 0;
+        const diffPct = prevValue !== 0 ? (diff / prevValue) * 100 : null;
         const sign = diff >= 0 ? '+' : '';
         const diffClass = diff >= 0 ? 'positive' : 'negative';
-        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${t(diff)}</span><span class="pct_value"> (${sign}${t(diffPct)}%)</span></span>`;
+        const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
+        latestAssetDiff = { diff, diffPct, sign, diffClass };
+        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${t(diff)}</span><span class="pct_value"> (${diffPctLabel})</span></span>`;
     }
 
     // Append asset to list
@@ -146,14 +149,15 @@ const updateProgress = (data) => {
     // Auto-scroll to bottom
     listEl.scrollTop = listEl.scrollHeight;
 
-    // Update portfolio delta (sum of individual asset changes)
-    if (previousCachedTotal) {
-        const deltaPercentage = (runningDelta / previousCachedTotal) * 100;
-        const sign = runningDelta >= 0 ? '+' : '';
+    // Update portfolio delta using the current asset's previous value as the percentage baseline.
+    if (latestAssetDiff) {
+        const { diffPct, sign: assetSign } = latestAssetDiff;
+        const runningSign = runningDelta >= 0 ? '+' : '';
         const emoji = runningDelta >= 0 ? '🚀' : '🔥';
+        const deltaPctLabel = diffPct === null ? '—' : `${assetSign}${t(diffPct)}%`;
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${sign}€${t(runningDelta)}</span><span class="pct_value"> (${sign}${t(deltaPercentage)}%)</span> ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${t(runningDelta)}</span><span class="pct_value"> (${deltaPctLabel})</span> ${emoji}`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
