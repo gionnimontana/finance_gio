@@ -136,6 +136,7 @@ const renderTable = () => {
         const [assetClass, assetId, quantity, displayName, viewGroup] = asset;
 
         const tr = document.createElement('tr');
+        tr.setAttribute('data-testid', `asset-row-${String(assetId).replaceAll(/[^a-zA-Z0-9_-]+/g, '-')}`);
 
         const tdClass = document.createElement('td');
         tdClass.innerHTML = renderSelect(ASSET_CLASSES, assetClass, `onAssetChange(${idx}, 0, this.value)`);
@@ -188,6 +189,7 @@ const renderGroupsTable = () => {
 
     groups.forEach((groupName, idx) => {
         const tr = document.createElement('tr');
+        tr.setAttribute('data-testid', `view-group-row-${String(groupName).replaceAll(/[^a-zA-Z0-9_-]+/g, '-')}`);
 
         const tdName = document.createElement('td');
         tdName.innerHTML = `<input value="${escapeHtml(groupName)}" onchange="onGroupNameChange(${idx}, this.value)" />`;
@@ -307,7 +309,7 @@ window.addNewRow = () => {
     const next = JSON.parse(JSON.stringify(assetsSchema));
     const groups = getViewGroups();
     const defaultGroup = groups.includes('Liquidity') ? 'Liquidity' : (groups[0] || 'Liquidity');
-    next.assets.push(['Liquidity', `new-asset-${Date.now()}`, 0, 'New Asset', defaultGroup]);
+    next.assets.push(['Other', `new-asset-${Date.now()}`, 0, 'New Asset', defaultGroup]);
     assetsSchema = next;
     renderTable();
     renderGroupsTable();

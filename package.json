@@ -2,13 +2,22 @@
   "name": "personal-finance-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "start:live": "node server.js",
+    "e2e:reset": "node tests/e2e/setup/resetTestData.js",
+    "test": "npm run test:e2e",
+    "test:e2e": "npm run e2e:reset && playwright test",
+    "test:e2e:smoke": "npm run e2e:reset && playwright test --grep @smoke",
+    "test:e2e:headed": "npm run e2e:reset && playwright test --headed",
+    "prepare": "simple-git-hooks"
   },
   "author": "",
   "license": "ISC",
+  "simple-git-hooks": {
+    "pre-commit": "npm run test:e2e:smoke"
+  },
   "dependencies": {
     "dotenv": "^16.4.5",
     "puppeteer": "^16.1.0",
@@ -17,5 +26,9 @@
     "cross-fetch": "^3.1.5",
     "express": "^4.18.2",
     "node-fetch": "^2.6.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.44.0",
+    "simple-git-hooks": "^2.13.1"
   }
 }

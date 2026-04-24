@@ -7,7 +7,7 @@ const { getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSc
 const { handleGenerate, handleValidate, authMiddleware, hashPassword, userExists } = require('./src/auth')
 
 const app = express()
-const port = 8085
+const port = Number(process.env.PORT || 8085)
 
 app.use(cors())
 app.use(bodyParser.json());
@@ -31,6 +31,11 @@ app.get('/history.html', (req, res) => res.redirect('/history/'))
 
 // Default route redirects to login (which will redirect to dashboard if authenticated)
 app.get('/', (req, res) => res.redirect('/login/'))
+
+// Simple health endpoint used by automated checks and local test startup.
+app.get('/health', (req, res) => {
+  res.json({ ok: true })
+})
 
 app.listen(port, () => { console.log(`Personal finance bot listening on port ${port}`)})
 

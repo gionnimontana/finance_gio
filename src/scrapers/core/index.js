@@ -1,7 +1,119 @@
 /**
  * Provide shared Puppeteer scraping helpers with retries, cached values, and progress reporting.
  */
+const fs = require('fs')
+const path = require('path')
 const puppeteer = require('puppeteer')
+
+const TEST_MODE = process.env.PFB_TEST_MODE === '1'
+const DEFAULT_TEST_PROGRESS_DELAY_MS = 20
+
+/**
+ * Pause execution for a small amount of time.
+ * @param {number} ms - Delay in milliseconds.
+ * @returns {Promise<void>}
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * Read the configured deterministic scraper fixture for test mode.
+ * @returns {{ values: Record<string, number>, failures: string[], progressDelayMs: number }}
+ */
+const readTestFixture = () => {
+    const fixturePath = process.env.PFB_TEST_FIXTURE_PATH
+    if (!fixturePath) {
+        return { values: {}, failures: [], progressDelayMs: DEFAULT_TEST_PROGRESS_DELAY_MS }
+    }
+
+    try {
+        const raw = fs.readFileSync(path.resolve(fixturePath), 'utf8')
+        const parsed = JSON.parse(raw)
+        return {
+            values: parsed && typeof parsed.values === 'object' ? parsed.values : {},
+            failures: Array.isArray(parsed?.failures) ? parsed.failures : [],
+            progressDelayMs: Number(parsed?.progressDelayMs || DEFAULT_TEST_PROGRESS_DELAY_MS),
+        }
+    } catch (error) {
+        console.error(`Failed to read scraper test fixture: ${error.message}`)
+        return { values: {}, failures: [], progressDelayMs: DEFAULT_TEST_PROGRESS_DELAY_MS }
+    }
+}
+
+/**
+ * Resolve whether a fixture value exists for a scraper key.
+ * @param {Record<string, number>} fixtureValues - Deterministic values keyed by scraper name.
+ * @param {string} name - Scraper cache key.
+ * @returns {boolean}
+ */
+const hasFixtureValue = (fixtureValues, name) => Object.prototype.hasOwnProperty.call(fixtureValues, name)
+
+/**
+ * Deterministic scraper implementation used during end-to-end tests.
+ * @param {Array<{ name: { url: string, selector: string, selectorFunction: function, logger: function}}>} options - Scraper option configs.
+ * @param {boolean} refresh - Whether cached values should be refreshed.
+ * @param {(progressData: { name: string, value: number|null, failed: boolean, index: number, total: number, cached?: boolean }) => void | null} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<{values: {string: number}, failures: string[]}>}
+ */
+const runDeterministicTestScraper = async (options, refresh, onProgress = null) => {
+    if (isScrapingInProgress && scrapingPromise) {
+        return scrapingPromise
+    }
+
+    isScrapingInProgress = true
+    scrapingPromise = (async () => {
+        const fixture = readTestFixture()
+        const totalAssets = options.length
+        const configuredFailures = new Set(fixture.failures)
+
+        if (refresh) {
+            failures.length = 0
+        }
+
+        try {
+            for (let index = 0; index < totalAssets; index++) {
+                const option = options[index]
+                const name = Object.keys(option)[0]
+                const currentIndex = index + 1
+
+                if (!refresh && hasFixtureValue(values, name) && !configuredFailures.has(name)) {
+                    if (onProgress) {
+                        onProgress({ name, value: values[name], failed: false, index: currentIndex, total: totalAssets, cached: true })
+                    }
+                    continue
+                }
+
+                await sleep(fixture.progressDelayMs)
+
+                const failed = configuredFailures.has(name) || !hasFixtureValue(fixture.values, name)
+                if (!failed) {
+                    values[name] = Number(fixture.values[name])
+                    const failureIndex = failures.indexOf(name)
+                    if (failureIndex > -1) failures.splice(failureIndex, 1)
+                } else if (!failures.includes(name)) {
+                    failures.push(name)
+                }
+
+                if (onProgress) {
+                    onProgress({
+                        name,
+                        value: hasFixtureValue(values, name) ? values[name] : null,
+                        failed,
+                        index: currentIndex,
+                        total: totalAssets,
+                        cached: false,
+                    })
+                }
+            }
+
+            return { values: { ...values }, failures: [...failures] }
+        } finally {
+            isScrapingInProgress = false
+            scrapingPromise = null
+        }
+    })()
+
+    return scrapingPromise
+}
 
 /**
  * Scrape the value of an isin
@@ -108,6 +220,10 @@ let scrapingPromise = null
  * @returns {Promise<{values: {string: number}, failures: string[]}>} - The values and list of failed scrapers
  */
 const multipleUrlSelectorScraper = async (options, maxRetries = 5, refresh, onProgress = null) => {
+    if (TEST_MODE) {
+        return runDeterministicTestScraper(options, refresh, onProgress)
+    }
+
     // If scraping is already in progress, wait for it to complete
     if (isScrapingInProgress && scrapingPromise) {
         console.log('Scraping already in progress, waiting for completion...')

@@ -8,15 +8,41 @@ A personal finance tracker that scrapes live asset prices, stores per-user portf
 - Puppeteer-based price scraping
 - Vanilla HTML/CSS/JavaScript frontend
 - Per-user JSON storage under `data/users/`
+- Playwright end-to-end coverage for the full browser flow
 
 ## Run Locally
 
 ```bash
 npm install
-node server.js
+npm start
 ```
 
 The app runs on `http://localhost:8085`
+
+## End-To-End Tests
+
+The repository now includes a deterministic full-stack e2e harness under `tests/e2e/`.
+
+- `npm run test:e2e:smoke`: fast smoke coverage used by the local `pre-commit` hook
+- `npm run test:e2e`: full Playwright suite against the real Express server and frontend
+- `npm run test:e2e:headed`: headed Playwright run for local debugging
+
+The tests boot the real application in a dedicated test mode:
+
+- live scrapers are replaced with deterministic fixture values
+- user data is written to `tests/e2e/.runtime/` instead of `data/`
+- the browser still exercises the real login, dashboard, history, and settings flows end to end
+
+Install the browser runtime once after `npm install`:
+
+```bash
+npx playwright install chromium
+```
+
+## Commit And CI Automation
+
+- `pre-commit` runs `npm run test:e2e:smoke`
+- GitHub Actions runs the full e2e suite on pushes to `main` and on pull requests
 
 ## Use The App
 

@@ -1,6 +1,6 @@
 # Source
 
-This folder contains the backend application logic for authentication, user data persistence, live market scraping, and portfolio aggregation.
+This folder contains the backend application logic for authentication, user data persistence, live market scraping, deterministic e2e test-mode scraping, and portfolio aggregation.
 
 ## Folders
 

@@ -173,6 +173,7 @@ const updateProgress = (data) => {
     
     const assetRow = document.createElement('div');
     assetRow.className = 'progress_asset_row';
+    assetRow.setAttribute('data-testid', `progress-asset-${String(assetId).replaceAll(/[^a-zA-Z0-9_-]+/g, '-')}`);
     assetRow.innerHTML = `<span class="asset_name">${assetName}</span><span>${valueDisplay}</span>`;
     
     const listEl = document.getElementById('progress_assets_list');

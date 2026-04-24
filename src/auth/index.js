@@ -57,10 +57,12 @@ const ITALIAN_WORDS = [
     'soffitta', 'garage', 'magazzino', 'granaio', 'stalla', 'pollaio', 'alveare', 'nido', 'tana', 'caverna'
 ];
 
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const DATA_DIR = process.env.PFB_DATA_DIR
+    ? path.resolve(process.env.PFB_DATA_DIR)
+    : path.join(__dirname, '..', '..', 'data');
 const USERS_DIR = path.join(DATA_DIR, 'users');
-const ACCOUNT_CREATION_LIMIT = 5;
-const ACCOUNT_CREATION_WINDOW_MS = 30 * 60 * 1000;
+const ACCOUNT_CREATION_LIMIT = Number(process.env.PFB_ACCOUNT_CREATION_LIMIT || 5);
+const ACCOUNT_CREATION_WINDOW_MS = Number(process.env.PFB_ACCOUNT_CREATION_WINDOW_MS || (30 * 60 * 1000));
 
 let recentAccountCreationTimestamps = [];
 
@@ -156,6 +158,10 @@ const userExists = (passwordHash) => {
  */
 const createUser = (passwordHash) => {
     const userDir = getUserDataDir(passwordHash);
+
+    if (!fs.existsSync(USERS_DIR)) {
+        fs.mkdirSync(USERS_DIR, { recursive: true });
+    }
     
     // Create user directory
     fs.mkdirSync(userDir, { recursive: true });

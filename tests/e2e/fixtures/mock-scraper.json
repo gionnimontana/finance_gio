@@ -1,0 +1,9 @@
+{
+  "progressDelayMs": 25,
+  "values": {
+    "BTC": 40000,
+    "IE00B4L5Y983": 100,
+    "physical-gold": 50
+  },
+  "failures": []
+}
