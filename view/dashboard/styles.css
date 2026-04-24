@@ -193,11 +193,35 @@
     transition: width 0.3s ease;
 }
 
+.progress_bar.indeterminate {
+    animation: progress_bar_indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes progress_bar_indeterminate {
+    0% {
+        transform: translateX(-120%);
+    }
+
+    50% {
+        transform: translateX(40%);
+    }
+
+    100% {
+        transform: translateX(220%);
+    }
+}
+
 .progress_assets_list {
     max-height: 200px;
     overflow-y: auto;
     margin-bottom: 10px;
     font-size: 13px;
+}
+
+.progress_status_message {
+    padding: 8px 0;
+    color: #1976D2;
+    font-weight: bold;
 }
 
 .progress_asset_row {
@@ -246,6 +270,10 @@
     background-color: #e8f5e9;
     border-radius: 4px;
     display: inline-block;
+}
+
+.progress_delta:empty {
+    display: none;
 }
 
 .progress_delta.positive {

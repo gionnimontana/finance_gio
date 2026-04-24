@@ -1,7 +1,23 @@
 const { test, expect } = require('@playwright/test')
 
 const { DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
-const { canvasHasPaint, openAuthenticatedPage } = require('../helpers/app')
+const { canvasHasPaint, openAuthenticatedPage, storePassword } = require('../helpers/app')
+
+test('streams per-asset progress on the first dashboard load without cache', async ({ page }) => {
+  await storePassword(page, DASHBOARD_USER_PASSWORD)
+
+  await page.route(/\/portfolio\?refresh=false$/, route => route.abort('failed'))
+
+  await page.goto('/dashboard/')
+
+  await expect(page.locator('#progress_banner')).toHaveClass(/visible/)
+  await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#progress_counter')).toHaveText('3/3')
+  await expect(page.getByTestId('progress-asset-BTC')).toBeVisible()
+  await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
+  await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
+  await expect(page.locator('#total_value')).toContainText('23500.00')
+})
 
 test('refreshes the dashboard through SSE and updates the summary @smoke', async ({ page }) => {
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)

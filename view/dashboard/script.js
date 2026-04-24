@@ -16,22 +16,62 @@ const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 
 /**
+ * Toggle indeterminate progress-bar animation for non-streaming loads.
+ * @param {boolean} active - Whether the loading animation should run.
+ * @returns {void}
+ */
+const setProgressBarIndeterminate = (active) => {
+    const progressBar = document.getElementById('progress_bar');
+    progressBar.classList.toggle('indeterminate', active);
+    if (active) {
+        progressBar.style.width = '35%';
+    }
+};
+
+/**
  * Reset and reveal the refresh progress banner.
  * @returns {void}
  */
-const showProgressBanner = () => {
+const resetProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('visible');
     banner.classList.remove('completed');
     document.getElementById('error_banner').classList.remove('visible');
+    setProgressBarIndeterminate(false);
     document.getElementById('progress_bar').style.width = '0%';
     document.getElementById('progress_counter').textContent = '0/0';
     document.getElementById('progress_assets_list').innerHTML = '';
     document.getElementById('progress_delta').textContent = '';
     document.getElementById('progress_delta').className = 'progress_delta';
-    document.getElementById('progress_title').textContent = '🔄 Refreshing Portfolio...';
     document.getElementById('progress_close').style.display = 'none';
     runningDelta = 0; // Reset running delta
+};
+
+/**
+ * Reset and reveal the refresh progress banner.
+ * @returns {void}
+ */
+const showProgressBanner = (title = '🔄 Refreshing Portfolio...') => {
+    resetProgressBanner();
+    document.getElementById('progress_title').textContent = title;
+};
+
+/**
+ * Show the progress banner in loading mode while uncached data is being fetched.
+ * @param {{ title?: string, message?: string }} [options] - Loading-banner copy overrides.
+ * @returns {void}
+ */
+const showLoadingProgressBanner = (options = {}) => {
+    const {
+        title = '🔄 Loading Portfolio...',
+        message = 'Fetching the latest portfolio data...'
+    } = options;
+
+    resetProgressBanner();
+    setProgressBarIndeterminate(true);
+    document.getElementById('progress_title').textContent = title;
+    document.getElementById('progress_counter').textContent = 'Loading...';
+    document.getElementById('progress_assets_list').innerHTML = `<div class="progress_status_message">${escapeHtml(message)}</div>`;
 };
 
 /**
@@ -42,6 +82,7 @@ const hideProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.remove('visible');
     banner.classList.remove('completed');
+    setProgressBarIndeterminate(false);
 };
 
 /**
@@ -78,17 +119,24 @@ const formatProgressBannerTitle = () => {
 };
 
 /**
- * Mark the progress banner as completed and persist its visible state.
+ * Mark the progress banner as completed and optionally persist its visible state.
+ * @param {boolean} [persistState=true] - Whether the completed banner should survive reloads.
  * @returns {void}
  */
-const completeProgressBanner = () => {
+const completeProgressBanner = (persistState = true) => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('completed');
+    setProgressBarIndeterminate(false);
+    document.getElementById('progress_bar').style.width = '100%';
     document.getElementById('progress_title').textContent = formatProgressBannerTitle();
     document.getElementById('progress_close').style.display = 'block';
     
-    // Save progress banner state for persistence across page refresh
-    saveProgressBannerState();
+    if (persistState) {
+        // Save progress banner state for persistence across page refresh
+        saveProgressBannerState();
+    } else {
+        clearProgressBannerState();
+    }
 };
 
 /**
@@ -124,6 +172,7 @@ const restoreProgressBanner = () => {
         const banner = document.getElementById('progress_banner');
         banner.classList.add('visible');
         banner.classList.add('completed');
+        setProgressBarIndeterminate(false);
         document.getElementById('progress_title').textContent = formatProgressBannerTitle();
         document.getElementById('progress_close').style.display = 'block';
         document.getElementById('progress_bar').style.width = '100%';
@@ -195,15 +244,23 @@ const updateProgress = (data) => {
 };
 
 /**
- * Refresh portfolio data through the SSE endpoint while streaming progress into the UI.
+ * Stream portfolio data through the SSE endpoint while showing per-asset progress updates.
+ * @param {{ refresh?: boolean, title?: string, buttonLabel?: string, persistCompletedBanner?: boolean, fallbackLoadingMessage?: string|null }} [options] - Streaming behavior overrides.
  * @returns {Promise<object>}
  */
-const streamPortfolioRefresh = () => {
+const streamPortfolioRefresh = (options = {}) => {
     return new Promise((resolve, reject) => {
+        const {
+            refresh = true,
+            title = refresh ? '🔄 Refreshing Portfolio...' : '🔄 Loading Portfolio...',
+            buttonLabel = refresh ? 'Refreshing...' : 'Loading...',
+            persistCompletedBanner = refresh,
+            fallbackLoadingMessage = refresh ? null : 'Fetching the latest portfolio data...'
+        } = options;
         const refreshButton = document.getElementById('refresh_button');
         const originalLabel = refreshButton.innerHTML;
         refreshButton.disabled = true;
-        refreshButton.innerHTML = 'Refreshing...';
+        refreshButton.innerHTML = buttonLabel;
 
         // Store initial total and build previous asset values map
         const cachedPortfolio = JSON.parse(localStorage.getItem('portfolio') || 'null');
@@ -224,10 +281,38 @@ const streamPortfolioRefresh = () => {
             }
         }
 
-        showProgressBanner();
+        showProgressBanner(title);
 
         const password = getPassword();
-        const eventSource = new EventSource(`${API_BASE}/portfolio/stream?password=${encodeURIComponent(password)}`);
+        const eventSource = new EventSource(`${API_BASE}/portfolio/stream?password=${encodeURIComponent(password)}&refresh=${refresh ? 'true' : 'false'}`);
+
+        const fallbackToStandardFetch = () => {
+            if (fallbackLoadingMessage) {
+                showLoadingProgressBanner({
+                    title,
+                    message: fallbackLoadingMessage
+                });
+            } else {
+                hideProgressBanner();
+            }
+
+            refreshButton.disabled = false;
+            refreshButton.innerHTML = originalLabel;
+
+            fetchData(refresh).then(portfolio => {
+                localStorage.setItem('portfolio', JSON.stringify(portfolio));
+                setLastUpdateNow();
+                if (fallbackLoadingMessage) {
+                    hideProgressBanner();
+                }
+                resolve(portfolio);
+            }).catch((error) => {
+                if (fallbackLoadingMessage) {
+                    hideProgressBanner();
+                }
+                reject(error);
+            });
+        };
 
         eventSource.addEventListener('progress', (event) => {
             const data = JSON.parse(event.data);
@@ -237,13 +322,12 @@ const streamPortfolioRefresh = () => {
         eventSource.addEventListener('complete', (event) => {
             const portfolio = JSON.parse(event.data);
             eventSource.close();
-            
-            completeProgressBanner();
-            refreshButton.disabled = false;
-            refreshButton.innerHTML = originalLabel;
 
             localStorage.setItem('portfolio', JSON.stringify(portfolio));
             setLastUpdateNow();
+            completeProgressBanner(persistCompletedBanner);
+            refreshButton.disabled = false;
+            refreshButton.innerHTML = originalLabel;
             resolve(portfolio);
         });
 
@@ -253,33 +337,14 @@ const streamPortfolioRefresh = () => {
                 console.error('Stream error:', JSON.parse(event.data));
             }
             eventSource.close();
-            
-            hideProgressBanner();
-            refreshButton.disabled = false;
-            refreshButton.innerHTML = originalLabel;
-
-            // Fallback to regular fetch on error
-            fetchData(true).then(portfolio => {
-                localStorage.setItem('portfolio', JSON.stringify(portfolio));
-                setLastUpdateNow();
-                resolve(portfolio);
-            }).catch(reject);
+            fallbackToStandardFetch();
         });
 
         eventSource.onerror = () => {
             // Connection error - close and fallback
             eventSource.close();
-            
-            hideProgressBanner();
-            refreshButton.disabled = false;
-            refreshButton.innerHTML = originalLabel;
 
-            // Fallback to regular fetch
-            fetchData(true).then(portfolio => {
-                localStorage.setItem('portfolio', JSON.stringify(portfolio));
-                setLastUpdateNow();
-                resolve(portfolio);
-            }).catch(reject);
+            fallbackToStandardFetch();
         };
     });
 };
@@ -386,8 +451,14 @@ const getPortfolio = async (refresh) => {
         if (refresh) {
             // Use SSE streaming for manual refresh
             return await streamPortfolioRefresh();
+        } else if (portfolio === null) {
+            // Stream first-load progress so uncached visits show per-asset updates.
+            return await streamPortfolioRefresh({
+                refresh: false,
+                persistCompletedBanner: false
+            });
         } else {
-            // Use regular fetch for initial load
+            // Use regular fetch for automatic cache migrations.
             const refreshButton = document.getElementById('refresh_button');
             const originalLabel = refreshButton.innerHTML;
             refreshButton.disabled = true;
@@ -491,7 +562,7 @@ const renderPortfolio = async (refresh) => {
     if (portfolio) {
         renderPortfolioData(portfolio);
     }
-    
+
     // Fetch new data if needed
     portfolio = await getPortfolio(refresh);
     portfolio = await mergeViewGroupsIntoPortfolio(portfolio);

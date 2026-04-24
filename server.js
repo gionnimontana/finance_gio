@@ -47,7 +47,7 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
-// SSE endpoint for streaming portfolio refresh (requires auth via query param for SSE)
+// SSE endpoint for streaming portfolio loads and manual refreshes (requires auth via query param for SSE)
 app.get('/portfolio/stream', async (req, res) => {
   // For SSE, we need to get password from query param since headers aren't reliable
   const password = req.query.password || req.headers['x-user-password']
@@ -59,6 +59,10 @@ app.get('/portfolio/stream', async (req, res) => {
   if (!userExists(passwordHash)) {
     return res.status(401).json({ error: 'Invalid password' })
   }
+
+  const refresh = req.query.refresh === undefined
+    ? true
+    : String(req.query.refresh).toLowerCase() === 'true'
 
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream')
@@ -74,7 +78,7 @@ app.get('/portfolio/stream', async (req, res) => {
   }
 
   try {
-    await portfolioScripts.streamPortfolio(passwordHash, sendEvent)
+    await portfolioScripts.streamPortfolio(passwordHash, sendEvent, refresh)
   } catch (error) {
     console.error('Stream portfolio error:', error)
     sendEvent('error', { message: error.message })

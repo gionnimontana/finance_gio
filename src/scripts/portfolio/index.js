@@ -133,14 +133,17 @@ const getPortfolio = async (passwordHash, refresh) => {
 }
 
 /**
- * Stream portfolio data with progress updates
- * @param {string} passwordHash - The hashed password identifying the user
- * @param {function} sendEvent - Function to send SSE events: sendEvent(eventType, data)
+ * Stream portfolio data with progress updates.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {function} sendEvent - Function to send SSE events: sendEvent(eventType, data).
+ * @param {boolean} [refresh=true] - Whether the stream should force a live refresh and update derived history.
  */
-const streamPortfolio = async (passwordHash, sendEvent) => {
-    // Update prevMonthTotal and initYearNetworth from historical data
-    await api.updatePrevMonthTotal(passwordHash)
-    await api.updateInitYearNetworth(passwordHash)
+const streamPortfolio = async (passwordHash, sendEvent, refresh = true) => {
+    // Update prevMonthTotal and initYearNetworth from historical data only for live refreshes.
+    if (refresh) {
+        await api.updatePrevMonthTotal(passwordHash)
+        await api.updateInitYearNetworth(passwordHash)
+    }
     
     const assetsSchema = await api.getAssetsSchema(passwordHash)
     
@@ -210,7 +213,7 @@ const streamPortfolio = async (passwordHash, sendEvent) => {
     }
 
     // Get asset values with progress callback
-    const { assetValues, failures } = await getAssetsValue(passwordHash, true, onProgress)
+    const { assetValues, failures } = await getAssetsValue(passwordHash, refresh, onProgress)
 
     // Build final portfolio (same logic as getPortfolio)
     let viewGroupsMap = {}
@@ -269,8 +272,10 @@ const streamPortfolio = async (passwordHash, sendEvent) => {
         ...assetsDetails
     }
 
-    // Update historical data
-    await api.updateHistoricalData(passwordHash, finalPortfolio)
+    // Update historical data only when the stream represents a user-triggered refresh.
+    if (refresh) {
+        await api.updateHistoricalData(passwordHash, finalPortfolio)
+    }
 
     // Send complete event with final portfolio
     sendEvent('complete', finalPortfolio)
