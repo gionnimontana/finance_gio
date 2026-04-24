@@ -55,11 +55,14 @@ npx playwright install chromium
 
 - `src/index.md`: backend navigation
 - `view/index.md`: frontend navigation
+- `docs/index.md`: project wiki for architecture, workflows, conventions, troubleshooting, and durable decisions
 - Follow the nested `index.md` files inside those folders for more detailed module-level docs
 
 ## Working In This Repo
 
 - Keep source changes and markdown docs in sync.
 - When you add, remove, rename, or repurpose files or folders under `src/` or `view/`, update the affected `index.md` files in the same change.
+- Update `docs/` when a change affects cross-cutting project knowledge that should outlive the immediate diff.
+- Keep `src/` and `view/` `index.md` files focused on structure, and keep `docs/` focused on cross-cutting knowledge.
 - Keep file-scope comments and missing JSDoc up to date when editing JS source files.
 
