@@ -1,17 +1,27 @@
-// History page script
+/**
+ * Fetch and render historical portfolio data, summary cards, and chart/table updates for the history page.
+ */
 
 // Require authentication
 if (!requireAuth()) {
     throw new Error('Not authenticated');
 }
 
-// Fetch historical data from server
+/**
+ * Fetch the portfolio history dataset from the backend.
+ * @returns {Promise<object[]>}
+ */
 const fetchHistoricalData = async () => {
     const response = await authFetch(`${API_BASE}/portfolio/history`);
     const data = await response.json();
     return data;
 };
 
+/**
+ * Render the history summary cards from the loaded monthly data.
+ * @param {Array<{ total: number }>} historyData - Historical monthly portfolio snapshots.
+ * @returns {void}
+ */
 const renderSummaryCards = (historyData) => {
     if (!historyData || historyData.length === 0) return;
 
@@ -51,6 +61,10 @@ const renderSummaryCards = (historyData) => {
 let cachedHistoryData = null;
 let cachedHistoryViewGroups = null;
 
+/**
+ * Load history data and render the summary cards, chart, and table.
+ * @returns {Promise<void>}
+ */
 const renderHistory = async () => {
     const historyData = await fetchHistoricalData();
     const schema = await fetchAssetsSchema().catch(() => null);

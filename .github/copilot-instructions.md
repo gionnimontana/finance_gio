@@ -1,203 +1,28 @@
 # Copilot Instructions for Personal Finance Bot
 
-## ⚠️ Instruction Maintenance
+## Scope
 
-After ANY codebase modification, review and update this file:
-- Add new files, endpoints, schemas, or patterns
-- Remove references to deleted/renamed items
-- Keep examples accurate and minimal
-- No verbose explanations—be concise
+Keep this file minimal. Do not duplicate project structure, endpoints, schemas, or behavior that can be discovered from the markdown entry points below.
 
-## Project Overview
+## Entry Points
 
-This is a personal finance portfolio tracker application that:
-- Scrapes real-time asset prices from various sources (ETFs, crypto, gold)
-- Aggregates portfolio data and calculates totals
-- Displays a web dashboard with portfolio overview and pie chart visualization
-- Shows historical portfolio data with column charts
+Use these files first when you need project context:
+- `src/index.md` for backend navigation
+- `view/index.md` for frontend navigation
 
-## Tech Stack
+Follow the linked `index.md` files inside each subfolder for deeper context.
 
-- **Backend**: Node.js with Express (port 8085)
-- **Web Scraping**: Puppeteer for headless browser automation
-- **Frontend**: Vanilla HTML/CSS/JavaScript (no framework)
-- **Data Storage**: In-memory caching with localStorage on frontend
+## Documentation Rules
 
-## Project Structure
+- Source files under `src/` should begin with a short file-scope comment.
+- Frontend files under `view/` should begin with a short scope comment using the appropriate file syntax for JS, CSS, and HTML.
+- Add JSDoc to named JS functions when it is missing.
 
-```
-├── server.js              # Express server entry point
-├── view/                  # Frontend files
-│   ├── commons/           # Shared resources across all pages
-│   │   ├── styles.css     # Common CSS classes (body, nav, banners, buttons, tables)
-│   │   └── utils.js       # Common JS utilities (API_BASE, authFetch, t(), pct(), el(), etc.)
-│   ├── login/             # Login/authentication page
-│   │   ├── index.html     # Login page
-│   │   ├── styles.css     # Login-specific styles
-│   │   └── script.js      # Login/generate password logic
-│   ├── dashboard/         # Main dashboard (Networth)
-│   │   ├── index.html     # Dashboard page
-│   │   ├── styles.css     # Dashboard-specific styles (overview, progress banner)
-│   │   ├── chart.js       # Pie chart module for portfolio visualization
-│   │   └── script.js      # Dashboard logic (SSE refresh, rendering)
-│   ├── assets/            # Assets management UI
-│   │   ├── index.html     # Assets management page
-│   │   ├── styles.css     # Assets-specific styles
-│   │   └── script.js      # Assets CRUD logic
-│   └── history/           # Historical portfolio view
-│       ├── index.html     # History page
-│       ├── styles.css     # History-specific styles (history table colors)
-│       ├── chart.js       # Column chart module for history view
-│       └── script.js      # History rendering logic
-├── data/                  # JSON data files (per-user in data/users/{hash}/)
-│   └── users/             # User-specific data folders (named by password hash)
-│       └── {hash}/        # Each user's data directory
-│           ├── assetsSchema.json    # User's asset definitions
-│           └── historicalData.json  # User's historical snapshots
-├── src/
-│   ├── auth/
-│   │   └── index.js       # Authentication: password generation, hashing, middleware
-│   ├── api/
-│   │   └── index.js       # API logic for assets and historical data
-│   ├── scrapers/
-│   │   ├── core/
-│   │   │   └── index.js   # Core scraping logic with retry and caching
-│   │   ├── vendors/       # Individual scraper implementations
-│   │   │   ├── justETFscraper.js      # ETF prices from justETF
-│   │   │   ├── youngPlatformScraper.js # Crypto prices
-│   │   │   ├── goldPriceScraper.js    # Gold prices from gold.de
-│   │   │   └── ...
-│   │   └── index.js       # Scraper exports
-│   └── scripts/
-│       └── portfolio/
-│           └── index.js   # Portfolio calculation logic
-```
+## Documentation Maintenance
 
-## API Endpoints
-
-### Authentication (no auth required)
-- `POST /auth/generate` - Generate new 5-word Italian password, creates user folder, globally limited to 5 successful creations every 30 minutes per app instance (`429` + `retryAfterSeconds` when saturated)
-- `POST /auth/validate` - Validate password exists: `{ password }` → `{ valid: boolean }`
-
-### Protected endpoints (require `X-User-Password` header)
-- `GET /portfolio?refresh=true|false` - Current portfolio data
-- `GET /portfolio/stream?password=...` - SSE endpoint (password in query param)
-- `GET /portfolio/history` - Historical monthly snapshots
-- `GET /assets/schema` - Read assets schema
-- `PUT /assets/schema` - Replace assets array in assets schema
-- `PUT /assets/view-groups` - Replace view groups list
-
-## Key Concepts
-
-### Asset Schema
-Assets are defined as arrays with 5 elements:
-```javascript
-[assetClass, assetId, quantity, displayName, viewGroup]
-```
-- `assetClass`: Category for scraping logic (one of: `Isin`, `Crypto`, `Gold`, `Other`)
-- `assetId`: Unique identifier (ISIN for ETFs, symbol for crypto)
-- `quantity`: Number of units owned
-- `displayName`: Human-readable name for UI
-- `viewGroup`: Category for UI grouping/charts (e.g. Liquidity, Crypto, Gold, Houses, Equity)
-
-Assets schema also contains a `viewGroups` array used to drive the Assets UI dropdown and grouping:
-```json
-{ "assets": [...], "viewGroups": ["Liquidity", "Crypto", "Gold", "Houses", "Equity"], "prevMonthTotal": null, "initYearNetworth": null }
-```
-
-### Historical Data Schema
-Monthly snapshots with viewGroup totals:
-```javascript
-{ label, date, total, Liquidity: { total }, Crypto: { total }, Gold: { total }, Houses: { total }, Equity: { total } }
-```
-
-### View Groups
-Used for UI display and charts: Liquidity, Crypto, Gold, Houses, Equity
-
-History chart stacking order (bottom → top): Liquidity → Crypto → Gold → Houses → Equity
-
-### Multi-User Authentication
-- Each user has a unique password: 5 random Italian words joined by dashes (e.g. `casa-luna-libro-mare-sole`)
-- Passwords are hashed (SHA-256) to create folder names in `data/users/{hash}/`
-- No recovery mechanism - lost password = lost data
-- Account generation is protected by an in-memory global rolling limit: max 5 successful creations every 30 minutes per app instance
-- Password stored in `localStorage.userPassword` on frontend
-- Frontend uses `authFetch()` wrapper to add `X-User-Password` header
-- SSE streams use password as query param (headers unreliable for SSE)
-
-## Coding Guidelines
-
-### Scrapers
-- Always implement retry logic with configurable max retries
-- Close browser pages in both success and error paths
-- Use cached values when scraping fails
-- Track failures and report them to the frontend
-- `multipleUrlSelectorScraper` supports `onProgress` callback for streaming updates
-
-### Frontend
-- Use localStorage for caching portfolio data and user password
-- Absolute-value privacy toggle uses localStorage key `hideAbsoluteValues` and body class `hide_absolute`
-- Dashboard refresh stores last update timestamp in localStorage key `portfolioLastUpdate` and keeps it until the progress banner is closed
-- Wrap absolute values in `.abs_value` and percentages in `.pct_value` (use `.pct_placeholder` where no percent)
-- History monthly breakdown shows per-column percentages so hidden mode still displays values
-- History hides Current Total card and Total column when absolute values are hidden
-- All API calls use `authFetch()` from utils.js (adds X-User-Password header)
-- Each protected page calls `requireAuth()` at start to redirect to login if needed
-- Login page should surface `429` account-generation responses with the backend-provided retry hint
-- Show cached data immediately while refreshing
-- Display error banner when scrapers fail
-- Ensure HTML pages include UTF-8 meta charset
-- Common CSS in `view/commons/styles.css`, page-specific CSS in each route folder
-- Common JS utilities in `view/commons/utils.js` (API_BASE, authFetch, getPassword, etc.)
-- Each route has its own folder: `login/`, `dashboard/`, `assets/`, `history/`
-- Use consistent `.nav_link` class for all navigation/action buttons
-- All pages include a `.site_footer` privacy notice footer (copy injected from `view/commons/utils.js`)
-- Assets page includes a hint explaining ISIN/GOLD/CRYPTO refresh behavior and OTHER values in €
-- Dashboard uses SSE (`EventSource`) for real-time refresh progress updates
-- Progress banner shows: asset name, value, running absolute delta, and latest asset change percent vs that asset's previous value
-- Dashboard deltas show `—` for percent when baseline total is missing or zero
-- Old URLs (dashboard.html, assets.html, history.html) redirect to new folder structure
-- Assets page includes an Export password action (masked input by default, copy to clipboard)
-
-History page notes:
-- `3-Month Change` is computed vs the value 3 months earlier (not vs the first datapoint)
-- History summary percentages show `—` when baseline totals are missing or zero
-- History chart uses horizontal scroll; on mobile the chart container left-aligns to keep earliest months reachable
-
-## Common Tasks
-
-### Adding a New Asset
-1. Add entry to `data/users/{hash}/assetsSchema.json` with correct assetClass and viewGroup
-2. If new assetClass, create scraper in `src/scrapers/vendors/`
-3. Export scraper in `src/scrapers/index.js`
-4. Add scraper logic to `src/scripts/portfolio/index.js`
-
-### Adding Historical Data
-Add monthly snapshot to `data/users/{hash}/historicalData.json` (or let the app auto-update it)
-
-## Running the App
-
-```bash
-# Install dependencies
-npm install
-
-# Start server
-node server.js
-
-# Access login page (generates password or enter existing)
-open http://localhost:8085/login/
-```
-
-## Deployment Notes
-
-- App is served from the root of a subdomain (e.g. https://finance.gingergio.it/).
-- Nginx serves the frontend from `/var/www/finance.gingergio.it` and proxies API requests to port 8085.
-- `deploy.sh` copies `view/` into `/var/www/finance.gingergio.it` after pull.
-- `deploy.sh` uses `rsync -a --delete` to keep nginx frontend in sync with `view/`.
-- `deploy.sh` provisions a systemd service (`finance-bot`) for auto-restart and logs via journald.
-- `deploy.sh` installs system libraries required by Puppeteer.
-- Ubuntu 24.04 uses `libasound2t64` (not `libasound2`).
-
-## Environment Variables
-
-Uses `.env` file for configuration (loaded via dotenv).
+After every codebase change, update documentation immediately in the same change:
+- Keep `src/index.md` and `view/index.md` as the two root entry points.
+- Update the `index.md` file in every folder whose scope, files, links, or descriptions changed.
+- When files or folders are added, removed, renamed, or repurposed, update the parent and affected `index.md` files.
+- Keep all markdown docs concise, accurate, and aligned with the current codebase.
+- Update this file only when the documentation workflow or the two entry points change.

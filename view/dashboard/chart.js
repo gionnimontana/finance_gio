@@ -1,4 +1,6 @@
-// Pie Chart for Portfolio View Groups
+/**
+ * Render the dashboard pie chart that visualizes portfolio totals by view group.
+ */
 const ChartModule = (() => {
     // Colors for each viewGroup
     const viewGroupColors = {
@@ -10,6 +12,11 @@ const ChartModule = (() => {
 
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
 
+    /**
+     * Generate a deterministic fallback color for dynamic or unknown view-group labels.
+     * @param {string} label - View-group label.
+     * @returns {string}
+     */
     const hashToColor = (label) => {
         // Deterministic, pleasant-ish HSL color from a string label
         const str = String(label || '');

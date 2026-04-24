@@ -1,3 +1,6 @@
+/**
+ * Persist, normalize, and update per-user asset schemas and historical portfolio snapshots.
+ */
 const fs = require('fs');
 const path = require('path');
 const { getUserDataDir } = require('../auth');
@@ -26,6 +29,11 @@ const getUserDataPaths = (passwordHash) => {
     };
 };
 
+/**
+ * Read a user's assets schema from disk, creating the default file when missing.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {Promise<{ assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null }>}
+ */
 const getAssetsSchema = async (passwordHash) => {
     const { assetsPath } = getUserDataPaths(passwordHash);
     try {
@@ -48,6 +56,12 @@ const getAssetsSchema = async (passwordHash) => {
     return DEFAULT_ASSETS_SCHEMA;
 }
 
+/**
+ * Persist a user's assets schema to disk.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {{ assets: unknown[], viewGroups?: string[], prevMonthTotal?: number|null, initYearNetworth?: number|null }} assetsSchema - Schema data to persist.
+ * @returns {Promise<boolean>} - Whether the write succeeded.
+ */
 const writeAssetsSchema = async (passwordHash, assetsSchema) => {
     const { assetsPath } = getUserDataPaths(passwordHash);
     try {
@@ -59,6 +73,12 @@ const writeAssetsSchema = async (passwordHash, assetsSchema) => {
     }
 }
 
+/**
+ * Persist a user's historical portfolio snapshots to disk.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {Array<object>} historicalData - Monthly historical entries to persist.
+ * @returns {Promise<boolean>} - Whether the write succeeded.
+ */
 const writeHistoricalData = async (passwordHash, historicalData) => {
     const { historyPath } = getUserDataPaths(passwordHash);
     try {
@@ -74,11 +94,21 @@ const ALLOWED_ASSET_CLASSES = ['Isin', 'Gold', 'Crypto', 'Other'];
 
 const DEFAULT_VIEW_GROUPS = ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'];
  
+/**
+ * Normalize a candidate view-group name into a trimmed string.
+ * @param {unknown} name - Value received from user input or stored data.
+ * @returns {string}
+ */
 const normalizeViewGroupName = (name) => {
     const n = String(name ?? '').trim();
     return n;
 }
 
+/**
+ * Deduplicate values while preserving their original string order.
+ * @param {unknown[]} arr - Values to normalize and de-duplicate.
+ * @returns {string[]}
+ */
 const uniqStrings = (arr) => {
     const out = [];
     const seen = new Set();
@@ -92,6 +122,11 @@ const uniqStrings = (arr) => {
     return out;
 }
 
+/**
+ * Map legacy or invalid asset classes into the supported enum.
+ * @param {unknown} assetClass - Raw asset class value.
+ * @returns {'Isin'|'Gold'|'Crypto'|'Other'}
+ */
 const normalizeAssetClass = (assetClass) => {
     const c = String(assetClass || '').trim();
     if (ALLOWED_ASSET_CLASSES.includes(c)) return c;
@@ -99,12 +134,22 @@ const normalizeAssetClass = (assetClass) => {
     return 'Other';
 }
 
+/**
+ * Normalize a raw asset row into the canonical five-column schema format.
+ * @param {unknown} asset - Raw asset row to normalize.
+ * @returns {unknown}
+ */
 const normalizeAssetRow = (asset) => {
     if (!Array.isArray(asset) || asset.length !== 5) return asset;
     const [assetClass, assetId, quantity, displayName, viewGroup] = asset;
     return [normalizeAssetClass(assetClass), assetId, quantity, displayName, viewGroup];
 }
 
+/**
+ * Validate that an asset row matches the expected schema shape and field types.
+ * @param {unknown} asset - Asset row to validate.
+ * @returns {boolean}
+ */
 const isValidAssetRow = (asset) => {
     // Schema: [assetClass, assetId, quantity, displayName, viewGroup]
     if (!Array.isArray(asset) || asset.length !== 5) return false;
@@ -118,6 +163,11 @@ const isValidAssetRow = (asset) => {
     return true;
 }
 
+/**
+ * Fill missing schema fields with defaults while preserving stored values when valid.
+ * @param {unknown} schema - Raw schema object read from disk.
+ * @returns {{ assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null }}
+ */
 const normalizeAssetsSchema = (schema) => {
     const base = {
         assets: [],
@@ -135,6 +185,11 @@ const normalizeAssetsSchema = (schema) => {
     };
 }
 
+/**
+ * Collect unique view groups referenced by the current asset rows.
+ * @param {unknown[]} assets - Asset rows from the schema.
+ * @returns {string[]}
+ */
 const computeViewGroupsFromAssets = (assets) => {
     const groups = [];
     for (const a of assets) {
@@ -145,6 +200,11 @@ const computeViewGroupsFromAssets = (assets) => {
     return uniqStrings(groups.filter(Boolean));
 }
 
+/**
+ * Validate a proposed view-group list before persisting it.
+ * @param {unknown} viewGroups - Candidate view-group payload.
+ * @returns {{ ok: boolean, error?: string, viewGroups?: string[] }}
+ */
 const validateViewGroupsPayload = (viewGroups) => {
     if (!Array.isArray(viewGroups)) return { ok: false, error: 'Invalid payload: viewGroups must be an array' };
     const normalized = viewGroups.map(normalizeViewGroupName).filter(Boolean);
@@ -157,6 +217,12 @@ const validateViewGroupsPayload = (viewGroups) => {
 }
 
 // Replace assets array with provided one (preserves prevMonthTotal/initYearNetworth)
+/**
+ * Replace a user's asset list after normalization, validation, and duplicate checks.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {{ assets: unknown[] }} payload - New asset payload.
+ * @returns {Promise<{ ok: boolean, error?: string, assetsSchema?: { assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null } }>}
+ */
 const updateAssetsSchema = async (passwordHash, { assets }) => {
     if (!Array.isArray(assets)) {
         return { ok: false, error: 'Invalid payload: assets must be an array' };
@@ -192,6 +258,12 @@ const updateAssetsSchema = async (passwordHash, { assets }) => {
 }
 
 // Replace viewGroups array (cannot remove groups that are referenced by any asset)
+/**
+ * Replace the stored view groups and migrate dependent data during simple renames.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {{ viewGroups: unknown }} payload - Proposed view-group list.
+ * @returns {Promise<{ ok: boolean, error?: string, assetsSchema?: { assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null } }>}
+ */
 const updateViewGroups = async (passwordHash, { viewGroups }) => {
     const existing = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
 
@@ -268,6 +340,11 @@ const updateViewGroups = async (passwordHash, { viewGroups }) => {
 
 // Historical data for portfolio history view
 // Format: array of monthly snapshots with viewGroup totals
+/**
+ * Read historical monthly portfolio snapshots for a user, creating an empty file when missing.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {Promise<Array<object>>}
+ */
 const getHistoricalData = async (passwordHash) => {
     const { historyPath } = getUserDataPaths(passwordHash);
     try {
@@ -292,6 +369,11 @@ const getHistoricalData = async (passwordHash) => {
 
 // Update prevMonthTotal in assets schema based on historical data
 // Gets the total from the previous month's entry in historical data
+/**
+ * Derive and persist the previous month's portfolio total inside the assets schema.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {Promise<number|null>} - Rounded previous-month total when available.
+ */
 const updatePrevMonthTotal = async (passwordHash) => {
     const { assetsPath } = getUserDataPaths(passwordHash);
     const now = new Date();
@@ -322,6 +404,11 @@ const updatePrevMonthTotal = async (passwordHash) => {
 
 // Update initYearNetworth in assets schema based on historical data
 // Gets the total from December of the previous year
+/**
+ * Derive and persist the prior December portfolio total as the current year's baseline.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {Promise<number|null>} - Rounded December total when available.
+ */
 const updateInitYearNetworth = async (passwordHash) => {
     const { assetsPath } = getUserDataPaths(passwordHash);
     const now = new Date();
@@ -350,6 +437,12 @@ const updateInitYearNetworth = async (passwordHash) => {
 
 // Update historical data with current month's portfolio values
 // portfolio should have: total, Liquidity, Crypto, Equity, Gold, Houses (with .total for each)
+/**
+ * Upsert the current month's portfolio totals into historical storage.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {{ total: number, Liquidity?: { total: number }, Crypto?: { total: number }, Houses?: { total: number }, Equity?: { total: number }, Gold?: { total: number } }} portfolio - Aggregated portfolio totals.
+ * @returns {Promise<Array<object>>}
+ */
 const updateHistoricalData = async (passwordHash, portfolio) => {
     const { historyPath } = getUserDataPaths(passwordHash);
     const now = new Date();

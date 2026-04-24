@@ -1,3 +1,6 @@
+/**
+ * Provide shared Puppeteer scraping helpers with retries, cached values, and progress reporting.
+ */
 const puppeteer = require('puppeteer')
 
 /**

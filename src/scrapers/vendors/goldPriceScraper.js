@@ -1,17 +1,30 @@
+/**
+ * Scrape spot gold prices from goldpreis.de using the shared browser helpers.
+ */
 const core = require('../core')
 
 /**
- * Create the params for the gold price scraper
- * @returns {Object} - The params for the gold price scraper
+ * Create the scraping config needed to resolve the gold price per gram in EUR.
+ * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by asset id.
  * @throws {Error} - If the value is not found or not a number or 0
  */
 const goldOptionsCreator = () => {
     // Gold price per gram in EUR from goldpreis.de (German gold price portal)
     // Note: gold.de was previously used but is experiencing technical issues
     const url = 'https://www.goldpreis.de/'
+    /**
+     * Log scraping progress for the gold price lookup.
+     * @param {string} msg - Message to print.
+     * @returns {void}
+     */
     const logger = (msg) => console.log(`goldPriceScraper - ${msg}`)
     // Selector for the gold price per gram in the table
     const selector = 'table'
+    /**
+     * Parse the price-per-gram entry from the tables returned by the page.
+     * @param {string} selector - CSS selector for the candidate price table.
+     * @returns {number}
+     */
     const selectorFunction = (selector) => {
         // Find the table with gold prices and extract the price per gram
         const tables = document.querySelectorAll('table')
@@ -45,7 +58,7 @@ const goldOptionsCreator = () => {
 }
 
 /**
- * Scrape the value of gold per gram in EUR
+ * Scrape the current gold price per gram in EUR.
  * @returns {Promise<number>} - The value of gold per gram in EUR
  * @throws {Error} - If the value is not found or not a number or 0
  */

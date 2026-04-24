@@ -1,9 +1,25 @@
+/**
+ * Aggregate asset values into portfolio totals and stream incremental refresh progress to the API layer.
+ */
 const scrapers = require('../../scrapers');
 const api = require('../../api');
 
 const dynamicCategories = ['Isin', 'Crypto', 'Gold']
+
+/**
+ * Determine whether an asset relies on a live scraper instead of a static stored value.
+ * @param {Array<unknown>} asset - Asset schema row.
+ * @returns {boolean}
+ */
 const isDynamicAsset = (asset) => dynamicCategories.includes(asset[0])
 
+/**
+ * Resolve current asset values by combining live scraper results and static asset entries.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {boolean} refresh - Whether cached scraper values should be refreshed.
+ * @param {(progressData: { name: string, value: number|null, failed: boolean, index: number, total: number, cached?: boolean }) => void | null} [onProgress=null] - Optional progress callback for streamed updates.
+ * @returns {Promise<{ assetValues: Record<string, number>, failures: string[] }>}
+ */
 const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
     const assetsSchema = await api.getAssetsSchema(passwordHash)
 
@@ -37,6 +53,12 @@ const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
     return { assetValues, failures: scraperResult.failures }
 }
 
+/**
+ * Build the current portfolio totals grouped by view group.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {boolean} refresh - Whether to refresh live scraper values and derived history totals.
+ * @returns {Promise<object>}
+ */
 const getPortfolio = async (passwordHash, refresh) => {
     // Update prevMonthTotal and initYearNetworth from historical data when refreshing
     if (refresh) {
@@ -139,6 +161,11 @@ const streamPortfolio = async (passwordHash, sendEvent) => {
     let currentFailures = []
 
     // Progress callback for scraper
+    /**
+     * Translate scraper progress into portfolio-level SSE progress payloads.
+     * @param {{ name: string, value: number|null, failed: boolean, index: number, total: number }} progressData - Scraper progress update.
+     * @returns {void}
+     */
     const onProgress = (progressData) => {
         const { name, value, failed, index, total } = progressData
         const assetInfo = assetLookup[name]

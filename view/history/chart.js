@@ -1,4 +1,6 @@
-// Column Chart for Portfolio History by ViewGroups
+/**
+ * Render history charts and tables for monthly portfolio data grouped by view group.
+ */
 const HistoryChartModule = (() => {
     // Colors for each viewGroup (matching pie chart)
     const viewGroupColors = {
@@ -11,6 +13,11 @@ const HistoryChartModule = (() => {
 
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
 
+    /**
+     * Generate a deterministic fallback color for dynamic or unknown view-group labels.
+     * @param {string} label - View-group label.
+     * @returns {string}
+     */
     const hashToColor = (label) => {
         const str = String(label || '');
         let hash = 0;
@@ -22,6 +29,11 @@ const HistoryChartModule = (() => {
         return `hsl(${hue}, 65%, 55%)`;
     };
 
+    /**
+     * Infer view-group keys from the historical dataset when schema data is unavailable.
+     * @param {Array<object>} historyData - Historical monthly snapshots.
+     * @returns {string[]}
+     */
     const inferViewGroupsFromHistory = (historyData) => {
         const keys = new Set();
         (historyData || []).forEach(m => {
@@ -38,6 +50,7 @@ const HistoryChartModule = (() => {
      * Render a stacked column chart showing monthly viewGroup distribution
      * @param {string} canvasId - The ID of the canvas element
      * @param {Array} historyData - Array of monthly portfolio snapshots
+     * @param {string[]} [viewGroupsOverride] - Optional explicit view-group order.
      */
     const renderColumnChart = (canvasId, historyData, viewGroupsOverride) => {
         const canvas = document.getElementById(canvasId);
@@ -193,6 +206,7 @@ const HistoryChartModule = (() => {
      * Render a detailed table showing monthly breakdown
      * @param {string} containerId - The ID of the container element
      * @param {Array} historyData - Array of monthly portfolio snapshots
+     * @param {string[]} [viewGroupsOverride] - Optional explicit view-group order.
      */
     const renderHistoryTable = (containerId, historyData, viewGroupsOverride) => {
         const container = document.getElementById(containerId);
@@ -206,11 +220,31 @@ const HistoryChartModule = (() => {
         if (!(Array.isArray(viewGroupsOverride) && viewGroupsOverride.length) && detected.length) {
             viewGroups.sort((a, b) => a.localeCompare(b));
         }
+
+        /**
+         * Format a numeric value with two decimal places.
+         * @param {number} num - Value to format.
+         * @returns {string}
+         */
         const t = (num) => num.toFixed(2);
+
+        /**
+         * Calculate a percentage string relative to a total.
+         * @param {number} value - Partial value.
+         * @param {number} total - Whole value.
+         * @returns {string|null}
+         */
         const pct = (value, total) => {
             if (!total || total <= 0) return null;
             return ((value / total) * 100).toFixed(1);
         };
+
+        /**
+         * Render a percentage span or placeholder for hidden absolute values.
+         * @param {number} value - Partial value.
+         * @param {number} total - Whole value.
+         * @returns {string}
+         */
         const pctSpan = (value, total) => {
             const p = pct(value, total);
             return p === null

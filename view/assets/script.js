@@ -1,4 +1,6 @@
-// Assets management script
+/**
+ * Manage editable asset rows, view groups, and password export controls on the settings page.
+ */
 
 // Require authentication
 if (!requireAuth()) {
@@ -22,11 +24,23 @@ const DEFAULT_VIEW_GROUPS = [
     'Equity'
 ];
 
+/**
+ * Build an HTML select element from a list of options.
+ * @param {string[]} options - Available option labels.
+ * @param {string} value - Selected option value.
+ * @param {string} onChange - Inline change handler expression.
+ * @returns {string}
+ */
 const renderSelect = (options, value, onChange) => {
     const opts = options.map(o => `<option value="${escapeHtml(o)}" ${o === value ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
     return `<select onchange="${onChange}">${opts}</select>`;
 };
 
+/**
+ * Normalize number-like input values coming from text fields.
+ * @param {unknown} value - Raw value from the form.
+ * @returns {number}
+ */
 const normalizeNumber = (value) => {
     if (value === null || value === undefined) return NaN;
     if (typeof value === 'number') return value;
@@ -35,6 +49,11 @@ const normalizeNumber = (value) => {
     return Number(cleaned);
 };
 
+/**
+ * Validate the editable asset rows before saving them to the backend.
+ * @param {unknown[]} assets - Asset rows to validate.
+ * @returns {string|null} - Validation error message when invalid.
+ */
 const validateAssets = (assets) => {
     const seen = new Set();
     for (let i = 0; i < assets.length; i++) {
@@ -54,6 +73,11 @@ const validateAssets = (assets) => {
     return null;
 };
 
+/**
+ * Enable or disable all settings-page action buttons.
+ * @param {boolean} disabled - Whether the buttons should be disabled.
+ * @returns {void}
+ */
 const setButtonsDisabled = (disabled) => {
     el('reload_btn').disabled = disabled;
     el('add_btn').disabled = disabled;
@@ -63,14 +87,27 @@ const setButtonsDisabled = (disabled) => {
     el('groups_save_btn').disabled = disabled;
 };
 
+/**
+ * Resolve the active list of view groups, falling back to defaults when missing.
+ * @returns {string[]}
+ */
 const getViewGroups = () => {
     const groups = assetsSchema?.viewGroups;
     if (Array.isArray(groups) && groups.length) return groups;
     return DEFAULT_VIEW_GROUPS.slice();
 };
 
+/**
+ * Deduplicate string values while preserving their first occurrence order.
+ * @param {unknown[]} arr - Values to normalize and deduplicate.
+ * @returns {string[]}
+ */
 const uniq = (arr) => Array.from(new Set(arr.map(v => String(v))));
 
+/**
+ * Count how many assets currently reference each view group.
+ * @returns {Record<string, number>}
+ */
 const getGroupUsageCounts = () => {
     const counts = {};
     const assets = assetsSchema?.assets || [];
@@ -84,6 +121,10 @@ const getGroupUsageCounts = () => {
     return counts;
 };
 
+/**
+ * Render the editable asset rows table from the current schema state.
+ * @returns {void}
+ */
 const renderTable = () => {
     const tbody = el('assets_tbody');
     tbody.innerHTML = '';
@@ -134,6 +175,10 @@ const renderTable = () => {
     });
 };
 
+/**
+ * Render the editable view-group table from the current schema state.
+ * @returns {void}
+ */
 const renderGroupsTable = () => {
     const tbody = el('groups_tbody');
     tbody.innerHTML = '';
@@ -166,6 +211,13 @@ const renderGroupsTable = () => {
     });
 };
 
+/**
+ * Update an asset field in the local editable schema.
+ * @param {number} rowIndex - Asset row index.
+ * @param {number} fieldIndex - Asset field index.
+ * @param {string} value - New field value.
+ * @returns {void}
+ */
 window.onAssetChange = (rowIndex, fieldIndex, value) => {
     clearError();
     clearSuccess();
@@ -179,6 +231,12 @@ window.onAssetChange = (rowIndex, fieldIndex, value) => {
     renderGroupsTable();
 };
 
+/**
+ * Update an asset quantity field after numeric normalization.
+ * @param {number} rowIndex - Asset row index.
+ * @param {unknown} rawValue - Raw input value.
+ * @returns {void}
+ */
 window.onAssetQuantityChange = (rowIndex, rawValue) => {
     clearError();
     clearSuccess();
@@ -197,6 +255,11 @@ window.onAssetQuantityChange = (rowIndex, rawValue) => {
     renderGroupsTable();
 };
 
+/**
+ * Remove an asset row from the local editable schema.
+ * @param {number} rowIndex - Asset row index.
+ * @returns {void}
+ */
 window.deleteRow = (rowIndex) => {
     clearError();
     clearSuccess();
@@ -209,6 +272,12 @@ window.deleteRow = (rowIndex) => {
     renderGroupsTable();
 };
 
+/**
+ * Move an asset row up or down in the editable ordering.
+ * @param {number} rowIndex - Current asset row index.
+ * @param {number} delta - Relative move amount.
+ * @returns {void}
+ */
 window.moveRow = (rowIndex, delta) => {
     clearError();
     clearSuccess();
@@ -226,6 +295,10 @@ window.moveRow = (rowIndex, delta) => {
     renderGroupsTable();
 };
 
+/**
+ * Append a new placeholder asset row to the editable schema.
+ * @returns {void}
+ */
 window.addNewRow = () => {
     clearError();
     clearSuccess();
@@ -240,12 +313,21 @@ window.addNewRow = () => {
     renderGroupsTable();
 };
 
+/**
+ * Fetch the latest assets schema from the backend.
+ * @returns {Promise<object>}
+ */
 const fetchSchema = async () => {
     const res = await authFetch(`${API_BASE}/assets/schema`);
     if (!res.ok) throw new Error(`Failed to load schema (${res.status})`);
     return await res.json();
 };
 
+/**
+ * Persist the full assets payload to the backend.
+ * @param {{ assets: unknown[] }} payload - Asset payload to save.
+ * @returns {Promise<object>}
+ */
 const putSchema = async (payload) => {
     const res = await authFetch(`${API_BASE}/assets/schema`, {
         method: 'PUT',
@@ -260,6 +342,11 @@ const putSchema = async (payload) => {
     return json;
 };
 
+/**
+ * Persist the view-group list to the backend.
+ * @param {{ viewGroups: string[] }} payload - View groups to save.
+ * @returns {Promise<object>}
+ */
 const putViewGroups = async (payload) => {
     const res = await authFetch(`${API_BASE}/assets/view-groups`, {
         method: 'PUT',
@@ -274,6 +361,10 @@ const putViewGroups = async (payload) => {
     return json;
 };
 
+/**
+ * Populate the password export controls from the stored password.
+ * @returns {void}
+ */
 const initExportPassword = () => {
     const input = el('export_password');
     const copyBtn = el('export_password_btn');
@@ -294,6 +385,10 @@ const initExportPassword = () => {
     toggleBtn.disabled = false;
 };
 
+/**
+ * Copy the stored password to the clipboard from the settings page.
+ * @returns {Promise<void>}
+ */
 window.copyPassword = async () => {
     clearError();
     clearSuccess();
@@ -324,6 +419,10 @@ window.copyPassword = async () => {
     }
 };
 
+/**
+ * Toggle the visibility of the exported password input.
+ * @returns {void}
+ */
 window.togglePasswordVisibility = () => {
     const input = el('export_password');
     const toggleBtn = el('toggle_password_btn');
@@ -334,6 +433,10 @@ window.togglePasswordVisibility = () => {
     toggleBtn.textContent = isHidden ? '🙈' : '👁️';
 };
 
+/**
+ * Load the latest schema from the backend and re-render the page.
+ * @returns {Promise<void>}
+ */
 window.loadSchema = async () => {
     clearError();
     clearSuccess();
@@ -350,6 +453,10 @@ window.loadSchema = async () => {
     }
 };
 
+/**
+ * Validate and save the current asset rows.
+ * @returns {Promise<void>}
+ */
 window.saveAll = async () => {
     clearError();
     clearSuccess();
@@ -376,6 +483,12 @@ window.saveAll = async () => {
     }
 };
 
+/**
+ * Update a view-group name in the local editable schema.
+ * @param {number} groupIndex - View-group index.
+ * @param {string} value - New group name.
+ * @returns {void}
+ */
 window.onGroupNameChange = (groupIndex, value) => {
     clearError();
     clearSuccess();
@@ -397,6 +510,10 @@ window.onGroupNameChange = (groupIndex, value) => {
     renderGroupsTable();
 };
 
+/**
+ * Append a new placeholder view group to the editable schema.
+ * @returns {void}
+ */
 window.addGroup = () => {
     clearError();
     clearSuccess();
@@ -417,6 +534,11 @@ window.addGroup = () => {
     renderGroupsTable();
 };
 
+/**
+ * Remove an unused view group from the local editable schema.
+ * @param {number} groupIndex - View-group index.
+ * @returns {void}
+ */
 window.deleteGroup = (groupIndex) => {
     clearError();
     clearSuccess();
@@ -438,6 +560,10 @@ window.deleteGroup = (groupIndex) => {
     renderGroupsTable();
 };
 
+/**
+ * Validate and save the current view-group list.
+ * @returns {Promise<void>}
+ */
 window.saveGroups = async () => {
     clearError();
     clearSuccess();

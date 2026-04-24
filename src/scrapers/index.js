@@ -1,3 +1,6 @@
+/**
+ * Re-export vendor scrapers and shared multi-scraper utilities for portfolio valuation flows.
+ */
 const etfScraper = require('./vendors/justETFscraper')
 const cryptoScraper = require('./vendors/youngPlatformScraper')
 const beaconchainScraper = require('./vendors/beaconchainScraper')

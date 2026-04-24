@@ -1,4 +1,6 @@
-// Common utilities shared across all pages
+/**
+ * Provide shared frontend auth, formatting, banner, footer, and privacy-toggle utilities.
+ */
 
 // Shared footer copy
 const FOOTER_COPY = 'This site does not track any user activity, and all sections are completely anonymous.';
@@ -24,18 +26,37 @@ const PASSWORD_KEY = 'userPassword';
 // Absolute values visibility key
 const ABS_VISIBILITY_KEY = 'hideAbsoluteValues';
 
-// Get stored password
+/**
+ * Read the stored user password from localStorage.
+ * @returns {string|null}
+ */
 const getPassword = () => localStorage.getItem(PASSWORD_KEY);
 
-// Store password
+/**
+ * Persist the active user password in localStorage.
+ * @param {string} password - Password to store.
+ * @returns {void}
+ */
 const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
 
-// Clear password (logout)
+/**
+ * Remove the stored user password during logout or auth expiry.
+ * @returns {void}
+ */
 const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
 
 // Absolute values visibility helpers
+/**
+ * Check whether absolute portfolio values are hidden.
+ * @returns {boolean}
+ */
 const isAbsoluteHidden = () => localStorage.getItem(ABS_VISIBILITY_KEY) === '1';
 
+/**
+ * Sync the privacy-toggle button with the current visibility state.
+ * @param {boolean} hidden - Whether absolute values are hidden.
+ * @returns {void}
+ */
 const updateAbsoluteToggleButton = (hidden) => {
     const btn = el('abs_toggle_btn');
     if (!btn) return;
@@ -44,20 +65,38 @@ const updateAbsoluteToggleButton = (hidden) => {
     btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
 };
 
+/**
+ * Apply the absolute-value visibility state to the page and notify listeners.
+ * @param {boolean} [hidden=isAbsoluteHidden()] - Whether absolute values should be hidden.
+ * @returns {void}
+ */
 const applyAbsoluteVisibility = (hidden = isAbsoluteHidden()) => {
     document.body.classList.toggle('hide_absolute', hidden);
     updateAbsoluteToggleButton(hidden);
     window.dispatchEvent(new CustomEvent('absolute-visibility-change', { detail: { hidden } }));
 };
 
+/**
+ * Persist and apply the absolute-value visibility state.
+ * @param {boolean} hidden - Whether absolute values should be hidden.
+ * @returns {void}
+ */
 const setAbsoluteHidden = (hidden) => {
     localStorage.setItem(ABS_VISIBILITY_KEY, hidden ? '1' : '0');
     applyAbsoluteVisibility(hidden);
 };
 
+/**
+ * Toggle the absolute-value visibility state.
+ * @returns {void}
+ */
 const toggleAbsoluteVisibility = () => setAbsoluteHidden(!isAbsoluteHidden());
 
 // Logout and redirect to login
+/**
+ * Clear cached auth state and redirect the user to the login page.
+ * @returns {void}
+ */
 const logout = () => {
     clearPassword();
     localStorage.removeItem('portfolio'); // Clear cached portfolio data
@@ -65,6 +104,10 @@ const logout = () => {
 };
 
 // Check if authenticated and redirect to login if not
+/**
+ * Ensure the current page has an authenticated user before continuing.
+ * @returns {boolean}
+ */
 const requireAuth = () => {
     const password = getPassword();
     if (!password) {
@@ -75,6 +118,12 @@ const requireAuth = () => {
 };
 
 // Authenticated fetch wrapper - adds X-User-Password header
+/**
+ * Perform a fetch request with the stored password attached as an auth header.
+ * @param {string} url - Request URL.
+ * @param {RequestInit} [options={}] - Fetch options.
+ * @returns {Promise<Response>}
+ */
 const authFetch = async (url, options = {}) => {
     const password = getPassword();
     if (!password) {
@@ -101,15 +150,36 @@ const authFetch = async (url, options = {}) => {
 };
 
 // Format number to 2 decimal places
+/**
+ * Format a number with two fixed decimal places.
+ * @param {number} number - Value to format.
+ * @returns {string}
+ */
 const t = (number) => number.toFixed(2);
 
 // Calculate percentage
+/**
+ * Calculate a percentage string for a value within a total.
+ * @param {number} value - Partial value.
+ * @param {number} total - Total value.
+ * @returns {string}
+ */
 const pct = (value, total) => ((value / total) * 100).toFixed(1);
 
 // Get element by ID shorthand
+/**
+ * Resolve a DOM element by id.
+ * @param {string} id - Element id.
+ * @returns {HTMLElement|null}
+ */
 const el = (id) => document.getElementById(id);
 
 // Escape HTML to prevent XSS
+/**
+ * Escape user-provided text before inserting it into HTML strings.
+ * @param {unknown} unsafe - Raw value to escape.
+ * @returns {string}
+ */
 const escapeHtml = (unsafe) => {
     return String(unsafe)
         .replaceAll('&', '&amp;')
@@ -120,6 +190,10 @@ const escapeHtml = (unsafe) => {
 };
 
 // Fetch assets schema from API
+/**
+ * Fetch the current assets schema for the authenticated user.
+ * @returns {Promise<object>}
+ */
 const fetchAssetsSchema = async () => {
     const res = await authFetch(`${API_BASE}/assets/schema`);
     if (!res.ok) throw new Error(`Failed to load assets schema (${res.status})`);
@@ -127,6 +201,12 @@ const fetchAssetsSchema = async () => {
 };
 
 // Show error banner
+/**
+ * Show an error banner with the provided message.
+ * @param {string} message - Message to display.
+ * @param {string} [bannerId='error_banner'] - Banner element id.
+ * @returns {void}
+ */
 const showError = (message, bannerId = 'error_banner') => {
     const banner = el(bannerId);
     if (banner) {
@@ -136,6 +216,11 @@ const showError = (message, bannerId = 'error_banner') => {
 };
 
 // Clear error banner
+/**
+ * Clear and hide an error banner.
+ * @param {string} [bannerId='error_banner'] - Banner element id.
+ * @returns {void}
+ */
 const clearError = (bannerId = 'error_banner') => {
     const banner = el(bannerId);
     if (banner) {
@@ -145,6 +230,13 @@ const clearError = (bannerId = 'error_banner') => {
 };
 
 // Show success banner with auto-hide
+/**
+ * Show a success banner and hide it automatically after a timeout.
+ * @param {string} message - Message to display.
+ * @param {string} [bannerId='success_banner'] - Banner element id.
+ * @param {number} [timeout=2500] - Auto-hide timeout in milliseconds.
+ * @returns {void}
+ */
 const showSuccess = (message, bannerId = 'success_banner', timeout = 2500) => {
     const banner = el(bannerId);
     if (banner) {
@@ -157,6 +249,11 @@ const showSuccess = (message, bannerId = 'success_banner', timeout = 2500) => {
 };
 
 // Clear success banner
+/**
+ * Clear and hide a success banner.
+ * @param {string} [bannerId='success_banner'] - Banner element id.
+ * @returns {void}
+ */
 const clearSuccess = (bannerId = 'success_banner') => {
     const banner = el(bannerId);
     if (banner) {
@@ -165,6 +262,10 @@ const clearSuccess = (bannerId = 'success_banner') => {
     }
 };
 
+/**
+ * Inject the shared privacy notice text into all footer placeholders.
+ * @returns {void}
+ */
 const renderSiteFooter = () => {
     const footers = document.querySelectorAll('.site_footer');
     footers.forEach((footer) => {

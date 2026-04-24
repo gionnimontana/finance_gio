@@ -1,4 +1,6 @@
-// Dashboard script - Portfolio overview and refresh logic
+/**
+ * Render the dashboard portfolio overview, manage refresh progress, and keep cached frontend state in sync.
+ */
 
 // Require authentication
 if (!requireAuth()) {
@@ -13,7 +15,10 @@ let runningDelta = 0; // Accumulated delta from individual asset changes
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 
-// Show progress banner
+/**
+ * Reset and reveal the refresh progress banner.
+ * @returns {void}
+ */
 const showProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('visible');
@@ -29,13 +34,20 @@ const showProgressBanner = () => {
     runningDelta = 0; // Reset running delta
 };
 
-// Hide progress banner
+/**
+ * Hide the refresh progress banner.
+ * @returns {void}
+ */
 const hideProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.remove('visible');
     banner.classList.remove('completed');
 };
 
+/**
+ * Remove any persisted progress-banner state from localStorage.
+ * @returns {void}
+ */
 const clearProgressBannerState = () => {
     try {
         localStorage.removeItem(PROGRESS_BANNER_KEY);
@@ -44,13 +56,19 @@ const clearProgressBannerState = () => {
     }
 };
 
-// Close progress banner (keeps last update timestamp in dashboard card)
+/**
+ * Close the progress banner while leaving the last-update summary intact.
+ * @returns {void}
+ */
 const closeProgressBanner = () => {
     hideProgressBanner();
     clearProgressBannerState();
 };
 
-// Format date for progress banner title
+/**
+ * Format the progress-banner title from the stored last-update timestamp.
+ * @returns {string}
+ */
 const formatProgressBannerTitle = () => {
     const raw = localStorage.getItem(LAST_UPDATE_KEY);
     if (!raw) return '✅ Refresh Complete';
@@ -59,7 +77,10 @@ const formatProgressBannerTitle = () => {
     return `✅ Updated: ${date.toLocaleString()}`;
 };
 
-// Mark progress as complete (keep visible with close button)
+/**
+ * Mark the progress banner as completed and persist its visible state.
+ * @returns {void}
+ */
 const completeProgressBanner = () => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('completed');
@@ -70,7 +91,10 @@ const completeProgressBanner = () => {
     saveProgressBannerState();
 };
 
-// Save progress banner state to localStorage
+/**
+ * Persist the current progress-banner markup so it survives reloads.
+ * @returns {void}
+ */
 const saveProgressBannerState = () => {
     try {
         const state = {
@@ -85,7 +109,10 @@ const saveProgressBannerState = () => {
     }
 };
 
-// Restore progress banner from localStorage
+/**
+ * Restore a previously completed progress banner from localStorage.
+ * @returns {boolean}
+ */
 const restoreProgressBanner = () => {
     try {
         const raw = localStorage.getItem(PROGRESS_BANNER_KEY);
@@ -111,7 +138,11 @@ const restoreProgressBanner = () => {
     }
 };
 
-// Update progress display
+/**
+ * Append a streamed refresh update to the progress banner.
+ * @param {{ assetName: string, assetId: string, value: number|null, assetTotal: number|null, failed: boolean, index: number, total: number, currentPortfolioTotal: number, prevMonthTotal: number|null }} data - Progress payload from SSE.
+ * @returns {void}
+ */
 const updateProgress = (data) => {
     const { assetName, assetId, value, assetTotal, failed, index, total, currentPortfolioTotal, prevMonthTotal } = data;
     let latestAssetDiff = null;
@@ -162,7 +193,10 @@ const updateProgress = (data) => {
     }
 };
 
-// Stream portfolio refresh using SSE
+/**
+ * Refresh portfolio data through the SSE endpoint while streaming progress into the UI.
+ * @returns {Promise<object>}
+ */
 const streamPortfolioRefresh = () => {
     return new Promise((resolve, reject) => {
         const refreshButton = document.getElementById('refresh_button');
@@ -249,7 +283,13 @@ const streamPortfolioRefresh = () => {
     });
 };
 
-// Function to render a single category row
+/**
+ * Render one dashboard category card with its nested asset rows.
+ * @param {string} categoryKey - View-group name.
+ * @param {{ total: number, details?: Record<string, { total: number, displayName?: string }> }} categoryData - Category totals.
+ * @param {number} portfolioTotal - Whole-portfolio total.
+ * @returns {string}
+ */
 const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
@@ -282,7 +322,11 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     `;
 };
 
-// Function to render the entire table view
+/**
+ * Render the grouped dashboard table view.
+ * @param {object} portfolio - Portfolio data.
+ * @returns {void}
+ */
 const renderTableView = (portfolio) => {
     const tableView = document.getElementById('table_view');
     let html = '';
@@ -300,12 +344,22 @@ const renderTableView = (portfolio) => {
     tableView.innerHTML = html;
 };
 
+/**
+ * Fetch portfolio data from the standard HTTP endpoint.
+ * @param {boolean} refresh - Whether the backend should refresh live values.
+ * @returns {Promise<object>}
+ */
 const fetchData = async (refresh) => {
     const response = await authFetch(`${API_BASE}/portfolio?refresh=` + refresh);
     const data = await response.json();
     return data;
 }
 
+/**
+ * Resolve the portfolio from cache or backend refresh flows.
+ * @param {boolean} refresh - Whether to force a refresh.
+ * @returns {Promise<object>}
+ */
 const getPortfolio = async (refresh) => {
     let portfolio = JSON.parse(localStorage.getItem('portfolio') || null) || null;
     // Force refresh if displayName is missing or viewGroups are missing (cache from old version)
@@ -338,11 +392,22 @@ const getPortfolio = async (refresh) => {
     return portfolio;
 }
 
+/**
+ * Merge the latest schema view-group order into cached portfolio data when possible.
+ * @param {object} portfolio - Portfolio data from cache or backend.
+ * @returns {Promise<object>}
+ */
 const mergeViewGroupsIntoPortfolio = async (portfolio) => {
     // Keep older cached portfolio working, but ensure we always render with the latest group labels/order.
     try {
         const schema = await fetchAssetsSchema();
         if (schema && Array.isArray(schema.viewGroups)) {
+            /**
+             * Reconcile cached portfolio group keys with the latest schema ordering.
+             * @param {object} p - Cached portfolio object.
+             * @param {string[]} nextGroups - Latest view-group list.
+             * @returns {object}
+             */
             const migratePortfolioViewGroups = (p, nextGroups) => {
                 if (!p || typeof p !== 'object') return p;
 
@@ -401,6 +466,11 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
     return portfolio;
 };
 
+/**
+ * Render cached data immediately, then refresh and render the latest portfolio data.
+ * @param {boolean} refresh - Whether to force a live refresh.
+ * @returns {Promise<void>}
+ */
 const renderPortfolio = async (refresh) => {
     // Show cached data first (if available) so old values remain visible during refresh
     let portfolio = JSON.parse(localStorage.getItem('portfolio') || null);
@@ -414,6 +484,11 @@ const renderPortfolio = async (refresh) => {
     renderPortfolioData(portfolio);
 }
 
+/**
+ * Render the full dashboard UI from portfolio data.
+ * @param {{ total: number, prevMonthTotal: number|null, initYearNetworth: number|null, failures?: string[] }} portfolio - Portfolio data to render.
+ * @returns {void}
+ */
 const renderPortfolioData = (portfolio) => {
     const total = portfolio.total;
     const prevMonthTotal = portfolio.prevMonthTotal;
@@ -459,6 +534,10 @@ const renderPortfolioData = (portfolio) => {
     ChartModule.renderPieChart('portfolio_chart', portfolio);
 }
 
+/**
+ * Render the dashboard last-update timestamp from localStorage.
+ * @returns {void}
+ */
 const renderLastUpdate = () => {
     const el = document.getElementById('last_update_value');
     if (!el) return;
@@ -478,6 +557,10 @@ const renderLastUpdate = () => {
     el.textContent = date.toLocaleString();
 };
 
+/**
+ * Persist the current time as the last successful dashboard refresh timestamp.
+ * @returns {void}
+ */
 const setLastUpdateNow = () => {
     try {
         localStorage.setItem(LAST_UPDATE_KEY, new Date().toISOString());

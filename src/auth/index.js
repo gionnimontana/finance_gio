@@ -1,3 +1,6 @@
+/**
+ * Generate account credentials, manage per-user storage folders, and validate authenticated requests.
+ */
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -71,6 +74,11 @@ const DEFAULT_ASSETS_SCHEMA = {
 
 const DEFAULT_HISTORICAL_DATA = [];
 
+/**
+ * Drop account-creation timestamps that are older than the rolling rate-limit window.
+ * @param {number} [now=Date.now()] - Reference timestamp in milliseconds.
+ * @returns {number[]} - Active account-creation timestamps within the rolling window.
+ */
 const pruneExpiredAccountCreationTimestamps = (now = Date.now()) => {
     recentAccountCreationTimestamps = recentAccountCreationTimestamps.filter(
         (timestamp) => now - timestamp < ACCOUNT_CREATION_WINDOW_MS
@@ -78,6 +86,11 @@ const pruneExpiredAccountCreationTimestamps = (now = Date.now()) => {
     return recentAccountCreationTimestamps;
 };
 
+/**
+ * Compute the current account-creation rate-limit state.
+ * @param {number} [now=Date.now()] - Reference timestamp in milliseconds.
+ * @returns {{ limit: number, remaining: number, retryAfterSeconds: number, isLimited: boolean }}
+ */
 const getAccountCreationRateLimit = (now = Date.now()) => {
     const timestamps = pruneExpiredAccountCreationTimestamps(now);
     const remaining = Math.max(0, ACCOUNT_CREATION_LIMIT - timestamps.length);
@@ -94,6 +107,11 @@ const getAccountCreationRateLimit = (now = Date.now()) => {
     };
 };
 
+/**
+ * Record a successful account creation for rolling rate-limit enforcement.
+ * @param {number} [now=Date.now()] - Reference timestamp in milliseconds.
+ * @returns {void}
+ */
 const recordSuccessfulAccountCreation = (now = Date.now()) => {
     pruneExpiredAccountCreationTimestamps(now);
     recentAccountCreationTimestamps.push(now);

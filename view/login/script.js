@@ -1,7 +1,11 @@
-// Login page script
-// Uses getPassword, setPassword from ../commons/utils.js
+/**
+ * Handle login validation, account generation, and password handoff on the login page.
+ */
 
-// Check if already logged in
+/**
+ * Validate any stored password and detect whether the user is already authenticated.
+ * @returns {Promise<boolean>}
+ */
 const checkExistingAuth = async () => {
     const password = getPassword();
     if (!password) return false;
@@ -20,7 +24,11 @@ const checkExistingAuth = async () => {
     }
 };
 
-// Validate password with server
+/**
+ * Validate a password against the backend.
+ * @param {string} password - Password to validate.
+ * @returns {Promise<boolean>}
+ */
 const validatePassword = async (password) => {
     try {
         const res = await fetch(`${API_BASE}/auth/validate`, {
@@ -36,7 +44,10 @@ const validatePassword = async (password) => {
     }
 };
 
-// Generate new password
+/**
+ * Request a new account password from the backend.
+ * @returns {Promise<{ password: string|null, error: string|null, code: string|null, retryAfterSeconds: number }>}
+ */
 const generateNewPassword = async () => {
     try {
         const res = await fetch(`${API_BASE}/auth/generate`, {
@@ -72,6 +83,11 @@ const generateNewPassword = async () => {
     }
 };
 
+/**
+ * Build a user-facing rate-limit message from the backend retry hint.
+ * @param {number} retryAfterSeconds - Retry delay in seconds.
+ * @returns {string}
+ */
 const formatRetryAfterMessage = (retryAfterSeconds) => {
     if (!retryAfterSeconds) {
         return 'Account creation is temporarily unavailable. Please try again later.';
@@ -83,21 +99,31 @@ const formatRetryAfterMessage = (retryAfterSeconds) => {
     return `Account creation is temporarily unavailable. Please try again in about ${retryAfterMinutes} ${minuteLabel}.`;
 };
 
-// Show error message
+/**
+ * Show a login-page error banner.
+ * @param {string} message - Message to display.
+ * @returns {void}
+ */
 const showLoginError = (message) => {
     const banner = el('error_banner');
     banner.textContent = message;
     banner.classList.add('visible');
 };
 
-// Hide error message
+/**
+ * Clear the login-page error banner.
+ * @returns {void}
+ */
 const hideLoginError = () => {
     const banner = el('error_banner');
     banner.textContent = '';
     banner.classList.remove('visible');
 };
 
-// Handle login button click
+/**
+ * Submit the login form and redirect on success.
+ * @returns {Promise<void>}
+ */
 const handleLogin = async () => {
     hideLoginError();
     const password = el('password_input').value.trim();
@@ -122,7 +148,10 @@ const handleLogin = async () => {
     }
 };
 
-// Handle generate button click
+/**
+ * Generate a new account password and reveal the confirmation state.
+ * @returns {Promise<void>}
+ */
 const handleGenerate = async () => {
     hideLoginError();
     
@@ -151,7 +180,10 @@ const handleGenerate = async () => {
     }
 };
 
-// Handle copy button click
+/**
+ * Copy the generated password to the clipboard.
+ * @returns {Promise<void>}
+ */
 const handleCopy = async () => {
     const password = el('new_password').textContent;
     try {
@@ -165,12 +197,18 @@ const handleCopy = async () => {
     }
 };
 
-// Handle continue button click
+/**
+ * Continue to the dashboard after the generated password has been acknowledged.
+ * @returns {void}
+ */
 const handleContinue = () => {
     window.location.href = '/dashboard/';
 };
 
-// Initialize
+/**
+ * Initialize login page event handlers and auto-login redirect behavior.
+ * @returns {Promise<void>}
+ */
 const init = async () => {
     // Check if already authenticated
     const isAuth = await checkExistingAuth();
