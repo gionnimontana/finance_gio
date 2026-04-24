@@ -13,6 +13,64 @@ const ChartModule = (() => {
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
 
     /**
+     * Resolve the display color for a view-group label.
+     * @param {string} label - View-group label.
+     * @returns {string}
+     */
+    function getViewGroupColor(label) {
+        return viewGroupColors[label] || hashToColor(label) || defaultColor;
+    }
+
+    /**
+     * Resolve the legend container associated with a chart canvas.
+     * @param {string} canvasId - The canvas element ID.
+     * @returns {HTMLElement | null}
+     */
+    function getLegendContainer(canvasId) {
+        return document.getElementById(`${canvasId}_legend`);
+    }
+
+    /**
+     * Remove any previously rendered legend items.
+     * @param {HTMLElement | null} legendContainer - The legend host element.
+     */
+    function clearLegend(legendContainer) {
+        if (legendContainer) {
+            legendContainer.replaceChildren();
+        }
+    }
+
+    /**
+     * Render the legend items below the chart using DOM nodes instead of the canvas.
+     * @param {HTMLElement | null} legendContainer - The legend host element.
+     * @param {Array<{label: string, value: number, color: string}>} data - Pie slices.
+     * @param {number} total - Sum of all slice values.
+     */
+    function renderLegend(legendContainer, data, total) {
+        if (!legendContainer) return;
+
+        const legendItems = data.map(item => {
+            const percentage = ((item.value / total) * 100).toFixed(1);
+            const itemElement = document.createElement('div');
+            itemElement.className = 'chart_legend_item';
+
+            const swatchElement = document.createElement('span');
+            swatchElement.className = 'chart_legend_swatch';
+            swatchElement.style.backgroundColor = item.color;
+            itemElement.appendChild(swatchElement);
+
+            const labelElement = document.createElement('span');
+            labelElement.className = 'chart_legend_label';
+            labelElement.textContent = `${item.label}: ${percentage}%`;
+            itemElement.appendChild(labelElement);
+
+            return itemElement;
+        });
+
+        legendContainer.replaceChildren(...legendItems);
+    }
+
+    /**
      * Generate a deterministic fallback color for dynamic or unknown view-group labels.
      * @param {string} label - View-group label.
      * @returns {string}
@@ -38,6 +96,7 @@ const ChartModule = (() => {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
+        const legendContainer = getLegendContainer(canvasId);
         const ctx = canvas.getContext('2d');
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
@@ -45,6 +104,7 @@ const ChartModule = (() => {
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        clearLegend(legendContainer);
 
         const viewGroups = Array.isArray(portfolio?.viewGroups) && portfolio.viewGroups.length
             ? portfolio.viewGroups
@@ -55,7 +115,7 @@ const ChartModule = (() => {
             .map(group => ({
                 label: group,
                 value: portfolio[group].total,
-                color: viewGroupColors[group] || hashToColor(group) || defaultColor
+                color: getViewGroupColor(group)
             }));
 
         if (data.length === 0) return;
@@ -85,34 +145,12 @@ const ChartModule = (() => {
             startAngle = endAngle;
         });
 
-        // Draw legend
-        const legendX = 20;
-        let legendY = canvas.height - (data.length * 25) - 10;
-        const boxSize = 15;
-
-        data.forEach(item => {
-            const percentage = ((item.value / total) * 100).toFixed(1);
-
-            // Color box
-            ctx.fillStyle = item.color;
-            ctx.fillRect(legendX, legendY, boxSize, boxSize);
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(legendX, legendY, boxSize, boxSize);
-
-            // Label
-            ctx.fillStyle = '#333';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${item.label}: ${percentage}%`, legendX + boxSize + 10, legendY + boxSize / 2);
-
-            legendY += 25;
-        });
+        renderLegend(legendContainer, data, total);
     };
 
     return {
         renderPieChart,
+        getViewGroupColor,
         viewGroupColors
     };
 })();

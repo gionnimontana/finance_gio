@@ -285,6 +285,19 @@ const streamPortfolioRefresh = () => {
 };
 
 /**
+ * Build the inline accent style for one dashboard category card.
+ * @param {string} categoryKey - View-group name.
+ * @returns {string}
+ */
+const getCategoryCardStyle = (categoryKey) => {
+    const accentColor = typeof ChartModule === 'object' && typeof ChartModule.getViewGroupColor === 'function'
+        ? ChartModule.getViewGroupColor(categoryKey)
+        : '#9E9E9E';
+
+    return `--group-accent: ${accentColor};`;
+};
+
+/**
  * Render one dashboard category card with its nested asset rows.
  * @param {string} categoryKey - View-group name.
  * @param {{ total: number, details?: Record<string, { total: number, displayName?: string }> }} categoryData - Category totals.
@@ -313,7 +326,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     }
 
     return `
-        <div class="row">
+        <div class="row group_row" style="${getCategoryCardStyle(categoryKey)}">
             <div class="mainrow">
                 <div class="row_title">${categoryKey}:</div>
                 <div class="row_value">${mainRowValueHtml}</div>

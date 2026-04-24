@@ -18,6 +18,46 @@
     min-width: 300px;
 }
 
+.overview_container .chart_container {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex: 0 1 320px;
+}
+
+#portfolio_chart {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.chart_legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 16px;
+    width: min(100%, 320px);
+}
+
+.chart_legend_item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+    font-size: 14px;
+}
+
+.chart_legend_swatch {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    flex: 0 0 14px;
+}
+
+.chart_legend_label {
+    font-weight: bold;
+}
+
 .overview {
     display: flex;
     justify-content: space-between;
@@ -52,6 +92,25 @@
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
     flex: 1 1 250px;
+}
+
+.group_row {
+    background: linear-gradient(rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.76)), var(--group-accent, #ffffff);
+    border: 1px solid rgba(17, 17, 17, 0.08);
+    border-left: 6px solid var(--group-accent, #9e9e9e);
+    box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04);
+}
+
+.group_row .mainrow,
+.group_row .subrow {
+    border-bottom-color: rgba(17, 17, 17, 0.08);
+}
+
+.group_row .row_title,
+.group_row .row_value,
+.group_row .subrow_title,
+.group_row .subrow_value {
+    color: #111;
 }
 
 .mainrow {
@@ -229,4 +288,15 @@
 
 .progress_banner.completed .progress_close {
     color: #2e7d32;
+}
+
+@media (max-width: 768px) {
+    .overview_container .chart_container {
+        flex-basis: 100%;
+        width: 100%;
+    }
+
+    .chart_legend {
+        width: 100%;
+    }
 }
