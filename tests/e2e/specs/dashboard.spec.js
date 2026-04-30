@@ -50,6 +50,8 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
   await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
   await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
+  await expect(page.locator('#delta_value')).toContainText('%')
+  await expect(page.locator('#delta_value')).not.toContainText('(')
   await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(1)
   expect(await page.locator('#ath_distance_value .abs_value').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).display === 'none'))).toBeTruthy()
 })
@@ -106,9 +108,7 @@ test('refreshes stale cached dashboard data after assets change in another sessi
 })
 
 test('shows the deep drawdown ATH face from cached portfolio data', async ({ page }) => {
-  await page.addInitScript((portfolio) => {
-    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
-  }, {
+  const drawdownPortfolio = {
     total: 23500,
     prevMonthTotal: 22400,
     initYearNetworth: 18000,
@@ -139,7 +139,11 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
         IE00B4L5Y983: { total: 1000, displayName: 'World ETF' },
       },
     },
-  })
+  }
+
+  await page.addInitScript((portfolio) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+  }, drawdownPortfolio)
 
   await storePassword(page, DASHBOARD_USER_PASSWORD)
 
@@ -148,4 +152,13 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
   await expect(page.locator('#ath_distance_value')).toContainText('(-50.00%)')
   await expect(page.locator('#ath_distance_value')).toContainText('Jan 2025')
   await expect(page.locator('#ath_distance_value')).toContainText('😭')
+
+  await page.evaluate((portfolio) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+  }, drawdownPortfolio)
+
+  await page.locator('#abs_toggle_btn').click()
+  await expect(page.locator('body')).toHaveClass(/hide_absolute/)
+  await expect(page.locator('#ath_distance_value')).toContainText('-50.00%')
+  await expect(page.locator('#ath_distance_value')).not.toContainText('(-50.00%)')
 })

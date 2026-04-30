@@ -257,7 +257,7 @@ const renderAthDistance = (portfolio) => {
 
     el.innerHTML = `
         <span class="abs_value">${formatCompactValue(distanceAmount)}</span>
-        <span class="pct_value"> (${t(distancePercentage)}%)</span>
+        ${renderPercentageValue(`${t(distancePercentage)}%`)}
         <span class="overview_context"> from ATH</span>
         <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
         <span class="overview_context"> in ${athLabel}</span>
@@ -290,7 +290,7 @@ const updateProgress = (data) => {
         const diffClass = diff >= 0 ? 'positive' : 'negative';
         const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
         latestAssetDiff = { diff, diffPct, sign, diffClass };
-        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${formatCompactValue(diff)}</span><span class="pct_value"> (${diffPctLabel})</span></span>`;
+        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${formatCompactValue(diff)}</span>${renderPercentageValue(diffPctLabel)}</span>`;
     }
 
     // Append asset to list
@@ -316,7 +316,7 @@ const updateProgress = (data) => {
         const deltaPctLabel = diffPct === null ? '—' : `${assetSign}${t(diffPct)}%`;
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${formatCompactValue(runningDelta)}</span><span class="pct_value"> (${deltaPctLabel})</span> ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} ${emoji}`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
@@ -451,7 +451,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
-    let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span><span class="pct_value"> (${categoryPct}%)</span>`;
+    let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';
@@ -462,7 +462,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
             subrowsHtml += `
                 <div class="subrow">
                     <div class="subrow_title">${label}:</div>
-                    <div class="subrow_value"><span class="abs_value">${formatCompactValue(detail.total)}</span><span class="pct_value"> (${assetPct}%)</span></div>
+                    <div class="subrow_value"><span class="abs_value">${formatCompactValue(detail.total)}</span>${renderPercentageValue(`${assetPct}%`)}</div>
                 </div>
             `;
         }
@@ -679,12 +679,12 @@ const renderPortfolioData = (portfolio) => {
     document.getElementById('total_value').innerHTML = `<span class="abs_value">${formatCompactValue(total)}</span><span class="pct_value pct_placeholder">—</span>`;
     document.getElementById('delta_value').innerHTML = `
         <span class="abs_value">${formatCompactValue(delta)}</span>
-        <span class="pct_value"> (${deltaPercentage === null ? '—' : t(deltaPercentage) + '%'})</span>
+        ${renderPercentageValue(deltaPercentage === null ? '—' : `${t(deltaPercentage)}%`)}
         ${deltaPercentageLabel}
     `;
     document.getElementById('prevMonth_delta_value').innerHTML = `
         <span class="abs_value">${formatCompactValue(prevMonthdelta)}</span>
-        <span class="pct_value"> (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'})</span>
+        ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
         ${prevMonthdeltaPercentageLabel}
     `;
     renderAthDistance(portfolio);

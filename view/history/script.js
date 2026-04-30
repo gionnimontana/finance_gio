@@ -41,7 +41,7 @@ const renderSummaryCards = (historyData) => {
     const changeSign = totalChange >= 0 ? '+' : '';
     document.getElementById('total_change').innerHTML = `
         <span class="abs_value">${changeSign}€${formatCompactValue(totalChange)}</span>
-        <span class="pct_value"> (${totalChangePct === null ? '—' : changeSign + totalChangePct + '%'})</span>
+        ${renderPercentageValue(totalChangePct === null ? '—' : changeSign + totalChangePct + '%')}
     `;
     document.getElementById('total_change').className = `summary_card_value ${changeClass}`;
     

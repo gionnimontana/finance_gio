@@ -15,4 +15,6 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
 
   await page.locator('#abs_toggle_btn').click()
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
+  await expect(page.locator('#total_change')).toContainText('%')
+  await expect(page.locator('#total_change')).not.toContainText('(')
 })

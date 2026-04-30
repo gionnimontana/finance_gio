@@ -201,6 +201,24 @@ const formatCompactValue = (value, fractionDigits = 1) => {
  */
 const pct = (value, total) => ((value / total) * 100).toFixed(1);
 
+/**
+ * Format a percentage label according to the current privacy mode.
+ * @param {string|number|null|undefined} value - Preformatted percentage label.
+ * @returns {string}
+ */
+const formatPercentageValue = (value) => {
+    const label = value === null || value === undefined ? '—' : String(value);
+    return isAbsoluteHidden() ? label : ` (${label})`;
+};
+
+/**
+ * Render a percentage span that omits parentheses while privacy mode is enabled.
+ * @param {string|number|null|undefined} value - Preformatted percentage label.
+ * @param {string} [className='pct_value'] - CSS classes to apply to the span.
+ * @returns {string}
+ */
+const renderPercentageValue = (value, className = 'pct_value') => `<span class="${className}">${formatPercentageValue(value)}</span>`;
+
 // Get element by ID shorthand
 /**
  * Resolve a DOM element by id.
@@ -329,3 +347,4 @@ if (document.readyState === 'loading') {
 window.isAbsoluteHidden = isAbsoluteHidden;
 window.applyAbsoluteVisibility = applyAbsoluteVisibility;
 window.toggleAbsoluteVisibility = toggleAbsoluteVisibility;
+window.renderPercentageValue = renderPercentageValue;

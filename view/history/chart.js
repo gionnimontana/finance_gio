@@ -242,7 +242,7 @@ const HistoryChartModule = (() => {
             const p = pct(value, total);
             return p === null
                 ? '<span class="pct_value pct_placeholder">—</span>'
-                : `<span class="pct_value"> (${p}%)</span>`;
+                : renderPercentageValue(`${p}%`);
         };
 
         let html = '<table class="history_table">';
@@ -263,7 +263,7 @@ const HistoryChartModule = (() => {
             const change = prevTotal ? month.total - prevTotal : null;
             const changeClass = change !== null ? (change >= 0 ? 'positive' : 'negative') : '';
             const changeLabel = change !== null 
-                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${formatCompactValue(change)}</span><span class="pct_value"> (${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%)</span>`
+                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${formatCompactValue(change)}</span>${renderPercentageValue(`${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%`)}`
                 : '-';
 
             html += `<tr>
