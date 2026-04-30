@@ -4,13 +4,10 @@
 const core = require('../core')
 
 /**
- * Create the scraping config needed to resolve the gold price per gram in EUR.
- * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by asset id.
- * @throws {Error} - If the value is not found or not a number or 0
+ * Build a goldpreis.de provider config for the spot gold quote.
+ * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number }}
  */
-const goldOptionsCreator = () => {
-    // Gold price per gram in EUR from goldpreis.de (German gold price portal)
-    // Note: gold.de was previously used but is experiencing technical issues
+const createGoldPreisProvider = () => {
     const url = 'https://www.goldpreis.de/'
     /**
      * Log scraping progress for the gold price lookup.
@@ -18,42 +15,72 @@ const goldOptionsCreator = () => {
      * @returns {void}
      */
     const logger = (msg) => console.log(`goldPriceScraper - ${msg}`)
-    // Selector for the gold price per gram in the table
-    const selector = 'table'
+    const selectors = ['table', '#content table', '.table']
     /**
      * Parse the price-per-gram entry from the tables returned by the page.
-     * @param {string} selector - CSS selector for the candidate price table.
+     * @param {string[]} selectorCandidates - CSS selectors to try in order.
      * @returns {number}
      */
-    const selectorFunction = (selector) => {
-        // Find the table with gold prices and extract the price per gram
-        const tables = document.querySelectorAll('table')
-        for (const table of tables) {
-            const rows = table.querySelectorAll('tr')
-            for (const row of rows) {
-                const cells = row.querySelectorAll('td')
-                if (cells.length >= 2) {
-                    const label = cells[0]?.innerText?.trim() || ''
-                    if (label.includes('1 Gramm') || label.includes('1 g')) {
-                        // Get the last cell which contains the EUR price
-                        const priceText = cells[cells.length - 1]?.innerText?.trim() || ''
-                        // Extract number from format like "127,60 EUR"
-                        const match = priceText.match(/([\d.,]+)\s*EUR/)
-                        if (match) {
-                            // Convert German number format (comma as decimal) to standard
-                            const numericValue = parseFloat(match[1].replace('.', '').replace(',', '.'))
-                            if (!isNaN(numericValue) && numericValue > 0) {
-                                return numericValue
-                            }
-                        }
+    const parseValue = (selectorCandidates) => {
+        const parseNumericText = (text) => {
+            if (!text) return null
+            const match = text.match(/([\d.,]+)\s*EUR/i)
+            if (!match) return null
+            const raw = match[1]
+            const normalized = raw.includes(',')
+                ? raw.replace(/\./g, '').replace(',', '.')
+                : raw.replace(/,/g, '')
+            const numericValue = Number(normalized)
+            return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null
+        }
+
+        for (const selector of selectorCandidates) {
+            const tables = document.querySelectorAll(selector)
+            for (const table of tables) {
+                const rows = table.querySelectorAll('tr')
+                for (const row of rows) {
+                    const cells = row.querySelectorAll('td')
+                    if (cells.length < 2) continue
+
+                    const label = cells[0]?.textContent?.trim() || ''
+                    if (!label.includes('1 Gramm') && !label.includes('1 g')) {
+                        continue
+                    }
+
+                    const priceText = cells[cells.length - 1]?.textContent?.trim() || ''
+                    const numericValue = parseNumericText(priceText)
+                    if (numericValue !== null) {
+                        return numericValue
                     }
                 }
             }
         }
-        throw new Error('Gold price per gram not found')
+
+        throw new Error('Value not found')
     }
+
     return {
-        ['physical-gold']: { url, selector, selectorFunction, logger }
+        name: 'goldpreis',
+        url,
+        selectors,
+        parseValue,
+        logger,
+        waitUntil: 'domcontentloaded',
+        navigationTimeoutMs: 5000,
+        selectorTimeoutMs: 3000,
+    }
+}
+
+/**
+ * Create the scraping config needed to resolve the gold price per gram in EUR.
+ * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by asset id.
+ * @throws {Error} - If the value is not found or not a number or 0
+ */
+const goldOptionsCreator = () => {
+    return {
+        ['physical-gold']: {
+            providers: [createGoldPreisProvider()],
+        }
     }
 }
 
@@ -64,11 +91,11 @@ const goldOptionsCreator = () => {
  */
 const goldValue = async () => {
     const params = goldOptionsCreator()
-    const { url, selector, selectorFunction, logger } = params['physical-gold']
-    return core.urlSelectorScraper(url, selector, selectorFunction, logger)
+    return core.optionValueScraper('physical-gold', params['physical-gold'], 1)
 }
 
 module.exports = {
     goldValue,
     goldOptionsCreator,
+    createGoldPreisProvider,
 }

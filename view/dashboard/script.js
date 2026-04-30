@@ -452,6 +452,9 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
     let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
+    const formatDetailValue = (value) => categoryKey === 'Crypto'
+        ? formatPreciseValue(value)
+        : formatCompactValue(value);
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';
@@ -462,7 +465,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
             subrowsHtml += `
                 <div class="subrow">
                     <div class="subrow_title">${label}:</div>
-                    <div class="subrow_value"><span class="abs_value">${formatCompactValue(detail.total)}</span>${renderPercentageValue(`${assetPct}%`)}</div>
+                    <div class="subrow_value"><span class="abs_value">${formatDetailValue(detail.total)}</span>${renderPercentageValue(`${assetPct}%`)}</div>
                 </div>
             `;
         }

@@ -6,6 +6,14 @@ const api = require('../../api');
 
 const dynamicCategories = ['Isin', 'Crypto', 'Gold']
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const SCRAPER_MAX_RETRIES = 2
+
+/**
+ * Normalize the refresh flag received from routes or internal callers.
+ * @param {boolean|string|undefined|null} refresh - Refresh hint.
+ * @returns {boolean}
+ */
+const isRefreshEnabled = (refresh) => refresh === true || String(refresh).toLowerCase() === 'true'
 
 /**
  * Determine whether an asset relies on a live scraper instead of a static stored value.
@@ -134,6 +142,7 @@ const buildPortfolioPayload = (assetsSchema, assetValues, failures, historicalDa
  * @returns {Promise<{ assetValues: Record<string, number>, failures: string[] }>}
  */
 const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
+    const shouldRefresh = isRefreshEnabled(refresh)
     const assetsSchema = await api.getAssetsSchema(passwordHash)
 
     const dynamicAssets = assetsSchema.assets.filter(asset => isDynamicAsset(asset))
@@ -156,7 +165,7 @@ const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
 
     const filteredScraperOptions = scraperOptions.filter(Boolean)
 
-    const scraperResult = await scrapers.multipleScraper(filteredScraperOptions, 5, refresh, onProgress)
+    const scraperResult = await scrapers.multipleScraper(filteredScraperOptions, SCRAPER_MAX_RETRIES, shouldRefresh, onProgress)
 
     const assetValues = { ...scraperResult.values, ...staticAssets.reduce((acc, asset) => {
         acc[asset[1]] = asset[2]
@@ -173,14 +182,15 @@ const getAssetsValue = async (passwordHash, refresh, onProgress = null) => {
  * @returns {Promise<object>}
  */
 const getPortfolio = async (passwordHash, refresh) => {
+    const shouldRefresh = isRefreshEnabled(refresh)
     // Update prevMonthTotal and initYearNetworth from historical data when refreshing
-    if (refresh) {
+    if (shouldRefresh) {
         await api.updatePrevMonthTotal(passwordHash)
         await api.updateInitYearNetworth(passwordHash)
     }
     
     const assetsSchema = await api.getAssetsSchema(passwordHash)
-    const { assetValues, failures } = await getAssetsValue(passwordHash, refresh)
+    const { assetValues, failures } = await getAssetsValue(passwordHash, shouldRefresh)
     const historicalData = await api.getHistoricalData(passwordHash)
 
     return buildPortfolioPayload(assetsSchema, assetValues, failures, historicalData)
@@ -193,8 +203,9 @@ const getPortfolio = async (passwordHash, refresh) => {
  * @param {boolean} [refresh=true] - Whether the stream should force a live refresh and update derived history.
  */
 const streamPortfolio = async (passwordHash, sendEvent, refresh = true) => {
+    const shouldRefresh = isRefreshEnabled(refresh)
     // Update prevMonthTotal and initYearNetworth from historical data only for live refreshes.
-    if (refresh) {
+    if (shouldRefresh) {
         await api.updatePrevMonthTotal(passwordHash)
         await api.updateInitYearNetworth(passwordHash)
     }
@@ -267,12 +278,12 @@ const streamPortfolio = async (passwordHash, sendEvent, refresh = true) => {
     }
 
     // Get asset values with progress callback
-    const { assetValues, failures } = await getAssetsValue(passwordHash, refresh, onProgress)
+    const { assetValues, failures } = await getAssetsValue(passwordHash, shouldRefresh, onProgress)
     const historicalData = await api.getHistoricalData(passwordHash)
     const finalPortfolio = buildPortfolioPayload(assetsSchema, assetValues, failures, historicalData)
 
     // Update historical data only when the stream represents a user-triggered refresh.
-    if (refresh) {
+    if (shouldRefresh) {
         await api.updateHistoricalData(passwordHash, finalPortfolio)
     }
 

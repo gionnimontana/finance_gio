@@ -17,22 +17,62 @@ const cryptoWalletOptionsCreator = (address) => {
      * @returns {void}
      */
     const logger = (msg) => console.log(`cryptoWalletOptionsCreator - ${msg}`)
-    const selector = 'HoldingsUSD'
+    const selectors = [
+        '#HoldingsUSD',
+        '[id="HoldingsUSD"]',
+        '[data-testid="HoldingsUSD"]',
+        '.card-body .fw-medium',
+    ]
     /**
-     * Parse the EUR wallet value from the selected Etherscan element.
-     * @param {string} selector - CSS selector for the holdings element.
+     * Parse the wallet value from the selected Etherscan element.
+     * @param {string[]} selectorCandidates - CSS selectors to try in order.
      * @returns {number}
      */
-    const selectorFunction = (selector) => {
-        const rawValue = document.querySelector(selector).innerText
-        const match = rawValue.match(/\d{1,3}(?:,\d{3})*(?:\.\d+)?(?=\sEUR)/);
-        if (!match) throw new Error('Value not found');
-        const numbericValue = parseFloat(match[0].replace(/,/g, ''));
-        if (!numbericValue) throw new Error('Value not found');
-        return numbericValue;
+    const parseValue = (selectorCandidates) => {
+        const parseNumericText = (text) => {
+            if (!text) return null
+            const match = text.replace(/\u00a0/g, ' ').match(/([\d.,\s]+)(?=\s*(?:USD|EUR)|$)/i)
+            if (!match) return null
+            const raw = match[1].replace(/\s/g, '')
+            let normalized = raw
+
+            if (raw.includes(',') && raw.includes('.')) {
+                normalized = raw.lastIndexOf('.') > raw.lastIndexOf(',')
+                    ? raw.replace(/,/g, '')
+                    : raw.replace(/\./g, '').replace(',', '.')
+            } else if (raw.includes(',')) {
+                const decimalDigits = raw.split(',').pop()?.length || 0
+                normalized = decimalDigits === 2 ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, '')
+            }
+
+            const numericValue = Number(normalized)
+            return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null
+        }
+
+        for (const selector of selectorCandidates) {
+            const element = document.querySelector(selector)
+            const numericValue = parseNumericText(element?.textContent || '')
+            if (numericValue !== null) {
+                return numericValue
+            }
+        }
+
+        throw new Error('Value not found')
     }
+
     return {
-        [address]: { url, selector, selectorFunction, logger }
+        [address]: {
+            providers: [{
+                name: 'etherscan',
+                url,
+                selectors,
+                parseValue,
+                logger,
+                waitUntil: 'domcontentloaded',
+                navigationTimeoutMs: 5000,
+                selectorTimeoutMs: 3500,
+            }],
+        }
     }
 }
 
@@ -44,8 +84,7 @@ const cryptoWalletOptionsCreator = (address) => {
 */
 const cryptoWalletValue = async (address) => {
     const params = cryptoWalletOptionsCreator(address)
-    const { url, selector, selectorFunction, logger } = params[address]
-    return core.urlSelectorScraper(url, selector, selectorFunction, logger)
+    return core.optionValueScraper(address, params[address], 1)
 }
 
 module.exports = {

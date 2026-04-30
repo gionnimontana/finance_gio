@@ -90,7 +90,9 @@ app.get('/portfolio/stream', async (req, res) => {
 // add support for refresh url param
 app.get('/portfolio', authMiddleware, async (req, res) => {
   const params = req.query
-  const refresh = params.refresh
+  const refresh = params.refresh === undefined
+    ? false
+    : String(params.refresh).toLowerCase() === 'true'
   const passwordHash = req.userPasswordHash
   const portfolio = await portfolioScripts.getPortfolio(passwordHash, refresh)
   

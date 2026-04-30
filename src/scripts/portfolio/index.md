@@ -4,4 +4,4 @@ This folder contains the backend logic that converts asset schemas and live mark
 
 ## Files
 
-- [index.js](./index.js): Aggregates asset values, groups totals by view group, derives all-time-high metadata from saved history plus the current live total, attaches the current schema cache key, and emits SSE progress and completion payloads for both manual refreshes and first-load streams.
+- [index.js](./index.js): Aggregates asset values, groups totals by view group, derives all-time-high metadata from saved history plus the current live total, normalizes refresh flags before invoking the scraper runtime, attaches the current schema cache key, and emits SSE progress and completion payloads for both manual refreshes and first-load streams.

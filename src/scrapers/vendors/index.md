@@ -4,10 +4,10 @@ This folder contains source-specific scraping adapters that translate each upstr
 
 ## Files
 
-- [beaconchainScraper.js](./beaconchainScraper.js): Scrapes adjusted validator balances from beaconcha.in.
-- [etherScan.js](./etherScan.js): Builds wallet-holdings scraper configs backed by Etherscan.
-- [goldPriceScraper.js](./goldPriceScraper.js): Resolves the current gold price per gram in EUR from goldpreis.de.
-- [justETFscraper.js](./justETFscraper.js): Resolves ETF quote values by ISIN from justETF.
-- [xeScraper.js](./xeScraper.js): Resolves crypto-to-EUR exchange rates from XE.
-- [yahooFinance.js](./yahooFinance.js): Resolves crypto-to-EUR quotes from Yahoo Finance.
-- [youngPlatformScraper.js](./youngPlatformScraper.js): Resolves crypto-to-EUR prices from Young Platform.
+- [beaconchainScraper.js](./beaconchainScraper.js): Exposes beaconcha.in validator-balance providers using the shared selector-list parser contract.
+- [etherScan.js](./etherScan.js): Builds Etherscan wallet-value providers using the shared selector-list parser contract.
+- [goldPriceScraper.js](./goldPriceScraper.js): Resolves the current gold price per gram in EUR from goldpreis.de using table parsing backed by the shared provider contract.
+- [justETFscraper.js](./justETFscraper.js): Resolves ETF quote values by ISIN from justETF using multiple selector candidates.
+- [xeScraper.js](./xeScraper.js): Exposes XE crypto-to-EUR providers used as the last fallback source.
+- [yahooFinance.js](./yahooFinance.js): Exposes Yahoo Finance crypto-to-EUR providers used as the preferred live crypto source.
+- [youngPlatformScraper.js](./youngPlatformScraper.js): Builds the active crypto quote chain, preferring Yahoo Finance before Young Platform and XE.

@@ -192,6 +192,22 @@ const formatCompactValue = (value, fractionDigits = 1) => {
     return `${trimTrailingZeros(thousands.toFixed(digits))}k`;
 };
 
+/**
+ * Format a value with thousands separators and a stable decimal precision.
+ * @param {number} value - Numeric total to format.
+ * @param {number} [fractionDigits=2] - Decimal precision for the rendered value.
+ * @returns {string}
+ */
+const formatPreciseValue = (value, fractionDigits = 2) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '0';
+
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    }).format(numericValue);
+};
+
 // Calculate percentage
 /**
  * Calculate a percentage string for a value within a total.

@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test')
 
-const { DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
+const { DASHBOARD_USER_PASSWORD, HISTORY_USER_PASSWORD } = require('../fixtures/users')
 const { canvasHasPaint, openAuthenticatedPage, storePassword } = require('../helpers/app')
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -22,6 +22,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('progress-asset-BTC')).toBeVisible()
   await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
   await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
+  await expect(page.locator('#table_view')).toContainText('20,000.00')
   await expect(page.locator('#total_value')).toContainText('23.5k')
   await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
   await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
@@ -108,12 +109,23 @@ test('refreshes stale cached dashboard data after assets change in another sessi
 })
 
 test('shows the deep drawdown ATH face from cached portfolio data', async ({ page }) => {
+  const drawdownSchema = {
+    assets: [
+      ['Other', 'cash-wallet', 1500, 'Cash Wallet', 'Liquidity'],
+      ['Crypto', 'BTC', 0.5, 'Bitcoin Stack', 'Crypto'],
+      ['Gold', 'physical-gold', 20, 'Gold Reserve', 'Gold'],
+      ['Isin', 'IE00B4L5Y983', 10, 'World ETF', 'Equity'],
+    ],
+    viewGroups: ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'],
+  }
   const drawdownPortfolio = {
     total: 23500,
     prevMonthTotal: 22400,
     initYearNetworth: 18000,
     allTimeHighTotal: 47000,
     allTimeHighLabel: 'Jan 2025',
+    schemaCacheKey: JSON.stringify(drawdownSchema),
+    viewGroups: drawdownSchema.viewGroups,
     Liquidity: {
       total: 1500,
       details: {
@@ -145,7 +157,7 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
     window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
   }, drawdownPortfolio)
 
-  await storePassword(page, DASHBOARD_USER_PASSWORD)
+  await storePassword(page, HISTORY_USER_PASSWORD)
 
   await page.goto('/dashboard/')
 

@@ -4,35 +4,83 @@
 const core = require('../core')
 
 /**
- * Create the scraping config needed to resolve a crypto price from XE.
- * @param {'BTC' | 'ETH' } crypto - The crypto currency to scrape
- * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by ticker.
- * @throws {Error} - If the value is not found or not a number or 0
-*/
-const cryptoOptionsCreator = (crypto) => {
+ * Build an XE provider config for a crypto quote.
+ * @param {'BTC' | 'ETH' } crypto - The crypto currency to scrape.
+ * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number }}
+ */
+const createXeProvider = (crypto) => {
     const url = `https://www.xe.com/currencycharts/?from=${crypto}&to=EUR`
     /**
      * Log scraping progress for the current XE lookup.
      * @param {string} msg - Message to print.
      * @returns {void}
      */
-    const logger = (msg) => console.log(`cryptoValueScraper - ${msg}`)
-    const selector = '.mx-2.font-semibold'
+    const logger = (msg) => console.log(`xeScraper - ${msg}`)
+    const selectors = [
+        '[data-testid="conversion"]',
+        '.mx-2.font-semibold',
+        '[class*="ChartRate"]',
+    ]
     /**
      * Parse the quoted EUR price from the XE page.
-     * @param {string} selector - CSS selector for the quote element.
+     * @param {string[]} selectorCandidates - CSS selectors to try in order.
      * @returns {number}
      */
-    const selectorFunction = (selector) => {
-        const rawValue = document.querySelector(selector).innerText
-        const match = rawValue.match(/\d{1,3}(?:,\d{3})*(?:\.\d+)?(?=\sEUR)/);
-        if (!match) throw new Error('Value not found');
-        const numbericValue = parseFloat(match[0].replace(/,/g, ''));
-        if (!numbericValue) throw new Error('Value not found');
-        return numbericValue;
+    const parseValue = (selectorCandidates) => {
+        const parseNumericText = (text) => {
+            if (!text) return null
+            const match = text.replace(/\u00a0/g, ' ').match(/([\d.,\s]+)(?=\s*EUR|$)/)
+            if (!match) return null
+            const raw = match[1].replace(/\s/g, '')
+            let normalized = raw
+
+            if (raw.includes(',') && raw.includes('.')) {
+                normalized = raw.lastIndexOf('.') > raw.lastIndexOf(',')
+                    ? raw.replace(/,/g, '')
+                    : raw.replace(/\./g, '').replace(',', '.')
+            } else if (raw.includes(',')) {
+                const decimalDigits = raw.split(',').pop()?.length || 0
+                normalized = decimalDigits === 2 ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, '')
+            }
+
+            const numericValue = Number(normalized)
+            return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null
+        }
+
+        for (const selector of selectorCandidates) {
+            const element = document.querySelector(selector)
+            const numericValue = parseNumericText(element?.textContent || '')
+            if (numericValue !== null) {
+                return numericValue
+            }
+        }
+
+        throw new Error('Value not found')
     }
+
     return {
-        [crypto]: { url, selector, selectorFunction, logger }
+        name: 'xe',
+        url,
+        selectors,
+        parseValue,
+        logger,
+        waitUntil: 'domcontentloaded',
+        navigationTimeoutMs: 4500,
+        selectorTimeoutMs: 3000,
+    }
+}
+
+/**
+ * Create the scraping config needed to resolve a crypto price from XE.
+ * @param {'BTC' | 'ETH' } crypto - The crypto currency to scrape
+ * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by ticker.
+ * @throws {Error} - If the value is not found or not a number or 0
+*/
+const cryptoOptionsCreator = (crypto) => {
+    return {
+        [crypto]: {
+            providers: [createXeProvider(crypto)],
+        }
     }
 }
 
@@ -44,11 +92,11 @@ const cryptoOptionsCreator = (crypto) => {
 */
 const cryptoValue = async (crypto) => {
     const params = cryptoOptionsCreator(crypto)
-    const { url, selector, selectorFunction, logger } = params[crypto]
-    return core.urlSelectorScraper(url, selector, selectorFunction, logger)
+    return core.optionValueScraper(crypto, params[crypto], 1)
 }
 
 module.exports = {
     cryptoValue: cryptoValue,
     cryptoOptionsCreator,
+    createXeProvider,
 }

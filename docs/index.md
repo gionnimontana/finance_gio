@@ -5,6 +5,7 @@ This folder contains the LLM-maintained project wiki for cross-cutting knowledge
 ## Files
 
 - [data-model.md](./data-model.md): Cross-cutting notes about password-derived user storage, persisted JSON files, browser-local caches, and cross-device synchronization behavior.
+- [scraper-runtime.md](./scraper-runtime.md): Fallback-provider runtime notes covering cache TTLs, stale-value reuse, and deterministic scraper regression tests.
 - [log.md](./log.md): Append-only history of notable wiki updates.
 - [schema.md](./schema.md): Minimal format and maintenance rules for wiki pages.
 
