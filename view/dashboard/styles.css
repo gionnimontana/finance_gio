@@ -61,9 +61,11 @@
 .overview {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     padding: 10px;
     font-size: 16px;
     border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
 }
 
 .overview:last-child {
@@ -76,6 +78,28 @@
 
 .overview_value {
     font-weight: bold;
+    flex: 1 1 220px;
+    min-width: 0;
+    text-align: right;
+    line-height: 1.35;
+}
+
+#ath_distance_value.positive {
+    color: #4CAF50;
+}
+
+#ath_distance_value.negative {
+    color: #f44336;
+}
+
+.overview_context {
+    opacity: 0.82;
+    font-weight: 600;
+}
+
+.overview_face {
+    font-size: 20px;
+    line-height: 1;
 }
 
 /* Table View */
@@ -216,6 +240,18 @@
     overflow-y: auto;
     margin-bottom: 10px;
     font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    .overview {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .overview_value {
+        width: 100%;
+        text-align: left;
+    }
 }
 
 .progress_status_message {

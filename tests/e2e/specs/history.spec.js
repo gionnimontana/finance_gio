@@ -6,9 +6,9 @@ const { canvasHasPaint, openAuthenticatedPage } = require('../helpers/app')
 test('renders historical summaries, chart, and monthly table', async ({ page }) => {
   await openAuthenticatedPage(page, '/history/', HISTORY_USER_PASSWORD)
 
-  await expect(page.locator('#current_total')).toContainText('€23500.00')
+  await expect(page.locator('#current_total')).toContainText('€23.5k')
   await expect(page.locator('#avg_growth')).toContainText('%')
-  await expect(page.locator('#total_change')).toContainText('3300.00')
+  await expect(page.locator('#total_change')).toContainText('3.3k')
   await expect(page.locator('#history_table table tbody tr')).toHaveCount(5)
   await expect(page.locator('#history_table')).toContainText('Month')
   expect(await canvasHasPaint(page, '#history_chart')).toBeTruthy()

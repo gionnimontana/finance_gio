@@ -3,7 +3,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const portfolioScripts = require('./src/scripts/portfolio')
-const { getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema, updateViewGroups } = require('./src/api')
+const { buildAssetsSchemaCacheKey, getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema, updateViewGroups } = require('./src/api')
 const { handleGenerate, handleValidate, authMiddleware, hashPassword, userExists } = require('./src/auth')
 
 const app = express()
@@ -112,7 +112,10 @@ app.get('/portfolio/history', authMiddleware, async (req, res) => {
 app.get('/assets/schema', authMiddleware, async (req, res) => {
   const passwordHash = req.userPasswordHash
   const schema = await getAssetsSchema(passwordHash)
-  res.send(schema)
+  res.send({
+    ...schema,
+    schemaCacheKey: buildAssetsSchemaCacheKey(schema)
+  })
 })
 
 app.put('/assets/schema', authMiddleware, async (req, res) => {

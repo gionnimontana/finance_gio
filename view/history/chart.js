@@ -116,7 +116,7 @@ const HistoryChartModule = (() => {
             // Label
             if (!hideAbsolute) {
                 ctx.fillStyle = '#333';
-                const labelValue = value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toFixed(0);
+                const labelValue = formatCompactValue(value, 0);
                 ctx.fillText(labelValue, padding.left - 10, y);
             }
         }
@@ -163,7 +163,7 @@ const HistoryChartModule = (() => {
                 ctx.font = 'bold 11px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                const totalLabel = month.total >= 1000 ? `${(month.total / 1000).toFixed(1)}k` : month.total.toFixed(0);
+                const totalLabel = formatCompactValue(month.total);
                 ctx.fillText(totalLabel, x + columnWidth / 2, currentY - 5);
             }
         });
@@ -222,13 +222,6 @@ const HistoryChartModule = (() => {
         }
 
         /**
-         * Format a numeric value with two decimal places.
-         * @param {number} num - Value to format.
-         * @returns {string}
-         */
-        const t = (num) => num.toFixed(2);
-
-        /**
          * Calculate a percentage string relative to a total.
          * @param {number} value - Partial value.
          * @param {number} total - Whole value.
@@ -270,7 +263,7 @@ const HistoryChartModule = (() => {
             const change = prevTotal ? month.total - prevTotal : null;
             const changeClass = change !== null ? (change >= 0 ? 'positive' : 'negative') : '';
             const changeLabel = change !== null 
-                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${t(change)}</span><span class="pct_value"> (${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%)</span>`
+                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${formatCompactValue(change)}</span><span class="pct_value"> (${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%)</span>`
                 : '-';
 
             html += `<tr>
@@ -279,10 +272,10 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
                 const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                html += `<td class="col-${cls}"><span class="abs_value">${t(value)}</span>${pctSpan(value, month.total)}</td>`;
+                html += `<td class="col-${cls}"><span class="abs_value">${formatCompactValue(value)}</span>${pctSpan(value, month.total)}</td>`;
             });
 
-            html += `<td class="total_cell total_column"><span class="abs_value">${t(month.total)}</span>${pctSpan(month.total, month.total)}</td>
+            html += `<td class="total_cell total_column"><span class="abs_value">${formatCompactValue(month.total)}</span>${pctSpan(month.total, month.total)}</td>
                 <td class="change_cell ${changeClass}">${changeLabel}</td>
             </tr>`;
         });

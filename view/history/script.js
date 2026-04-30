@@ -31,7 +31,7 @@ const renderSummaryCards = (historyData) => {
     const baseline = historyData[baselineIndex];
     
     // Current total
-    document.getElementById('current_total').innerHTML = `<span class="abs_value">€${t(latest.total)}</span><span class="pct_value pct_placeholder">—</span>`;
+    document.getElementById('current_total').innerHTML = `<span class="abs_value">€${formatCompactValue(latest.total)}</span><span class="pct_value pct_placeholder">—</span>`;
     
     // Change vs N months back
     const totalChange = latest.total - baseline.total;
@@ -40,7 +40,7 @@ const renderSummaryCards = (historyData) => {
     const changeClass = totalChange >= 0 ? 'positive' : 'negative';
     const changeSign = totalChange >= 0 ? '+' : '';
     document.getElementById('total_change').innerHTML = `
-        <span class="abs_value">${changeSign}€${t(totalChange)}</span>
+        <span class="abs_value">${changeSign}€${formatCompactValue(totalChange)}</span>
         <span class="pct_value"> (${totalChangePct === null ? '—' : changeSign + totalChangePct + '%'})</span>
     `;
     document.getElementById('total_change').className = `summary_card_value ${changeClass}`;

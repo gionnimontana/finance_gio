@@ -188,6 +188,84 @@ const restoreProgressBanner = () => {
 };
 
 /**
+ * Resolve the ATH face and accessible label from the drawdown percentage.
+ * @param {number} distancePercentage - Percentage distance from all-time high.
+ * @returns {{ icon: string, label: string }}
+ */
+const getAthMood = (distancePercentage) => {
+    if (distancePercentage >= 0) {
+        return { icon: '🤩', label: 'Portfolio at all time high' };
+    }
+
+    if (distancePercentage <= -50) {
+        return { icon: '😭', label: 'Portfolio is at least 50 percent below all time high' };
+    }
+
+    if (distancePercentage <= -35) {
+        return { icon: '😢', label: 'Portfolio is between 35 and 50 percent below all time high' };
+    }
+
+    if (distancePercentage <= -20) {
+        return { icon: '😟', label: 'Portfolio is between 20 and 35 percent below all time high' };
+    }
+
+    if (distancePercentage <= -10) {
+        return { icon: '😬', label: 'Portfolio is between 10 and 20 percent below all time high' };
+    }
+
+    if (distancePercentage <= -2) {
+        return { icon: '🙂', label: 'Portfolio is between 2 and 10 percent below all time high' };
+    }
+
+    return { icon: '😎', label: 'Portfolio is within 2 percent of all time high' };
+};
+
+/**
+ * Render the dashboard ATH overview line with privacy-mode-safe text.
+ * @param {{ total?: number, allTimeHighTotal?: number|null, allTimeHighLabel?: string|null }} portfolio - Portfolio payload.
+ * @returns {void}
+ */
+const renderAthDistance = (portfolio) => {
+    const el = document.getElementById('ath_distance_value');
+    if (!el) return;
+
+    const allTimeHighTotal = portfolio.allTimeHighTotal;
+    if (typeof allTimeHighTotal !== 'number' || !Number.isFinite(allTimeHighTotal) || allTimeHighTotal < 0) {
+        el.textContent = '—';
+        el.className = 'overview_value';
+        return;
+    }
+
+    const total = typeof portfolio.total === 'number' && Number.isFinite(portfolio.total) ? portfolio.total : 0;
+    const distanceAmount = total - allTimeHighTotal;
+    const isAtAth = Math.abs(distanceAmount) < 0.005;
+    const distancePercentage = allTimeHighTotal > 0 ? (distanceAmount / allTimeHighTotal) * 100 : 0;
+    const athLabel = escapeHtml(portfolio.allTimeHighLabel || 'current month');
+    const mood = getAthMood(isAtAth ? 0 : distancePercentage);
+
+    el.className = `overview_value ${isAtAth ? 'positive' : 'negative'}`;
+
+    if (isAtAth) {
+        el.innerHTML = `
+            <span class="overview_context">At ATH</span>
+            <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
+            <span class="overview_context"> in ${athLabel}</span>
+            <span class="overview_face" aria-label="${mood.label}">${mood.icon}</span>
+        `;
+        return;
+    }
+
+    el.innerHTML = `
+        <span class="abs_value">${formatCompactValue(distanceAmount)}</span>
+        <span class="pct_value"> (${t(distancePercentage)}%)</span>
+        <span class="overview_context"> from ATH</span>
+        <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
+        <span class="overview_context"> in ${athLabel}</span>
+        <span class="overview_face" aria-label="${mood.label}">${mood.icon}</span>
+    `;
+};
+
+/**
  * Append a streamed refresh update to the progress banner.
  * @param {{ assetName: string, assetId: string, value: number|null, assetTotal: number|null, failed: boolean, index: number, total: number, currentPortfolioTotal: number, prevMonthTotal: number|null }} data - Progress payload from SSE.
  * @returns {void}
@@ -212,13 +290,13 @@ const updateProgress = (data) => {
         const diffClass = diff >= 0 ? 'positive' : 'negative';
         const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
         latestAssetDiff = { diff, diffPct, sign, diffClass };
-        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${t(diff)}</span><span class="pct_value"> (${diffPctLabel})</span></span>`;
+        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${formatCompactValue(diff)}</span><span class="pct_value"> (${diffPctLabel})</span></span>`;
     }
 
     // Append asset to list
     const valueDisplay = failed 
         ? '<span class="asset_value failed">❌ Failed</span>'
-        : `<span class="asset_value"><span class="abs_value">€${t(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
+        : `<span class="asset_value"><span class="abs_value">€${formatCompactValue(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
     
     const assetRow = document.createElement('div');
     assetRow.className = 'progress_asset_row';
@@ -238,7 +316,7 @@ const updateProgress = (data) => {
         const deltaPctLabel = diffPct === null ? '—' : `${assetSign}${t(diffPct)}%`;
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${t(runningDelta)}</span><span class="pct_value"> (${deltaPctLabel})</span> ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${formatCompactValue(runningDelta)}</span><span class="pct_value"> (${deltaPctLabel})</span> ${emoji}`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
@@ -373,7 +451,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
-    let mainRowValueHtml = `<span class="abs_value">${t(categoryData.total)}</span><span class="pct_value"> (${categoryPct}%)</span>`;
+    let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span><span class="pct_value"> (${categoryPct}%)</span>`;
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';
@@ -384,7 +462,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
             subrowsHtml += `
                 <div class="subrow">
                     <div class="subrow_title">${label}:</div>
-                    <div class="subrow_value"><span class="abs_value">${t(detail.total)}</span><span class="pct_value"> (${assetPct}%)</span></div>
+                    <div class="subrow_value"><span class="abs_value">${formatCompactValue(detail.total)}</span><span class="pct_value"> (${assetPct}%)</span></div>
                 </div>
             `;
         }
@@ -445,7 +523,9 @@ const getPortfolio = async (refresh) => {
     const needsRefresh = portfolio && (
         (portfolio.Equity?.details && Object.values(portfolio.Equity.details).some(d => !d.displayName)) ||
         !portfolio.Gold ||
-        !portfolio.Equity
+        !portfolio.Equity ||
+        !Object.prototype.hasOwnProperty.call(portfolio, 'allTimeHighTotal') ||
+        !Object.prototype.hasOwnProperty.call(portfolio, 'allTimeHighLabel')
     );
     if (portfolio === null || refresh || needsRefresh) {
         if (refresh) {
@@ -487,6 +567,13 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
     try {
         const schema = await fetchAssetsSchema();
         if (schema && Array.isArray(schema.viewGroups)) {
+            let resolvedPortfolio = portfolio;
+            if (resolvedPortfolio && resolvedPortfolio.schemaCacheKey !== schema.schemaCacheKey) {
+                resolvedPortfolio = await fetchData(false);
+                localStorage.setItem('portfolio', JSON.stringify(resolvedPortfolio));
+                setLastUpdateNow();
+            }
+
             /**
              * Reconcile cached portfolio group keys with the latest schema ordering.
              * @param {object} p - Cached portfolio object.
@@ -534,7 +621,7 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
                 return { ...p, viewGroups: nextGroups };
             };
 
-            const migrated = migratePortfolioViewGroups(portfolio, schema.viewGroups);
+            const migrated = migratePortfolioViewGroups(resolvedPortfolio, schema.viewGroups);
 
             // Persist migration so the first render (cached) doesn't show stale keys next time.
             try {
@@ -589,17 +676,18 @@ const renderPortfolioData = (portfolio) => {
     const prevMonthdeltaPercentageLabel = prevMonthdelta >= 0 ? '🚀' : '🔥';
 
     // Update overview values
-    document.getElementById('total_value').innerHTML = `<span class="abs_value">${t(total)}</span><span class="pct_value pct_placeholder">—</span>`;
+    document.getElementById('total_value').innerHTML = `<span class="abs_value">${formatCompactValue(total)}</span><span class="pct_value pct_placeholder">—</span>`;
     document.getElementById('delta_value').innerHTML = `
-        <span class="abs_value">${t(delta)}</span>
+        <span class="abs_value">${formatCompactValue(delta)}</span>
         <span class="pct_value"> (${deltaPercentage === null ? '—' : t(deltaPercentage) + '%'})</span>
         ${deltaPercentageLabel}
     `;
     document.getElementById('prevMonth_delta_value').innerHTML = `
-        <span class="abs_value">${t(prevMonthdelta)}</span>
+        <span class="abs_value">${formatCompactValue(prevMonthdelta)}</span>
         <span class="pct_value"> (${prevMonthdeltaPercentage === null ? '—' : t(prevMonthdeltaPercentage) + '%'})</span>
         ${prevMonthdeltaPercentageLabel}
     `;
+    renderAthDistance(portfolio);
     renderLastUpdate();
 
     // Show/hide error banner based on failures

@@ -157,6 +157,41 @@ const authFetch = async (url, options = {}) => {
  */
 const t = (number) => number.toFixed(2);
 
+/**
+ * Format a number using compact suffixes for visible absolute values.
+ * @param {number} value - Numeric total to format.
+ * @param {number} [fractionDigits=1] - Decimal precision for compact labels.
+ * @returns {string}
+ */
+const formatCompactValue = (value, fractionDigits = 1) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '0';
+
+    const trimTrailingZeros = (formattedValue) => formattedValue.replace(/\.0+$|(\.\d*[1-9])0+$/, '$1');
+    const absValue = Math.abs(numericValue);
+
+    if (absValue < 1000) {
+        return numericValue.toFixed(0);
+    }
+
+    if (absValue >= 1000000) {
+        const millions = numericValue / 1000000;
+        const digits = Math.abs(millions) >= 10 ? 0 : fractionDigits;
+        return `${trimTrailingZeros(millions.toFixed(digits))}m`;
+    }
+
+    const thousands = numericValue / 1000;
+    const digits = Math.abs(thousands) >= 100 ? 0 : fractionDigits;
+    const roundedThousands = Number(thousands.toFixed(digits));
+
+    if (Math.abs(roundedThousands) >= 1000) {
+        const millions = numericValue / 1000000;
+        return `${trimTrailingZeros(millions.toFixed(fractionDigits))}m`;
+    }
+
+    return `${trimTrailingZeros(thousands.toFixed(digits))}k`;
+};
+
 // Calculate percentage
 /**
  * Calculate a percentage string for a value within a total.

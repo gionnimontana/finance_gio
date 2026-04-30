@@ -21,7 +21,7 @@ test('creates a new account and reaches the dashboard @smoke', async ({ page }) 
 
   await page.locator('#continue_btn').click()
   await expect(page).toHaveURL(/\/dashboard\/$/)
-  await expect(page.locator('#total_value')).toContainText('0.00')
+  await expect(page.locator('#total_value')).toContainText('0')
   await expect(page.locator('#table_view .row')).toHaveCount(0)
 })
 
@@ -30,5 +30,5 @@ test('redirects away from login when a valid password is already stored', async 
   await page.goto('/login/')
 
   await expect(page).toHaveURL(/\/dashboard\/$/)
-  await expect(page.locator('#total_value')).toContainText('23500.00')
+  await expect(page.locator('#total_value')).toContainText('23.5k')
 })

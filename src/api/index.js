@@ -186,6 +186,19 @@ const normalizeAssetsSchema = (schema) => {
 }
 
 /**
+ * Build a deterministic cache key from the persisted asset rows and view-group order.
+ * @param {unknown} schema - Raw or normalized schema object.
+ * @returns {string}
+ */
+const buildAssetsSchemaCacheKey = (schema) => {
+    const normalized = normalizeAssetsSchema(schema);
+    return JSON.stringify({
+        assets: normalized.assets,
+        viewGroups: normalized.viewGroups,
+    });
+}
+
+/**
  * Collect unique view groups referenced by the current asset rows.
  * @param {unknown[]} assets - Asset rows from the schema.
  * @returns {string[]}
@@ -254,7 +267,13 @@ const updateAssetsSchema = async (passwordHash, { assets }) => {
     };
     const wrote = await writeAssetsSchema(passwordHash, next);
     if (!wrote) return { ok: false, error: 'Failed to persist assets schema' };
-    return { ok: true, assetsSchema: next };
+    return {
+        ok: true,
+        assetsSchema: {
+            ...next,
+            schemaCacheKey: buildAssetsSchemaCacheKey(next)
+        }
+    };
 }
 
 // Replace viewGroups array (cannot remove groups that are referenced by any asset)
@@ -335,7 +354,13 @@ const updateViewGroups = async (passwordHash, { viewGroups }) => {
     const wroteHistory = await writeHistoricalData(passwordHash, historicalData);
     if (!wroteHistory) return { ok: false, error: 'Failed to persist historical data' };
 
-    return { ok: true, assetsSchema: next };
+    return {
+        ok: true,
+        assetsSchema: {
+            ...next,
+            schemaCacheKey: buildAssetsSchemaCacheKey(next)
+        }
+    };
 }
 
 // Historical data for portfolio history view
@@ -493,6 +518,7 @@ const updateHistoricalData = async (passwordHash, portfolio) => {
 }
 
 module.exports = {
+    buildAssetsSchemaCacheKey,
     getAssetsSchema,
     updateAssetsSchema,
     updateViewGroups,

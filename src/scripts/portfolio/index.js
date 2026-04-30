@@ -5,6 +5,7 @@ const scrapers = require('../../scrapers');
 const api = require('../../api');
 
 const dynamicCategories = ['Isin', 'Crypto', 'Gold']
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**
  * Determine whether an asset relies on a live scraper instead of a static stored value.
@@ -12,6 +13,118 @@ const dynamicCategories = ['Isin', 'Crypto', 'Gold']
  * @returns {boolean}
  */
 const isDynamicAsset = (asset) => dynamicCategories.includes(asset[0])
+
+/**
+ * Format the current month label used when a live portfolio total sets a new ATH.
+ * @param {Date} [date=new Date()] - Reference date.
+ * @returns {string}
+ */
+const getCurrentMonthLabel = (date = new Date()) => `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+
+/**
+ * Resolve the portfolio all-time high from saved history plus the current live total.
+ * @param {Array<{ total?: number, label?: string }>} historicalData - Historical monthly snapshots.
+ * @param {number} currentTotal - Current live portfolio total.
+ * @returns {{ allTimeHighTotal: number|null, allTimeHighLabel: string|null }}
+ */
+const getAllTimeHighSummary = (historicalData, currentTotal) => {
+    const historyEntries = Array.isArray(historicalData) ? historicalData : []
+    const highestHistoricalEntry = historyEntries.reduce((highestEntry, entry) => {
+        if (!entry || typeof entry.total !== 'number') return highestEntry
+        if (!highestEntry || entry.total > highestEntry.total) return entry
+        return highestEntry
+    }, null)
+
+    const hasCurrentTotal = typeof currentTotal === 'number' && Number.isFinite(currentTotal)
+    if (!highestHistoricalEntry && !hasCurrentTotal) {
+        return {
+            allTimeHighTotal: null,
+            allTimeHighLabel: null
+        }
+    }
+
+    if (hasCurrentTotal && (!highestHistoricalEntry || currentTotal > highestHistoricalEntry.total)) {
+        return {
+            allTimeHighTotal: Math.round(currentTotal * 100) / 100,
+            allTimeHighLabel: getCurrentMonthLabel()
+        }
+    }
+
+    return {
+        allTimeHighTotal: Math.round(highestHistoricalEntry.total * 100) / 100,
+        allTimeHighLabel: highestHistoricalEntry.label || null
+    }
+}
+
+/**
+ * Build the grouped portfolio payload shared by the standard and SSE flows.
+ * @param {{ assets: Array<Array<unknown>>, prevMonthTotal?: number|null, initYearNetworth?: number|null }} assetsSchema - Persisted asset schema.
+ * @param {Record<string, number>} assetValues - Current resolved asset values.
+ * @param {string[]} failures - Asset ids that failed to refresh.
+ * @param {Array<{ total?: number, label?: string }>} historicalData - Historical monthly portfolio snapshots.
+ * @returns {object}
+ */
+const buildPortfolioPayload = (assetsSchema, assetValues, failures, historicalData) => {
+    let viewGroupsMap = {}
+
+    const portfolioRow = Object.keys(assetValues).reduce((acc, key) => {
+        const asset = assetsSchema.assets.find(asset => asset[1] === key)
+        if (!asset) return acc // Skip if asset not found in schema
+
+        const value = assetValues[key]
+        if (value === undefined || value === null) return acc // Skip if no value available
+
+        const viewGroup = asset[4]
+        viewGroupsMap[viewGroup] = viewGroup
+
+        if (!isDynamicAsset(asset)) {
+            acc[key] = { quantity: 1, value, total: value, displayName: asset[3] }
+            return acc
+        }
+
+        const quantity = asset[2]
+        acc[key] = { quantity, value, total: quantity * value, displayName: asset[3] }
+        return acc
+    }, {})
+
+    const assetsDetails = Object.keys(viewGroupsMap).reduce((acc, viewGroup) => {
+        const groupAssets = assetsSchema.assets.filter(asset => asset[4] === viewGroup)
+        const groupData = groupAssets.reduce((groupAcc, asset) => {
+            if (!portfolioRow[asset[1]]) return groupAcc
+            groupAcc.details[asset[1]] = portfolioRow[asset[1]]
+            groupAcc.total += portfolioRow[asset[1]].total
+            return groupAcc
+        }, { total: 0, details: {} })
+
+        const sortedDetails = Object.entries(groupData.details)
+            .sort(([, a], [, b]) => b.total - a.total)
+            .reduce((sorted, [key, value]) => {
+                sorted[key] = value
+                return sorted
+            }, {})
+
+        acc[viewGroup] = { total: groupData.total, details: sortedDetails }
+        return acc
+    }, {})
+
+    const totalPortfolio = Object.values(portfolioRow).reduce((acc, asset) => acc + asset.total, 0)
+    const failedAssets = failures.map(failureId => {
+        const asset = assetsSchema.assets.find(a => a[1] === failureId)
+        return asset ? asset[3] : failureId
+    })
+    const { allTimeHighTotal, allTimeHighLabel } = getAllTimeHighSummary(historicalData, totalPortfolio)
+
+    return {
+        prevMonthTotal: assetsSchema.prevMonthTotal,
+        initYearNetworth: assetsSchema.initYearNetworth,
+        schemaCacheKey: api.buildAssetsSchemaCacheKey(assetsSchema),
+        total: totalPortfolio,
+        allTimeHighTotal,
+        allTimeHighLabel,
+        failures: failedAssets,
+        ...assetsDetails
+    }
+}
 
 /**
  * Resolve current asset values by combining live scraper results and static asset entries.
@@ -68,68 +181,9 @@ const getPortfolio = async (passwordHash, refresh) => {
     
     const assetsSchema = await api.getAssetsSchema(passwordHash)
     const { assetValues, failures } = await getAssetsValue(passwordHash, refresh)
+    const historicalData = await api.getHistoricalData(passwordHash)
 
-    let viewGroupsMap = {}
-
-    const portfolioRow = Object.keys(assetValues).reduce((acc, key) => {
-        const asset = assetsSchema.assets.find(asset => asset[1] === key)
-        if (!asset) return acc // Skip if asset not found in schema
-        
-        const value = assetValues[key]
-        if (value === undefined || value === null) return acc // Skip if no value available
-        
-        // Use viewGroup (index 4) for grouping
-        const viewGroup = asset[4]
-        viewGroupsMap[viewGroup] = viewGroup
-        
-        if (!isDynamicAsset(asset)) {
-            acc[key] = { quantity: 1, value, total: value, displayName: asset[3] }
-            return acc
-        } 
-        const quantity = asset[2]
-        acc[key] = { quantity, value, total: quantity * value, displayName: asset[3] }
-        return acc
-    }, {})
-
-    const assetsDetails = Object.keys(viewGroupsMap).reduce((acc, viewGroup) => {
-        // Filter assets by viewGroup (index 4)
-        const groupAssets = assetsSchema.assets.filter(asset => asset[4] === viewGroup)
-        const groupData = groupAssets.reduce((acc, asset) => {
-            if (!portfolioRow[asset[1]]) return acc // Skip if asset has no value
-            acc.details[asset[1]] = portfolioRow[asset[1]]
-            acc.total += portfolioRow[asset[1]].total
-            return acc
-        }, { total: 0, details: {} })
-        
-        // Sort details by total value (descending)
-        const sortedDetails = Object.entries(groupData.details)
-            .sort(([, a], [, b]) => b.total - a.total)
-            .reduce((sorted, [key, value]) => {
-                sorted[key] = value
-                return sorted
-            }, {})
-        
-        acc[viewGroup] = { total: groupData.total, details: sortedDetails }
-        return acc
-    }, {})
-
-    const totalPortfolio = Object.values(portfolioRow).reduce((acc, asset) => acc + asset.total, 0)
-    
-    // Map failure IDs to display names
-    const failedAssets = failures.map(failureId => {
-        const asset = assetsSchema.assets.find(a => a[1] === failureId)
-        return asset ? asset[3] : failureId
-    })
-
-    const portfolio = {
-        prevMonthTotal: assetsSchema.prevMonthTotal,
-        initYearNetworth: assetsSchema.initYearNetworth,
-        total: totalPortfolio,
-        failures: failedAssets,
-        ...assetsDetails
-    }
-
-    return portfolio
+    return buildPortfolioPayload(assetsSchema, assetValues, failures, historicalData)
 }
 
 /**
@@ -214,63 +268,8 @@ const streamPortfolio = async (passwordHash, sendEvent, refresh = true) => {
 
     // Get asset values with progress callback
     const { assetValues, failures } = await getAssetsValue(passwordHash, refresh, onProgress)
-
-    // Build final portfolio (same logic as getPortfolio)
-    let viewGroupsMap = {}
-
-    const portfolioRow = Object.keys(assetValues).reduce((acc, key) => {
-        const asset = assetsSchema.assets.find(asset => asset[1] === key)
-        if (!asset) return acc
-        
-        const value = assetValues[key]
-        if (value === undefined || value === null) return acc
-        
-        const viewGroup = asset[4]
-        viewGroupsMap[viewGroup] = viewGroup
-        
-        if (!isDynamicAsset(asset)) {
-            acc[key] = { quantity: 1, value, total: value, displayName: asset[3] }
-            return acc
-        } 
-        const quantity = asset[2]
-        acc[key] = { quantity, value, total: quantity * value, displayName: asset[3] }
-        return acc
-    }, {})
-
-    const assetsDetails = Object.keys(viewGroupsMap).reduce((acc, viewGroup) => {
-        const groupAssets = assetsSchema.assets.filter(asset => asset[4] === viewGroup)
-        const groupData = groupAssets.reduce((acc, asset) => {
-            if (!portfolioRow[asset[1]]) return acc
-            acc.details[asset[1]] = portfolioRow[asset[1]]
-            acc.total += portfolioRow[asset[1]].total
-            return acc
-        }, { total: 0, details: {} })
-        
-        const sortedDetails = Object.entries(groupData.details)
-            .sort(([, a], [, b]) => b.total - a.total)
-            .reduce((sorted, [key, value]) => {
-                sorted[key] = value
-                return sorted
-            }, {})
-        
-        acc[viewGroup] = { total: groupData.total, details: sortedDetails }
-        return acc
-    }, {})
-
-    const totalPortfolio = Object.values(portfolioRow).reduce((acc, asset) => acc + asset.total, 0)
-    
-    const failedAssets = failures.map(failureId => {
-        const asset = assetsSchema.assets.find(a => a[1] === failureId)
-        return asset ? asset[3] : failureId
-    })
-
-    const finalPortfolio = {
-        prevMonthTotal: assetsSchema.prevMonthTotal,
-        initYearNetworth: assetsSchema.initYearNetworth,
-        total: totalPortfolio,
-        failures: failedAssets,
-        ...assetsDetails
-    }
+    const historicalData = await api.getHistoricalData(passwordHash)
+    const finalPortfolio = buildPortfolioPayload(assetsSchema, assetValues, failures, historicalData)
 
     // Update historical data only when the stream represents a user-triggered refresh.
     if (refresh) {
