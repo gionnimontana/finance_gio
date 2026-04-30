@@ -42,6 +42,13 @@ ExecStart=/usr/bin/node $SCRIPT_DIR/server.js
 Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production
+Environment=PFB_SCRAPER_CONCURRENCY=1
+Environment=PFB_SCRAPER_TIMEOUT_MS=12000
+Environment=PFB_SCRAPER_SELECTOR_TIMEOUT_MS=8000
+Environment=PFB_SCRAPER_ETF_TIMEOUT_MS=14000
+Environment=PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS=9000
+Environment=PFB_SCRAPER_GOLD_TIMEOUT_MS=10000
+Environment=PFB_SCRAPER_GOLD_SELECTOR_TIMEOUT_MS=7000
 StandardOutput=journal
 StandardError=journal
 

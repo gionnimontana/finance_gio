@@ -23,3 +23,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-04-30] update | Document scraper fallback runtime
 - Added a `docs/scraper-runtime.md` topic page describing ordered provider fallback, cache TTL and stale-value reuse, and the deterministic scraper regression suite.
 - Updated the scraper and portfolio structural docs so the new runtime contract and refresh normalization are discoverable from the markdown entry points.
+
+## [2026-05-01] update | Document low-memory scraper tuning
+- Extended `docs/scraper-runtime.md` with the deployment guidance for low-memory Linux servers, including the new production scraper env vars and the specific timeout pressure affecting justETF and gold scrapes.
+- Updated the scraper core structural doc so the low-memory runtime behavior is discoverable from the backend entry point.

@@ -66,8 +66,8 @@ const createGoldPreisProvider = () => {
         parseValue,
         logger,
         waitUntil: 'domcontentloaded',
-        navigationTimeoutMs: 5000,
-        selectorTimeoutMs: 3000,
+        navigationTimeoutMs: Number(process.env.PFB_SCRAPER_GOLD_TIMEOUT_MS || 10000),
+        selectorTimeoutMs: Number(process.env.PFB_SCRAPER_GOLD_SELECTOR_TIMEOUT_MS || 7000),
     }
 }
 

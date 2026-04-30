@@ -65,8 +65,8 @@ const createJustEtfProvider = (isin) => {
         parseValue,
         logger,
         waitUntil: 'domcontentloaded',
-        navigationTimeoutMs: 5000,
-        selectorTimeoutMs: 3500,
+        navigationTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000),
+        selectorTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS || 9000),
     }
 }
 

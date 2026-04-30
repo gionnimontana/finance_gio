@@ -2,16 +2,19 @@
  * Provide shared Puppeteer scraping helpers with retries, provider fallbacks, cached values, and progress reporting.
  */
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 const puppeteer = require('puppeteer')
 
 const TEST_MODE = process.env.PFB_TEST_MODE === '1'
 const DEFAULT_TEST_PROGRESS_DELAY_MS = 20
+const LOW_MEMORY_THRESHOLD_BYTES = Number(process.env.PFB_SCRAPER_LOW_MEMORY_THRESHOLD_BYTES || 3 * 1024 * 1024 * 1024)
+const IS_LOW_MEMORY_MACHINE = os.totalmem() <= LOW_MEMORY_THRESHOLD_BYTES
 const DEFAULT_CACHE_TTL_MS = Number(process.env.PFB_SCRAPER_CACHE_TTL_MS || 5 * 60 * 1000)
 const DEFAULT_STALE_CACHE_TTL_MS = Number(process.env.PFB_SCRAPER_STALE_CACHE_TTL_MS || 12 * 60 * 60 * 1000)
-const DEFAULT_NAVIGATION_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_TIMEOUT_MS || 5000)
-const DEFAULT_SELECTOR_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_SELECTOR_TIMEOUT_MS || 3500)
-const DEFAULT_CONCURRENCY = Math.max(1, Number(process.env.PFB_SCRAPER_CONCURRENCY || 3))
+const DEFAULT_NAVIGATION_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_TIMEOUT_MS || (IS_LOW_MEMORY_MACHINE ? 12000 : 5000))
+const DEFAULT_SELECTOR_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_SELECTOR_TIMEOUT_MS || (IS_LOW_MEMORY_MACHINE ? 8000 : 3500))
+const DEFAULT_CONCURRENCY = Math.max(1, Number(process.env.PFB_SCRAPER_CONCURRENCY || (IS_LOW_MEMORY_MACHINE ? 1 : 3)))
 const DEFAULT_WAIT_UNTIL = 'domcontentloaded'
 const BLOCKED_RESOURCE_TYPES = new Set(['image', 'media', 'font'])
 const BLOCKED_URL_PATTERNS = [/google-analytics/i, /googletagmanager/i, /doubleclick/i, /facebook\.net/i]
@@ -50,6 +53,10 @@ const getBrowserLaunchOptions = () => ({
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
     ],
 })
 
@@ -429,6 +436,7 @@ const scrapeOptionWithFallback = async (browser, assetName, optionConfig, maxRet
     }
 
     if (staleEntry) {
+        console.warn(`Scraper fallback to stale cache for ${assetName} after live providers failed; last provider=${lastFailure?.provider || 'unknown'} reason=${lastFailure?.reason || 'unknown'}`)
         return {
             value: staleEntry.value,
             failed: false,
