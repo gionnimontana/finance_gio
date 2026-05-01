@@ -97,11 +97,6 @@
     font-weight: 600;
 }
 
-.overview_face {
-    font-size: 20px;
-    line-height: 1;
-}
-
 /* Table View */
 .table_view {
     display: flex;

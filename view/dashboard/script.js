@@ -266,7 +266,6 @@ const renderAthDistance = (portfolio) => {
             <span class="overview_context">At ATH</span>
             <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
             <span class="overview_context"> in ${athLabel}</span>
-            <span class="overview_face" aria-label="${mood.label}">${mood.icon}</span>
         `;
         return;
     }
@@ -277,7 +276,6 @@ const renderAthDistance = (portfolio) => {
         <span class="overview_context"> from ATH</span>
         <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
         <span class="overview_context"> in ${athLabel}</span>
-        <span class="overview_face" aria-label="${mood.label}">${mood.icon}</span>
     `;
 };
 
