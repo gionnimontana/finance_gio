@@ -142,6 +142,28 @@ test('parses the justETF fixture', async ({ page }) => {
   await expectFixtureValue(page, justEtfScraper.createJustEtfProvider('IE00B4L5Y983'), 'justetf.html', 104.23)
 })
 
+test('parses the current justETF realtime quote markup', async ({ page }) => {
+  const provider = justEtfScraper.createJustEtfProvider('IE00B4L5Y983')
+  await page.setContent(`
+    <realtime-quotes id="realtime-quotes" data-testid="etf-quote-section_realtime-quotes">
+      <div data-testid="realtime-quotes_content-wrapper">
+        <div data-testid="realtime-quotes_price-value-wrapper">
+          <span data-testid="realtime-quotes_price-currency">EUR</span>
+          <span data-testid="realtime-quotes_price-value">117.70</span>
+        </div>
+        <div data-testid="realtime-quotes_price-timestamp">30/04/2026 22:59:39 (gettex)</div>
+        <div data-testid="realtime-quotes_daily-change-value-wrapper">
+          <span data-testid="realtime-quotes_daily-change-amount">+1.54</span>
+          <span data-testid="realtime-quotes_daily-change-percent">+1.33%</span>
+        </div>
+      </div>
+    </realtime-quotes>
+  `)
+
+  const value = await page.evaluate(provider.parseValue, provider.selectors)
+  expect(value).toBeCloseTo(117.70, 2)
+})
+
 test('parses the goldpreis fixture', async ({ page }) => {
   await expectFixtureValue(page, goldPriceScraper.createGoldPreisProvider(), 'goldpreis.html', 127.6)
 })

@@ -7,7 +7,7 @@ This folder contains source-specific scraping adapters that translate each upstr
 - [beaconchainScraper.js](./beaconchainScraper.js): Exposes beaconcha.in validator-balance providers using the shared selector-list parser contract.
 - [etherScan.js](./etherScan.js): Builds Etherscan wallet-value providers using the shared selector-list parser contract.
 - [goldPriceScraper.js](./goldPriceScraper.js): Resolves the current gold price per gram in EUR from goldpreis.de using table parsing backed by the shared provider contract.
-- [justETFscraper.js](./justETFscraper.js): Resolves ETF quote values by ISIN from justETF using multiple selector candidates.
+- [justETFscraper.js](./justETFscraper.js): Resolves ETF quote values by ISIN from justETF, preferring the current realtime `data-testid` hooks while keeping legacy selector fallbacks.
 - [xeScraper.js](./xeScraper.js): Exposes XE crypto-to-EUR providers used as the last fallback source.
 - [yahooFinance.js](./yahooFinance.js): Exposes Yahoo Finance crypto-to-EUR providers used as the preferred live crypto source.
 - [youngPlatformScraper.js](./youngPlatformScraper.js): Builds the active crypto quote chain, preferring Yahoo Finance before Young Platform and XE.

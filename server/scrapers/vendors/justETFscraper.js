@@ -17,6 +17,10 @@ const createJustEtfProvider = (isin) => {
      */
     const logger = (msg) => console.log(`isinValueScraper - ${msg}`)
     const selectors = [
+        '[data-testid="realtime-quotes_price-value"]',
+        '[data-testid="realtime-quotes_content-wrapper"] [data-testid="realtime-quotes_price-value"]',
+        '[data-testid="etf-quote-section_realtime-quotes"] [data-testid="realtime-quotes_price-value"]',
+        '#realtime-quotes',
         '[data-testid="realtime-quote"]',
         '#realtime-quotes [class*="price"]',
         '#realtime-quotes span:nth-child(2)',
