@@ -43,3 +43,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Rename backend root folder to server
 - Renamed the top-level backend folder from `src/` to `server/`, including the Express entrypoint, nested backend modules, and structural navigation docs.
 - Updated runtime config, tests, contributor instructions, and wiki links so backend references now resolve through `server/index.md`.
+
+## [2026-05-01] update | Document deploy runtime verification
+- Updated `docs/frontend-cache.md` with the deploy-time Node-runtime pinning and post-restart backend health probe that now guard the systemd-managed API service.
+- Refreshed `docs/index.md` so the deployment troubleshooting notes are discoverable from the docs entry point.
