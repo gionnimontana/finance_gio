@@ -43,7 +43,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$SCRIPT_DIR
-ExecStart=/usr/bin/node $SCRIPT_DIR/server.js
+ExecStart=/usr/bin/node $SCRIPT_DIR/server/index.js
 Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production

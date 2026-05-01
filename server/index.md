@@ -1,4 +1,4 @@
-# Source
+# Server
 
 This folder contains the backend application logic for authentication, user data persistence, live market scraping, deterministic e2e test-mode scraping, and portfolio aggregation.
 

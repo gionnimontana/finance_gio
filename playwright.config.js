@@ -23,7 +23,7 @@ module.exports = defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'node server.js',
+    command: 'node server/index.js',
     url: `http://127.0.0.1:${TEST_PORT}/health`,
     reuseExistingServer: false,
     timeout: 30_000,

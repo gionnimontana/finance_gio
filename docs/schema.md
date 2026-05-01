@@ -16,7 +16,7 @@ Keep the wiki small, current, and easy to maintain.
 
 ## When Not To Use The Wiki
 
-- Do not duplicate folder inventories already covered by [../src/index.md](../src/index.md) or [../view/index.md](../view/index.md).
+- Do not duplicate folder inventories already covered by [../server/index.md](../server/index.md) or [../view/index.md](../view/index.md).
 - Do not mirror routine implementation edits that are already obvious from the code change.
 - Do not use `docs/` as a dumping ground for temporary task notes.
 
@@ -34,7 +34,7 @@ Short statement of scope and why the topic matters.
 - Cross-cutting details, caveats, or decisions.
 
 ## Related
-- [Relevant structural doc](../src/index.md)
+- [Relevant structural doc](../server/index.md)
 - [Relevant code or frontend doc](../view/index.md)
 ```
 

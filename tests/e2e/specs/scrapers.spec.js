@@ -4,14 +4,14 @@ const path = require('path')
 
 delete process.env.PFB_TEST_MODE
 
-const scraperCore = require('../../../src/scrapers/core')
-const youngPlatformScraper = require('../../../src/scrapers/vendors/youngPlatformScraper')
-const yahooFinanceScraper = require('../../../src/scrapers/vendors/yahooFinance')
-const xeScraper = require('../../../src/scrapers/vendors/xeScraper')
-const justEtfScraper = require('../../../src/scrapers/vendors/justETFscraper')
-const goldPriceScraper = require('../../../src/scrapers/vendors/goldPriceScraper')
-const beaconchainScraper = require('../../../src/scrapers/vendors/beaconchainScraper')
-const etherScanScraper = require('../../../src/scrapers/vendors/etherScan')
+const scraperCore = require('../../../server/scrapers/core')
+const youngPlatformScraper = require('../../../server/scrapers/vendors/youngPlatformScraper')
+const yahooFinanceScraper = require('../../../server/scrapers/vendors/yahooFinance')
+const xeScraper = require('../../../server/scrapers/vendors/xeScraper')
+const justEtfScraper = require('../../../server/scrapers/vendors/justETFscraper')
+const goldPriceScraper = require('../../../server/scrapers/vendors/goldPriceScraper')
+const beaconchainScraper = require('../../../server/scrapers/vendors/beaconchainScraper')
+const etherScanScraper = require('../../../server/scrapers/vendors/etherScan')
 
 const fixtureDir = path.join(__dirname, '..', 'fixtures', 'scrapers')
 

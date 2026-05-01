@@ -18,7 +18,7 @@ This folder contains the LLM-maintained project wiki for cross-cutting knowledge
 
 ## What Stays Elsewhere
 
-- [../src/index.md](../src/index.md) and [../view/index.md](../view/index.md) remain the structural entry points for backend and frontend code.
+- [../server/index.md](../server/index.md) and [../view/index.md](../view/index.md) remain the structural entry points for backend and frontend code.
 - Folder inventories, file-level behavior, and implementation details should stay in source, comments, JSDoc, or the folder-level `index.md` files unless a cross-cutting wiki page is needed.
 
 ## Next Topic Pages

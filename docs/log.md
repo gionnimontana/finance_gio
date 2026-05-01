@@ -39,3 +39,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Exclude markdown from generated frontend release
 - Updated the frontend release build so `.deploy/view/` omits source markdown navigation docs and contains only deployable frontend files.
 - Refreshed the cache/deploy docs so contributors know the `view/` markdown pages stay in source control only and should not be edited in generated output.
+
+## [2026-05-01] update | Rename backend root folder to server
+- Renamed the top-level backend folder from `src/` to `server/`, including the Express entrypoint, nested backend modules, and structural navigation docs.
+- Updated runtime config, tests, contributor instructions, and wiki links so backend references now resolve through `server/index.md`.

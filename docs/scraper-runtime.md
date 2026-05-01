@@ -3,7 +3,7 @@
 This page captures the cross-cutting scraper behavior that matters beyond a single code diff.
 
 ## Current State
-- The shared runtime in `src/scrapers/core/index.js` normalizes each asset into an ordered provider chain instead of a single scraper target.
+- The shared runtime in `server/scrapers/core/index.js` normalizes each asset into an ordered provider chain instead of a single scraper target.
 - Live refreshes reuse one Puppeteer browser per pass plus one Puppeteer page per worker, scrape with bounded concurrency, retry provider-local failures with backoff, and can reuse stale cached values when every live provider fails.
 - Crypto quotes currently prefer Yahoo Finance first, then Young Platform, then XE. ETF, gold, validator, and wallet scrapers use the same provider contract even where only one upstream exists today.
 - Low-memory hosts automatically fall back to safer scraper defaults, and the deployment script pins the production service to a single concurrent scrape with longer ETF and gold timeouts.
@@ -18,6 +18,6 @@ This page captures the cross-cutting scraper behavior that matters beyond a sing
 - The deployment service now exports `PFB_SCRAPER_CONCURRENCY`, `PFB_SCRAPER_TIMEOUT_MS`, `PFB_SCRAPER_SELECTOR_TIMEOUT_MS`, `PFB_SCRAPER_ETF_TIMEOUT_MS`, `PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS`, `PFB_SCRAPER_GOLD_TIMEOUT_MS`, and `PFB_SCRAPER_GOLD_SELECTOR_TIMEOUT_MS` for a 2 GB server profile.
 
 ## Related
-- [Backend entry point](../src/index.md)
-- [Scraper structure](../src/scrapers/index.md)
-- [Portfolio orchestration](../src/scripts/portfolio/index.md)
+- [Backend entry point](../server/index.md)
+- [Scraper structure](../server/scrapers/index.md)
+- [Portfolio orchestration](../server/scripts/portfolio/index.md)

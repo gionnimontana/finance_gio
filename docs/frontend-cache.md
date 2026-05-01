@@ -19,5 +19,5 @@ This page documents how production frontend releases force browsers to fetch fre
 
 ## Related
 - [../view/index.md](../view/index.md)
-- [../src/scripts/index.md](../src/scripts/index.md)
+- [../server/scripts/index.md](../server/scripts/index.md)
 - [../deploy.sh](../deploy.sh)

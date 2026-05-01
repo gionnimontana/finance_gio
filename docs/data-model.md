@@ -17,7 +17,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - Open pages are not real-time synchronized. Another session sees changes when it reloads the page, navigates back through a page that refetches, or manually refreshes the dashboard.
 
 ## Related
-- [../src/auth/index.md](../src/auth/index.md)
-- [../src/api/index.md](../src/api/index.md)
+- [../server/auth/index.md](../server/auth/index.md)
+- [../server/api/index.md](../server/api/index.md)
 - [../view/assets/index.md](../view/assets/index.md)
 - [../view/dashboard/index.md](../view/dashboard/index.md)

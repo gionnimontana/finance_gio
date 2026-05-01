@@ -1,18 +1,34 @@
-require('dotenv').config({path: __dirname + '/.env'})
+// Backend HTTP entrypoint that boots Express routes and static frontend hosting.
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+
 const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
-const portfolioScripts = require('./src/scripts/portfolio')
-const { buildAssetsSchemaCacheKey, getHistoricalData, updateHistoricalData, getAssetsSchema, updateAssetsSchema, updateViewGroups } = require('./src/api')
-const { handleGenerate, handleValidate, authMiddleware, hashPassword, userExists } = require('./src/auth')
+const portfolioScripts = require('./scripts/portfolio')
+const {
+  buildAssetsSchemaCacheKey,
+  getHistoricalData,
+  updateHistoricalData,
+  getAssetsSchema,
+  updateAssetsSchema,
+  updateViewGroups,
+} = require('./api')
+const {
+  handleGenerate,
+  handleValidate,
+  authMiddleware,
+  hashPassword,
+  userExists,
+} = require('./auth')
 
 const app = express()
 const port = Number(process.env.PORT || 8085)
 
 app.use(cors())
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true}))
-app.use(express.static(__dirname + '/view')) // Serve static files from view folder
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(express.static(path.resolve(__dirname, '../view')))
 
 // Legacy base-path support: redirect /financegio/* to root
 app.use('/financegio', (req, res) => {
@@ -37,7 +53,9 @@ app.get('/health', (req, res) => {
   res.json({ ok: true })
 })
 
-app.listen(port, () => { console.log(`Personal finance bot listening on port ${port}`)})
+app.listen(port, () => {
+  console.log(`Personal finance bot listening on port ${port}`)
+})
 
 app.use((err, req, res, next) => {
   console.log(err.stack)
@@ -54,7 +72,7 @@ app.get('/portfolio/stream', async (req, res) => {
   if (!password) {
     return res.status(401).json({ error: 'Authentication required' })
   }
-  
+
   const passwordHash = hashPassword(password)
   if (!userExists(passwordHash)) {
     return res.status(401).json({ error: 'Invalid password' })
@@ -95,12 +113,12 @@ app.get('/portfolio', authMiddleware, async (req, res) => {
     : String(params.refresh).toLowerCase() === 'true'
   const passwordHash = req.userPasswordHash
   const portfolio = await portfolioScripts.getPortfolio(passwordHash, refresh)
-  
+
   // Update historical data with current month values when refresh is triggered
   if (refresh) {
     await updateHistoricalData(passwordHash, portfolio)
   }
-  
+
   res.send(portfolio)
 })
 
@@ -116,7 +134,7 @@ app.get('/assets/schema', authMiddleware, async (req, res) => {
   const schema = await getAssetsSchema(passwordHash)
   res.send({
     ...schema,
-    schemaCacheKey: buildAssetsSchemaCacheKey(schema)
+    schemaCacheKey: buildAssetsSchemaCacheKey(schema),
   })
 })
 
