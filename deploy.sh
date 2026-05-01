@@ -17,6 +17,11 @@ git pull origin main
 echo "📦 Installing dependencies..."
 npm install
 
+echo "🏷️  Building versioned frontend release..."
+npm run build:frontend:release
+FRONTEND_VERSION="$(tr -d '\n' < .deploy/frontend-version.txt)"
+echo "🌐 Frontend release version: ${FRONTEND_VERSION}"
+
 echo "🧩 Installing system packages for Puppeteer..."
 sudo apt-get update
 sudo apt-get install -y \
@@ -26,7 +31,7 @@ sudo apt-get install -y \
 
 echo "📂 Deploying frontend to nginx..."
 sudo mkdir -p /var/www/finance.gingergio.it
-sudo rsync -a --delete view/ /var/www/finance.gingergio.it/
+sudo rsync -a --delete .deploy/view/ /var/www/finance.gingergio.it/
 sudo chown -R www-data:www-data /var/www/finance.gingergio.it
 
 echo "🛠️  Ensuring systemd service exists..."

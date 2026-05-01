@@ -31,3 +31,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Document scraper page reuse
 - Updated `docs/scraper-runtime.md` with the worker-local page reuse behavior now used by live scrapes to reduce repeated Puppeteer setup cost on small VPS hosts.
 - Refreshed the scraper structural docs so the runtime optimization is discoverable from the backend and docs entry points.
+
+## [2026-05-01] update | Document frontend cache-busting deploy flow
+- Added `docs/frontend-cache.md` to capture the production frontend caching strategy: HTML shells always revalidate, JS and CSS URLs are versioned during deploy, and only exact API routes proxy to Express.
+- Updated the backend and frontend structural docs so the generated release build and Nginx-owned static cache policy are discoverable from the project entry points.

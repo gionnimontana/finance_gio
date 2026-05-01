@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "build:frontend:release": "node src/scripts/buildFrontendRelease.js",
     "start": "node server.js",
     "start:live": "node server.js",
     "e2e:reset": "node tests/e2e/setup/resetTestData.js",

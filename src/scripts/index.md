@@ -1,10 +1,10 @@
 # Scripts
 
-This folder holds higher-level backend business logic that composes the API and scraper layers.
+This folder holds higher-level backend business logic plus release-build helpers that support deployment.
 
 ## Direct Files
 
-This folder currently has no direct source files.
+- [buildFrontendRelease.js](./buildFrontendRelease.js): Copies the frontend into a deploy artifact tree and appends one release version query string to local CSS and JS references so production browsers fetch fresh assets after each deploy.
 
 ## Subfolders
 
