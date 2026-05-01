@@ -14,6 +14,7 @@ let previousCachedTotal = null; // Total from cached portfolio for delta calcula
 let runningDelta = 0; // Accumulated delta from individual asset changes
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
+const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -188,6 +189,18 @@ const restoreProgressBanner = () => {
 };
 
 /**
+ * Render the dashboard page title with the base label and optional ATH mood icon.
+ * @param {{ icon?: string } | null} mood - ATH mood payload when available.
+ * @returns {void}
+ */
+const setDashboardTitle = (mood = null) => {
+    const titleEl = document.getElementById('dashboard_title');
+    if (!titleEl) return;
+
+    titleEl.textContent = mood?.icon ? `${DASHBOARD_TITLE_BASE} ${mood.icon}` : DASHBOARD_TITLE_BASE;
+};
+
+/**
  * Resolve the ATH face and accessible label from the drawdown percentage.
  * @param {number} distancePercentage - Percentage distance from all-time high.
  * @returns {{ icon: string, label: string }}
@@ -231,6 +244,7 @@ const renderAthDistance = (portfolio) => {
 
     const allTimeHighTotal = portfolio.allTimeHighTotal;
     if (typeof allTimeHighTotal !== 'number' || !Number.isFinite(allTimeHighTotal) || allTimeHighTotal < 0) {
+        setDashboardTitle();
         el.textContent = '—';
         el.className = 'overview_value';
         return;
@@ -242,6 +256,8 @@ const renderAthDistance = (portfolio) => {
     const distancePercentage = allTimeHighTotal > 0 ? (distanceAmount / allTimeHighTotal) * 100 : 0;
     const athLabel = escapeHtml(portfolio.allTimeHighLabel || 'current month');
     const mood = getAthMood(isAtAth ? 0 : distancePercentage);
+
+    setDashboardTitle(mood);
 
     el.className = `overview_value ${isAtAth ? 'positive' : 'negative'}`;
 
@@ -754,6 +770,7 @@ window.addEventListener('absolute-visibility-change', () => {
 });
 
 // Initialize on page load
+setDashboardTitle();
 renderLastUpdate();
 restoreProgressBanner();
 renderPortfolio();

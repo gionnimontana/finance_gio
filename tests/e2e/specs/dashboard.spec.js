@@ -161,6 +161,7 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
 
   await page.goto('/dashboard/')
 
+  await expect(page.locator('#dashboard_title')).toHaveText('🕵️‍♂️ Billy Tracker 😭')
   await expect(page.locator('#ath_distance_value')).toContainText('(-50.00%)')
   await expect(page.locator('#ath_distance_value')).toContainText('Jan 2025')
   await expect(page.locator('#ath_distance_value')).toContainText('😭')
