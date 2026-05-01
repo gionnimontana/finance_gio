@@ -188,7 +188,7 @@ test('reuses a fresh cache entry without scraping again when refresh is false', 
   await scraperCore.multipleUrlSelectorScraper([
     {
       ETH: {
-        cacheTtlMs: 1000,
+        cacheTtlMs: 30000,
         providers: [createSuccessProvider('fresh-provider', '2,345.67 EUR')],
       },
     },
@@ -198,7 +198,7 @@ test('reuses a fresh cache entry without scraping again when refresh is false', 
   const result = await scraperCore.multipleUrlSelectorScraper([
     {
       ETH: {
-        cacheTtlMs: 1000,
+        cacheTtlMs: 30000,
         providers: [createFailureProvider('broken-provider')],
       },
     },
@@ -220,7 +220,7 @@ test('reuses a stale cache entry when all live providers fail', async () => {
     {
       GOLD: {
         cacheTtlMs: 10,
-        staleCacheTtlMs: 1000,
+        staleCacheTtlMs: 30000,
         providers: [createSuccessProvider('gold-provider', '127.60 EUR')],
       },
     },
@@ -233,7 +233,7 @@ test('reuses a stale cache entry when all live providers fail', async () => {
     {
       GOLD: {
         cacheTtlMs: 10,
-        staleCacheTtlMs: 1000,
+        staleCacheTtlMs: 30000,
         providers: [createFailureProvider('broken-provider')],
       },
     },

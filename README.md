@@ -12,7 +12,11 @@ A personal finance tracker that scrapes live asset prices, stores per-user portf
 
 ## Run Locally
 
+Use Node.js 18.19.1 or newer.
+On Apple Silicon, use an arm64 Node build. An x64 Node binary running through Rosetta can make the Puppeteer-backed scraper tests much slower and will emit degraded-performance warnings.
+
 ```bash
+nvm use
 npm install
 npm start
 ```
@@ -33,11 +37,13 @@ The tests boot the real application in a dedicated test mode:
 - user data is written to `tests/e2e/.runtime/` instead of `data/`
 - the browser still exercises the real login, dashboard, history, and settings flows end to end
 
-Install the browser runtime once after `npm install`:
+Install both browser runtimes once after `npm install`, or let the e2e scripts do it for you automatically:
 
 ```bash
-npx playwright install chromium
+npm run browsers:install
 ```
+
+If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm run browsers:install`. Puppeteer 24 stores its Chrome binary separately from Playwright under `~/.cache/puppeteer`.
 
 ## Commit And CI Automation
 

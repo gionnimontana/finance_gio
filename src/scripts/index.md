@@ -4,7 +4,8 @@ This folder holds higher-level backend business logic plus release-build helpers
 
 ## Direct Files
 
-- [buildFrontendRelease.js](./buildFrontendRelease.js): Copies the frontend into a deploy artifact tree and appends one release version query string to local CSS and JS references so production browsers fetch fresh assets after each deploy.
+- [buildFrontendRelease.js](./buildFrontendRelease.js): Copies the frontend into a deploy artifact tree, excludes source markdown docs from the generated output, and appends one release version query string to local CSS and JS references so production browsers fetch fresh assets after each deploy.
+- [ensureBrowserRuntimes.js](./ensureBrowserRuntimes.js): Verifies the local Playwright and Puppeteer browser caches needed by the e2e suite, installing the missing runtime only when its executable is absent.
 
 ## Subfolders
 

@@ -45,6 +45,15 @@ function sanitizeVersion(value) {
 }
 
 /**
+ * Keep source-only documentation out of the generated deploy artifact tree.
+ * @param {string} sourcePath - Candidate source path.
+ * @returns {boolean}
+ */
+function shouldCopyReleaseEntry(sourcePath) {
+    return path.extname(sourcePath).toLowerCase() !== '.md'
+}
+
+/**
  * Replace local CSS and JS references with a versioned query string.
  * @param {string} html - Source HTML contents.
  * @param {string} version - Deploy version to append.
@@ -93,7 +102,10 @@ function buildFrontendRelease() {
 
     fs.rmSync(OUTPUT_ROOT, { recursive: true, force: true })
     fs.mkdirSync(OUTPUT_ROOT, { recursive: true })
-    fs.cpSync(SOURCE_DIR, OUTPUT_DIR, { recursive: true })
+    fs.cpSync(SOURCE_DIR, OUTPUT_DIR, {
+        recursive: true,
+        filter: shouldCopyReleaseEntry
+    })
 
     rewriteHtmlFiles(OUTPUT_DIR, version)
     fs.writeFileSync(VERSION_FILE, `${version}\n`)

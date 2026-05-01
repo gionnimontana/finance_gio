@@ -4,32 +4,36 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "browsers:install": "node src/scripts/ensureBrowserRuntimes.js",
     "build:frontend:release": "node src/scripts/buildFrontendRelease.js",
     "start": "node server.js",
     "start:live": "node server.js",
     "e2e:reset": "node tests/e2e/setup/resetTestData.js",
     "test": "npm run test:e2e",
-    "test:e2e": "npm run e2e:reset && playwright test",
-    "test:e2e:smoke": "npm run e2e:reset && playwright test --grep @smoke",
-    "test:e2e:headed": "npm run e2e:reset && playwright test --headed",
+    "test:e2e": "npm run browsers:install && npm run e2e:reset && playwright test",
+    "test:e2e:smoke": "npm run browsers:install && npm run e2e:reset && playwright test --grep @smoke",
+    "test:e2e:headed": "npm run browsers:install && npm run e2e:reset && playwright test --headed",
     "prepare": "simple-git-hooks"
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.19.1"
+  },
   "simple-git-hooks": {
     "pre-commit": "npm run test:e2e:smoke"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "puppeteer": "^16.1.0",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "cross-fetch": "^3.1.5",
-    "express": "^4.18.2",
-    "node-fetch": "^2.6.9"
+    "dotenv": "^17.4.2",
+    "puppeteer": "^24.42.0",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "cross-fetch": "^4.1.0",
+    "express": "^5.2.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "@playwright/test": "1.44.0",
+    "@playwright/test": "1.59.1",
     "simple-git-hooks": "^2.13.1"
   }
 }

@@ -35,3 +35,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Document frontend cache-busting deploy flow
 - Added `docs/frontend-cache.md` to capture the production frontend caching strategy: HTML shells always revalidate, JS and CSS URLs are versioned during deploy, and only exact API routes proxy to Express.
 - Updated the backend and frontend structural docs so the generated release build and Nginx-owned static cache policy are discoverable from the project entry points.
+
+## [2026-05-01] update | Exclude markdown from generated frontend release
+- Updated the frontend release build so `.deploy/view/` omits source markdown navigation docs and contains only deployable frontend files.
+- Refreshed the cache/deploy docs so contributors know the `view/` markdown pages stay in source control only and should not be edited in generated output.
