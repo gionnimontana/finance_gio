@@ -174,20 +174,17 @@ const authFetch = async (url, options = {}) => {
 const t = (number) => number.toFixed(2);
 
 /**
- * Format a number with separators when compact suffixes are disabled.
+ * Format a number with separators and no decimals when compact suffixes are disabled.
  * @param {number} value - Numeric total to format.
- * @param {number} [fractionDigits=1] - Preferred decimal precision for the rendered value.
  * @returns {string}
  */
-const formatExpandedValue = (value, fractionDigits = 1) => {
+const formatExpandedValue = (value) => {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return '0';
 
-    const maximumFractionDigits = fractionDigits === 0 ? 0 : Math.max(fractionDigits, 2);
-
     return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
-        maximumFractionDigits,
+        maximumFractionDigits: 0,
     }).format(numericValue);
 };
 
@@ -202,7 +199,7 @@ const formatCompactValue = (value, fractionDigits = 1) => {
     if (!Number.isFinite(numericValue)) return '0';
 
     if (!isCompactValuesEnabled()) {
-        return formatExpandedValue(numericValue, fractionDigits);
+        return formatExpandedValue(numericValue);
     }
 
     const trimTrailingZeros = (formattedValue) => formattedValue.replace(/\.0+$|(\.\d*[1-9])0+$/, '$1');
@@ -228,22 +225,6 @@ const formatCompactValue = (value, fractionDigits = 1) => {
     }
 
     return `${trimTrailingZeros(thousands.toFixed(digits))}k`;
-};
-
-/**
- * Format a value with thousands separators and a stable decimal precision.
- * @param {number} value - Numeric total to format.
- * @param {number} [fractionDigits=2] - Decimal precision for the rendered value.
- * @returns {string}
- */
-const formatPreciseValue = (value, fractionDigits = 2) => {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return '0';
-
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-    }).format(numericValue);
 };
 
 // Calculate percentage

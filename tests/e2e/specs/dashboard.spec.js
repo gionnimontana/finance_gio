@@ -22,11 +22,11 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('progress-asset-BTC')).toBeVisible()
   await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
   await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
-  await expect(page.locator('#table_view')).toContainText('20,000.00')
+  await expect(page.locator('#table_view')).toContainText('20,000')
   await expect(page.locator('#total_value')).toContainText('23,500')
   await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
   await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
-  await expect(page.locator('#ath_distance_value')).toContainText('🤩')
+  await expect(page.locator('#dashboard_title')).toContainText('🤩')
 })
 
 test('refreshes the dashboard through SSE and updates the summary @smoke', async ({ page }) => {
@@ -164,7 +164,7 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
   await expect(page.locator('#dashboard_title')).toHaveText('🕵️‍♂️ Billy Tracker 😭')
   await expect(page.locator('#ath_distance_value')).toContainText('(-50.00%)')
   await expect(page.locator('#ath_distance_value')).toContainText('Jan 2025')
-  await expect(page.locator('#ath_distance_value')).toContainText('😭')
+  await expect(page.locator('#dashboard_title')).toContainText('😭')
 
   await page.evaluate((portfolio) => {
     window.localStorage.setItem('portfolio', JSON.stringify(portfolio))

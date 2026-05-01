@@ -1,6 +1,6 @@
 # History
 
-This folder contains the authenticated historical portfolio page and its chart/table rendering logic, using shared absolute-value formatting that defaults to full values and can switch to compact labels from Settings across summaries, chart labels, and the monthly breakdown with a sticky, opaque table header inside the scroll area.
+This folder contains the authenticated historical portfolio page and its chart/table rendering logic, using shared absolute-value formatting that defaults to whole-number full values and can switch to compact labels from Settings across summaries, chart labels, and the monthly breakdown with a sticky, opaque table header inside the scroll area.
 
 ## Files
 

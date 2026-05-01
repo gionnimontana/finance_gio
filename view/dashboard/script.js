@@ -466,9 +466,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
     let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
-    const formatDetailValue = (value) => categoryKey === 'Crypto'
-        ? formatPreciseValue(value)
-        : formatCompactValue(value);
+    const formatDetailValue = (value) => formatCompactValue(value);
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';
