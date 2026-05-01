@@ -30,5 +30,5 @@ test('redirects away from login when a valid password is already stored', async 
   await page.goto('/login/')
 
   await expect(page).toHaveURL(/\/dashboard\/$/)
-  await expect(page.locator('#total_value')).toContainText('23.5k')
+  await expect(page.locator('#total_value')).toContainText('23,500')
 })

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Settings page shell for managing assets, view groups, and password export. -->
+<!-- Settings page shell for managing assets, view groups, display preferences, and password export. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -66,6 +66,17 @@
                 <tbody id="groups_tbody"></tbody>
             </table>
         </div>
+    </div>
+
+    <div class="container">
+        <div class="section_title">Display preferences</div>
+        <label class="preference_toggle" for="compact_values_toggle">
+            <span class="preference_copy">
+                <strong>Compact absolute values</strong>
+                <span>Use k for thousands and m for millions in dashboard and history labels.</span>
+            </span>
+            <input id="compact_values_toggle" type="checkbox" />
+        </label>
     </div>
 
     <div class="container" style="margin-top: 30px;">

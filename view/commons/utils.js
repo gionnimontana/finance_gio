@@ -1,5 +1,5 @@
 /**
- * Provide shared frontend auth, formatting, banner, footer, and privacy-toggle utilities.
+ * Provide shared frontend auth, formatting, banner, footer, and display-preference utilities.
  */
 
 // Shared footer copy
@@ -26,6 +26,9 @@ const PASSWORD_KEY = 'userPassword';
 // Absolute values visibility key
 const ABS_VISIBILITY_KEY = 'hideAbsoluteValues';
 
+// Compact values formatting key
+const COMPACT_VALUES_KEY = 'useCompactAbsoluteValues';
+
 /**
  * Read the stored user password from localStorage.
  * @returns {string|null}
@@ -51,6 +54,19 @@ const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
  * @returns {boolean}
  */
 const isAbsoluteHidden = () => localStorage.getItem(ABS_VISIBILITY_KEY) === '1';
+
+/**
+ * Check whether compact absolute-value formatting is enabled.
+ * @returns {boolean}
+ */
+const isCompactValuesEnabled = () => localStorage.getItem(COMPACT_VALUES_KEY) === '1';
+
+/**
+ * Persist the compact absolute-value formatting preference.
+ * @param {boolean} enabled - Whether compact formatting should be used.
+ * @returns {void}
+ */
+const setCompactValuesEnabled = (enabled) => localStorage.setItem(COMPACT_VALUES_KEY, enabled ? '1' : '0');
 
 /**
  * Sync the privacy-toggle button with the current visibility state.
@@ -158,7 +174,25 @@ const authFetch = async (url, options = {}) => {
 const t = (number) => number.toFixed(2);
 
 /**
- * Format a number using compact suffixes for visible absolute values.
+ * Format a number with separators when compact suffixes are disabled.
+ * @param {number} value - Numeric total to format.
+ * @param {number} [fractionDigits=1] - Preferred decimal precision for the rendered value.
+ * @returns {string}
+ */
+const formatExpandedValue = (value, fractionDigits = 1) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '0';
+
+    const maximumFractionDigits = fractionDigits === 0 ? 0 : Math.max(fractionDigits, 2);
+
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits,
+    }).format(numericValue);
+};
+
+/**
+ * Format a number using full values by default, with optional compact suffixes.
  * @param {number} value - Numeric total to format.
  * @param {number} [fractionDigits=1] - Decimal precision for compact labels.
  * @returns {string}
@@ -166,6 +200,10 @@ const t = (number) => number.toFixed(2);
 const formatCompactValue = (value, fractionDigits = 1) => {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return '0';
+
+    if (!isCompactValuesEnabled()) {
+        return formatExpandedValue(numericValue, fractionDigits);
+    }
 
     const trimTrailingZeros = (formattedValue) => formattedValue.replace(/\.0+$|(\.\d*[1-9])0+$/, '$1');
     const absValue = Math.abs(numericValue);
@@ -361,6 +399,8 @@ if (document.readyState === 'loading') {
 }
 
 window.isAbsoluteHidden = isAbsoluteHidden;
+window.isCompactValuesEnabled = isCompactValuesEnabled;
 window.applyAbsoluteVisibility = applyAbsoluteVisibility;
+window.setCompactValuesEnabled = setCompactValuesEnabled;
 window.toggleAbsoluteVisibility = toggleAbsoluteVisibility;
 window.renderPercentageValue = renderPercentageValue;

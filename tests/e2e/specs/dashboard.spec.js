@@ -23,7 +23,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
   await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
   await expect(page.locator('#table_view')).toContainText('20,000.00')
-  await expect(page.locator('#total_value')).toContainText('23.5k')
+  await expect(page.locator('#total_value')).toContainText('23,500')
   await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
   await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
   await expect(page.locator('#ath_distance_value')).toContainText('🤩')
@@ -33,7 +33,7 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
 
   await expect(page.locator('#table_view .row')).toHaveCount(4)
-  await expect(page.locator('#total_value')).toContainText('23.5k')
+  await expect(page.locator('#total_value')).toContainText('23,500')
 
   await page.locator('#refresh_button').click()
 
@@ -67,7 +67,7 @@ test('falls back to a regular refresh when the event stream cannot connect', asy
   await fallbackResponse
 
   await expect(page.locator('#progress_banner')).not.toHaveClass(/visible/)
-  await expect(page.locator('#total_value')).toContainText('23.5k')
+  await expect(page.locator('#total_value')).toContainText('23,500')
 })
 
 test('refreshes stale cached dashboard data after assets change in another session', async ({ browser }) => {
@@ -101,7 +101,7 @@ test('refreshes stale cached dashboard data after assets change in another sessi
 
     await expect(pageB.locator('#table_view .row')).toHaveCount(4)
     await expect(pageB.locator('#table_view')).toContainText('Bonus Fund')
-    await expect(pageB.locator('#total_value')).toContainText('26k')
+    await expect(pageB.locator('#total_value')).toContainText('26,000')
   } finally {
     await deviceA.close()
     await deviceB.close()

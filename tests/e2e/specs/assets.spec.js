@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test')
 
-const { ASSETS_USER_PASSWORD } = require('../fixtures/users')
+const { ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
 const { openAuthenticatedPage, readAssetIds } = require('../helpers/app')
 
 test('manages assets, view groups, password export, and logout @smoke', async ({ page }) => {
@@ -68,4 +68,22 @@ test('manages assets, view groups, password export, and logout @smoke', async ({
 
   await page.getByRole('button', { name: '🚪 Logout' }).click()
   await expect(page).toHaveURL(/\/login\/$/)
+})
+
+test('enables compact absolute values from settings', async ({ page }) => {
+  await openAuthenticatedPage(page, '/assets/', DASHBOARD_USER_PASSWORD)
+
+  const compactToggle = page.locator('#compact_values_toggle')
+  await expect(compactToggle).not.toBeChecked()
+
+  await compactToggle.check()
+
+  await page.goto('/dashboard/')
+  await expect(page.locator('#total_value')).toContainText('23.5k')
+
+  await page.goto('/history/')
+  await expect(page.locator('#current_total')).toContainText('€23.5k')
+
+  await page.goto('/assets/')
+  await expect(page.locator('#compact_values_toggle')).toBeChecked()
 })

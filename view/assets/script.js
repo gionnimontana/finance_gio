@@ -1,5 +1,5 @@
 /**
- * Manage editable asset rows, view groups, and password export controls on the settings page.
+ * Manage editable asset rows, view groups, display preferences, and password export controls on the settings page.
  */
 
 // Require authentication
@@ -388,6 +388,31 @@ const initExportPassword = () => {
 };
 
 /**
+ * Sync the compact-values checkbox with the stored display preference.
+ * @returns {void}
+ */
+const syncCompactValuesPreference = () => {
+    const checkbox = el('compact_values_toggle');
+    if (!checkbox || typeof window.isCompactValuesEnabled !== 'function') return;
+
+    checkbox.checked = window.isCompactValuesEnabled();
+};
+
+/**
+ * Initialize the compact-values display preference control.
+ * @returns {void}
+ */
+const initCompactValuesPreference = () => {
+    const checkbox = el('compact_values_toggle');
+    if (!checkbox || typeof window.setCompactValuesEnabled !== 'function') return;
+
+    syncCompactValuesPreference();
+    checkbox.addEventListener('change', () => {
+        window.setCompactValuesEnabled(checkbox.checked);
+    });
+};
+
+/**
  * Copy the stored password to the clipboard from the settings page.
  * @returns {Promise<void>}
  */
@@ -606,5 +631,6 @@ window.saveGroups = async () => {
 // initial load
 window.addEventListener('load', () => {
     loadSchema();
+    initCompactValuesPreference();
     initExportPassword();
 });
