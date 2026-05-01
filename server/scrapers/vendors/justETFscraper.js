@@ -2,75 +2,99 @@
  * Scrape ETF quote data from justETF using the shared browser helpers.
  */
 const core = require('../core')
+const fetchImpl = global.fetch || require('cross-fetch')
+
+/**
+ * Parse the justETF quote payload into a numeric quote.
+ * @param {unknown} payload - JSON payload returned by the justETF quote API.
+ * @returns {number}
+ */
+const parseJustEtfQuotePayload = (payload) => {
+    const numericValue = Number(payload?.latestQuote?.raw)
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue
+    }
+
+    throw new Error('Value not found')
+}
+
+/**
+ * Create an abort signal when the current runtime supports timeout-based signals.
+ * @param {number} timeoutMs - Timeout in milliseconds.
+ * @returns {AbortSignal|undefined}
+ */
+const createTimeoutSignal = (timeoutMs) => {
+    if (typeof AbortSignal === 'undefined' || typeof AbortSignal.timeout !== 'function') {
+        return undefined
+    }
+
+    return AbortSignal.timeout(timeoutMs)
+}
 
 /**
  * Build a justETF provider config for an ETF quote.
  * @param {string} isin - The ISIN to scrape.
- * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number }}
+ * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, waitForSelector: boolean, blockResources: boolean }}
  */
 const createJustEtfProvider = (isin) => {
-    const url = `https://www.justetf.com/en/etf-profile.html?isin=${isin}#overview`
+    const url = `https://www.justetf.com/api/etfs/${isin}/quote?locale=en&currency=EUR&isin=${isin}`
+    const navigationTimeoutMs = Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000)
     /**
      * Log scraping progress for the current ETF lookup.
      * @param {string} msg - Message to print.
      * @returns {void}
      */
     const logger = (msg) => console.log(`isinValueScraper - ${msg}`)
-    const selectors = [
-        '[data-testid="realtime-quotes_price-value"]',
-        '[data-testid="realtime-quotes_content-wrapper"] [data-testid="realtime-quotes_price-value"]',
-        '[data-testid="etf-quote-section_realtime-quotes"] [data-testid="realtime-quotes_price-value"]',
-        '#realtime-quotes',
-        '[data-testid="realtime-quote"]',
-        '#realtime-quotes [class*="price"]',
-        '#realtime-quotes span:nth-child(2)',
-        '#realtime-quotes > div > div > div > div > span:nth-child(2)',
-    ]
+    const selectors = ['body']
     /**
-     * Parse the ETF quote text into a numeric value.
-     * @param {string[]} selectorCandidates - CSS selectors to try in order.
+     * Parse the justETF quote API response into a numeric value.
+     * @param {string[]} _selectorCandidates - Unused selector list kept for shared-provider compatibility.
      * @returns {number}
      */
-    const parseValue = (selectorCandidates) => {
-        const parseNumericText = (text) => {
-            if (!text) return null
-            const match = text.replace(/\u00a0/g, ' ').match(/([\d.,\s]+)/)
-            if (!match) return null
-            const raw = match[1].replace(/\s/g, '')
-            let normalized = raw
-
-            if (raw.includes(',') && raw.includes('.')) {
-                normalized = raw.lastIndexOf(',') > raw.lastIndexOf('.')
-                    ? raw.replace(/\./g, '').replace(',', '.')
-                    : raw.replace(/,/g, '')
-            } else if (raw.includes(',')) {
-                normalized = raw.replace(/\./g, '').replace(',', '.')
-            }
-
-            const numericValue = Number(normalized)
-            return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null
-        }
-
-        for (const selector of selectorCandidates) {
-            const element = document.querySelector(selector)
-            const numericValue = parseNumericText(element?.textContent || '')
-            if (numericValue !== null) {
-                return numericValue
-            }
+    const parseValue = (_selectorCandidates) => {
+        const payloadText = document.body?.innerText || ''
+        const payload = JSON.parse(payloadText)
+        const numericValue = Number(payload?.latestQuote?.raw)
+        if (Number.isFinite(numericValue) && numericValue > 0) {
+            return numericValue
         }
 
         throw new Error('Value not found')
+    }
+    /**
+     * Fetch the justETF quote API directly instead of waiting on the rendered quote shell.
+     * @returns {Promise<number>}
+     */
+    const fetchValue = async () => {
+        const response = await fetchImpl(url, {
+            headers: {
+                Accept: 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+            },
+            signal: createTimeoutSignal(navigationTimeoutMs),
+        })
+
+        if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`)
+        }
+
+        const payload = await response.json()
+        return parseJustEtfQuotePayload(payload)
     }
 
     return {
         name: 'justetf',
         url,
         selectors,
+        fetchValue,
         parseValue,
         logger,
         waitUntil: 'domcontentloaded',
-        navigationTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000),
+        navigationTimeoutMs,
         selectorTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS || 9000),
+        waitForSelector: false,
+        blockResources: false,
     }
 }
 

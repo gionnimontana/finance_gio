@@ -47,3 +47,11 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Document deploy runtime verification
 - Updated `docs/frontend-cache.md` with the deploy-time Node-runtime pinning and post-restart backend health probe that now guard the systemd-managed API service.
 - Refreshed `docs/index.md` so the deployment troubleshooting notes are discoverable from the docs entry point.
+
+## [2026-05-01] update | Document headless scraper hardening
+- Updated `docs/scraper-runtime.md` with the justETF regression where headless Chromium stopped receiving quote text unless the runtime masked obvious automation signals.
+- Refreshed the scraper structural docs so the shared browser-profile hardening and new regression coverage are discoverable from the backend and docs entry points.
+
+## [2026-05-01] update | Switch justETF to quote API
+- Updated `docs/scraper-runtime.md` with the justETF quote API path now used in live refreshes, replacing the flaky rendered quote shell for ETF prices.
+- Refreshed the scraper structural docs so the shared fetch-only provider path and the justETF API-based ETF scraper are discoverable from the backend and docs entry points.

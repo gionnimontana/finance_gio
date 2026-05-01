@@ -102,6 +102,73 @@ const createFailureProvider = (name) => ({
 })
 
 /**
+ * Create a provider that hides its quote when automation signals leak through.
+ * @param {string} name - Provider name.
+ * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean }}
+ */
+const createAutomationSensitiveProvider = (name) => ({
+  name,
+  url: toDataUrl(`<!DOCTYPE html><html><body><div data-testid="price"></div><script>
+    const isAutomated = navigator.webdriver !== undefined || /HeadlessChrome/i.test(navigator.userAgent)
+    document.querySelector('[data-testid="price"]').textContent = isAutomated ? '' : '117.70 EUR'
+  </script></body></html>`),
+  selectors: ['[data-testid="price"]'],
+  parseValue: parseCurrencyValue,
+  logger: () => {},
+  waitUntil: 'domcontentloaded',
+  navigationTimeoutMs: 1500,
+  selectorTimeoutMs: 250,
+  blockResources: false,
+})
+
+/**
+ * Create a provider whose shell appears before the actual price text is populated.
+ * @param {string} name - Provider name.
+ * @returns {{ name: string, url: string, selectors: string[], waitSelectors: string[], waitForNonEmptyText: boolean, parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean }}
+ */
+const createDelayedValueProvider = (name) => ({
+  name,
+  url: toDataUrl(`<!DOCTYPE html><html><body>
+    <div id="shell">loading quote shell</div>
+    <div data-testid="price"></div>
+    <script>
+      setTimeout(() => {
+        document.querySelector('[data-testid="price"]').textContent = '117.70 EUR'
+      }, 50)
+    </script>
+  </body></html>`),
+  selectors: ['#shell', '[data-testid="price"]'],
+  waitSelectors: ['[data-testid="price"]'],
+  waitForNonEmptyText: true,
+  parseValue: parseCurrencyValue,
+  logger: () => {},
+  waitUntil: 'domcontentloaded',
+  navigationTimeoutMs: 1500,
+  selectorTimeoutMs: 1000,
+  blockResources: false,
+})
+
+/**
+ * Create a provider that resolves its value through the fetch-only runtime path.
+ * @param {string} name - Provider name.
+ * @param {number} value - Numeric quote to resolve.
+ * @returns {{ name: string, url: string, selectors: string[], fetchValue: Function, parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }}
+ */
+const createFetchOnlyProvider = (name, value) => ({
+  name,
+  url: 'https://example.invalid/fetch-only-provider',
+  selectors: ['body'],
+  fetchValue: async () => value,
+  parseValue: parseCurrencyValue,
+  logger: () => {},
+  waitUntil: 'domcontentloaded',
+  navigationTimeoutMs: 1500,
+  selectorTimeoutMs: 250,
+  blockResources: false,
+  waitForSelector: false,
+})
+
+/**
  * Assert that a provider parser can extract the expected value from a fixture.
  * @param {import('@playwright/test').Page} page - Playwright page instance.
  * @param {{ selectors: string[], parseValue: Function }} provider - Provider config under test.
@@ -138,30 +205,20 @@ test('parses the XE fixture', async ({ page }) => {
   await expectFixtureValue(page, xeScraper.createXeProvider('BTC'), 'xe.html', 40123.45)
 })
 
-test('parses the justETF fixture', async ({ page }) => {
-  await expectFixtureValue(page, justEtfScraper.createJustEtfProvider('IE00B4L5Y983'), 'justetf.html', 104.23)
-})
-
-test('parses the current justETF realtime quote markup', async ({ page }) => {
+test('parses the justETF quote API payload', async ({ page }) => {
   const provider = justEtfScraper.createJustEtfProvider('IE00B4L5Y983')
-  await page.setContent(`
-    <realtime-quotes id="realtime-quotes" data-testid="etf-quote-section_realtime-quotes">
-      <div data-testid="realtime-quotes_content-wrapper">
-        <div data-testid="realtime-quotes_price-value-wrapper">
-          <span data-testid="realtime-quotes_price-currency">EUR</span>
-          <span data-testid="realtime-quotes_price-value">117.70</span>
-        </div>
-        <div data-testid="realtime-quotes_price-timestamp">30/04/2026 22:59:39 (gettex)</div>
-        <div data-testid="realtime-quotes_daily-change-value-wrapper">
-          <span data-testid="realtime-quotes_daily-change-amount">+1.54</span>
-          <span data-testid="realtime-quotes_daily-change-percent">+1.33%</span>
-        </div>
-      </div>
-    </realtime-quotes>
-  `)
+  await page.setContent(`<pre>${JSON.stringify({ latestQuote: { raw: 104.23, localized: '104.23' } })}</pre>`)
 
   const value = await page.evaluate(provider.parseValue, provider.selectors)
-  expect(value).toBeCloseTo(117.70, 2)
+  expect(value).toBeCloseTo(104.23, 2)
+})
+
+test('prefers the raw justETF quote API value', async ({ page }) => {
+  const provider = justEtfScraper.createJustEtfProvider('IE00B4L5Y983')
+  await page.setContent(`<pre>${JSON.stringify({ latestQuote: { raw: 117.09, localized: '117,09' }, quoteTradingVenue: 'XETRA' })}</pre>`)
+
+  const value = await page.evaluate(provider.parseValue, provider.selectors)
+  expect(value).toBeCloseTo(117.09, 2)
 })
 
 test('parses the goldpreis fixture', async ({ page }) => {
@@ -270,6 +327,45 @@ test('reuses a stale cache entry when all live providers fail', async () => {
     stale: true,
     failed: false,
   })
+})
+
+test('uses a stable browser profile for automation-sensitive quote pages', async () => {
+  const result = await scraperCore.multipleUrlSelectorScraper([
+    {
+      ETF: {
+        providers: [createAutomationSensitiveProvider('automation-sensitive-provider')],
+      },
+    },
+  ], 0, true)
+
+  expect(result.failures).toEqual([])
+  expect(result.values.ETF).toBeCloseTo(117.7, 2)
+})
+
+test('waits for non-empty text before parsing shell-first quote pages', async () => {
+  const result = await scraperCore.multipleUrlSelectorScraper([
+    {
+      DELAYED: {
+        providers: [createDelayedValueProvider('delayed-value-provider')],
+      },
+    },
+  ], 0, true)
+
+  expect(result.failures).toEqual([])
+  expect(result.values.DELAYED).toBeCloseTo(117.7, 2)
+})
+
+test('supports fetch-only providers without DOM parsing', async () => {
+  const result = await scraperCore.multipleUrlSelectorScraper([
+    {
+      FETCHED: {
+        providers: [createFetchOnlyProvider('fetch-only-provider', 117.09)],
+      },
+    },
+  ], 0, true)
+
+  expect(result.failures).toEqual([])
+  expect(result.values.FETCHED).toBeCloseTo(117.09, 2)
 })
 
 test('reports failures when every provider fails and no cache exists', async () => {

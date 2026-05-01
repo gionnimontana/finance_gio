@@ -16,6 +16,11 @@ const DEFAULT_NAVIGATION_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_TIMEOUT_MS 
 const DEFAULT_SELECTOR_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_SELECTOR_TIMEOUT_MS || (IS_LOW_MEMORY_MACHINE ? 8000 : 3500))
 const DEFAULT_CONCURRENCY = Math.max(1, Number(process.env.PFB_SCRAPER_CONCURRENCY || (IS_LOW_MEMORY_MACHINE ? 1 : 3)))
 const DEFAULT_WAIT_UNTIL = 'domcontentloaded'
+const DEFAULT_SCRAPER_USER_AGENT = process.env.PFB_SCRAPER_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
+const DEFAULT_SCRAPER_ACCEPT_LANGUAGE = process.env.PFB_SCRAPER_ACCEPT_LANGUAGE || 'en-US,en;q=0.9'
+const DEFAULT_SCRAPER_LANGUAGES = ['en-US', 'en']
+const DEFAULT_SCRAPER_PLATFORM = 'MacIntel'
+const DEFAULT_SCRAPER_PLUGINS = [1, 2, 3, 4, 5]
 const BLOCKED_RESOURCE_TYPES = new Set(['image', 'media', 'font'])
 const BLOCKED_URL_PATTERNS = [/google-analytics/i, /googletagmanager/i, /doubleclick/i, /facebook\.net/i]
 
@@ -115,10 +120,16 @@ const normalizeSelectors = (providerConfig) => {
  * @param {string} assetName - Asset cache key.
  * @param {object} providerConfig - Raw provider config.
  * @param {number} providerIndex - Position inside the provider chain.
- * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }}
+ * @returns {{ name: string, url: string, selectors: string[], waitSelectors: string[], waitForNonEmptyText: boolean, fetchValue: Function|null, parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }}
  */
 const normalizeProviderConfig = (assetName, providerConfig, providerIndex) => {
     const selectors = normalizeSelectors(providerConfig)
+    const waitSelectors = Array.isArray(providerConfig.waitSelectors)
+        ? providerConfig.waitSelectors.filter(Boolean)
+        : selectors
+    const fetchValue = typeof providerConfig.fetchValue === 'function'
+        ? providerConfig.fetchValue
+        : null
     const parseValue = typeof providerConfig.parseValue === 'function'
         ? providerConfig.parseValue
         : providerConfig.selectorFunction
@@ -135,6 +146,9 @@ const normalizeProviderConfig = (assetName, providerConfig, providerIndex) => {
         name: providerConfig.name || `${assetName}-provider-${providerIndex + 1}`,
         url: providerConfig.url,
         selectors,
+        waitSelectors,
+        waitForNonEmptyText: providerConfig.waitForNonEmptyText === true,
+        fetchValue,
         parseValue,
         selectorArgMode: typeof providerConfig.parseValue === 'function' ? 'list' : 'single',
         logger: typeof providerConfig.logger === 'function' ? providerConfig.logger : () => {},
@@ -325,6 +339,40 @@ const configurePage = async (page, provider) => {
 }
 
 /**
+ * Create a reusable scraper page with a stable non-headless browser profile.
+ * @param {import('puppeteer').Browser} browser - Shared Puppeteer browser instance.
+ * @returns {Promise<import('puppeteer').Page>}
+ */
+const createScraperPage = async (browser) => {
+    const page = await browser.newPage()
+
+    await page.setUserAgent(DEFAULT_SCRAPER_USER_AGENT)
+    await page.setExtraHTTPHeaders({
+        'Accept-Language': DEFAULT_SCRAPER_ACCEPT_LANGUAGE,
+    })
+    await page.evaluateOnNewDocument((languages, platform, plugins) => {
+        Object.defineProperty(navigator, 'webdriver', {
+            configurable: true,
+            get: () => undefined,
+        })
+        Object.defineProperty(navigator, 'languages', {
+            configurable: true,
+            get: () => languages,
+        })
+        Object.defineProperty(navigator, 'platform', {
+            configurable: true,
+            get: () => platform,
+        })
+        Object.defineProperty(navigator, 'plugins', {
+            configurable: true,
+            get: () => plugins,
+        })
+    }, DEFAULT_SCRAPER_LANGUAGES, DEFAULT_SCRAPER_PLATFORM, DEFAULT_SCRAPER_PLUGINS)
+
+    return page
+}
+
+/**
  * Close a Puppeteer page while ignoring cleanup failures.
  * @param {import('puppeteer').Page | null} page - Page to close.
  * @returns {Promise<void>}
@@ -349,7 +397,7 @@ const closePage = async (page) => {
  * @returns {Promise<T>}
  */
 const withReusablePage = async (browser, worker) => {
-    const page = await browser.newPage()
+    const page = await createScraperPage(browser)
 
     try {
         return await worker(page)
@@ -361,28 +409,43 @@ const withReusablePage = async (browser, worker) => {
 /**
  * Wait for any selector candidate configured for the provider.
  * @param {import('puppeteer').Page} page - Active Puppeteer page.
- * @param {{ selectors: string[], selectorTimeoutMs: number, waitForSelector: boolean }} provider - Normalized provider config.
+ * @param {{ selectors: string[], waitSelectors: string[], waitForNonEmptyText: boolean, selectorTimeoutMs: number, waitForSelector: boolean }} provider - Normalized provider config.
  * @returns {Promise<void>}
  */
 const waitForProviderSelectors = async (page, provider) => {
-    if (!provider.waitForSelector || !provider.selectors.length) {
+    if (!provider.waitForSelector || !provider.waitSelectors.length) {
         return
     }
 
+    const waitPredicate = provider.waitForNonEmptyText
+        ? (selectors) => selectors.some((selector) => {
+            const element = document.querySelector(selector)
+            return Boolean(element?.textContent?.trim())
+        })
+        : (selectors) => selectors.some((selector) => Boolean(document.querySelector(selector)))
+
     await page.waitForFunction(
-        (selectors) => selectors.some(selector => Boolean(document.querySelector(selector))),
+        waitPredicate,
         { timeout: provider.selectorTimeoutMs },
-        provider.selectors
+        provider.waitSelectors
     )
 }
 
 /**
  * Execute a single provider attempt.
  * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
- * @param {{ name: string, url: string, selectors: string[], parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }} provider - Normalized provider config.
+ * @param {{ name: string, url: string, selectors: string[], waitSelectors: string[], waitForNonEmptyText: boolean, fetchValue: Function|null, parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }} provider - Normalized provider config.
  * @returns {Promise<number>}
  */
 const scrapeProviderAttempt = async (page, provider) => {
+    if (provider.fetchValue) {
+        provider.logger(`Fetching stats from ${provider.name}...`)
+        const value = await provider.fetchValue()
+        const normalizedValue = normalizeScrapedValue(value)
+        provider.logger(`Scrape done via ${provider.name}, scraped: ${normalizedValue}`)
+        return normalizedValue
+    }
+
     provider.logger(`Navigating to ${provider.url}...`)
     await configurePage(page, provider)
     await page.goto(provider.url, {
@@ -792,7 +855,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                         name: entry.name,
                     }, completedCount, totalAssets)
                 },
-                async () => browser.newPage(),
+                async () => createScraperPage(browser),
                 closePage
             )
 
