@@ -1,5 +1,5 @@
 /**
- * Provide shared Puppeteer scraping helpers with retries, provider fallbacks, cached values, and progress reporting.
+ * Provide shared Puppeteer scraping helpers with retries, provider fallbacks, page reuse, cached values, and progress reporting.
  */
 const fs = require('fs')
 const os = require('os')
@@ -20,6 +20,7 @@ const BLOCKED_RESOURCE_TYPES = new Set(['image', 'media', 'font'])
 const BLOCKED_URL_PATTERNS = [/google-analytics/i, /googletagmanager/i, /doubleclick/i, /facebook\.net/i]
 
 const cacheEntries = new Map()
+const pageRuntimeState = new WeakMap()
 
 // Lock to prevent concurrent refresh passes.
 let isScrapingInProgress = false
@@ -260,23 +261,31 @@ const normalizeScrapedValue = (value) => {
 }
 
 /**
- * Enable light request blocking for a scrape page.
+ * Resolve the mutable interception state for a reusable page.
  * @param {import('puppeteer').Page} page - Active Puppeteer page.
- * @param {{ blockResources: boolean, navigationTimeoutMs: number, selectorTimeoutMs: number }} provider - Normalized provider config.
- * @returns {Promise<void>}
+ * @returns {{ blockResources: boolean, interceptionEnabled: boolean, requestHandler: (request: import('puppeteer').HTTPRequest) => void }}
  */
-const configurePage = async (page, provider) => {
-    page.setDefaultNavigationTimeout(provider.navigationTimeoutMs)
-    page.setDefaultTimeout(provider.selectorTimeoutMs)
-
-    if (!provider.blockResources) {
-        return
+const getPageRuntimeState = (page) => {
+    const existingState = pageRuntimeState.get(page)
+    if (existingState) {
+        return existingState
     }
 
-    await page.setRequestInterception(true)
-    page.on('request', (request) => {
-        const shouldBlock = BLOCKED_RESOURCE_TYPES.has(request.resourceType())
+    const runtimeState = {
+        blockResources: true,
+        interceptionEnabled: false,
+        requestHandler: null,
+    }
+
+    runtimeState.requestHandler = (request) => {
+        if (!runtimeState.interceptionEnabled) {
+            return
+        }
+
+        const shouldBlock = runtimeState.blockResources && (
+            BLOCKED_RESOURCE_TYPES.has(request.resourceType())
             || BLOCKED_URL_PATTERNS.some(pattern => pattern.test(request.url()))
+        )
 
         if (shouldBlock) {
             request.abort().catch(() => {})
@@ -284,7 +293,69 @@ const configurePage = async (page, provider) => {
         }
 
         request.continue().catch(() => {})
-    })
+    }
+
+    page.on('request', runtimeState.requestHandler)
+    pageRuntimeState.set(page, runtimeState)
+    return runtimeState
+}
+
+/**
+ * Enable light request blocking for a scrape page.
+ * @param {import('puppeteer').Page} page - Active Puppeteer page.
+ * @param {{ blockResources: boolean, navigationTimeoutMs: number, selectorTimeoutMs: number }} provider - Normalized provider config.
+ * @returns {Promise<void>}
+ */
+const configurePage = async (page, provider) => {
+    const runtimeState = getPageRuntimeState(page)
+    page.setDefaultNavigationTimeout(provider.navigationTimeoutMs)
+    page.setDefaultTimeout(provider.selectorTimeoutMs)
+    runtimeState.blockResources = provider.blockResources
+
+    if (provider.blockResources && !runtimeState.interceptionEnabled) {
+        await page.setRequestInterception(true)
+        runtimeState.interceptionEnabled = true
+        return
+    }
+
+    if (!provider.blockResources && runtimeState.interceptionEnabled) {
+        await page.setRequestInterception(false)
+        runtimeState.interceptionEnabled = false
+    }
+}
+
+/**
+ * Close a Puppeteer page while ignoring cleanup failures.
+ * @param {import('puppeteer').Page | null} page - Page to close.
+ * @returns {Promise<void>}
+ */
+const closePage = async (page) => {
+    if (!page) {
+        return
+    }
+
+    try {
+        await page.close()
+    } catch (closeError) {
+        // Ignore cleanup failures.
+    }
+}
+
+/**
+ * Execute work with a reusable Puppeteer page.
+ * @template T
+ * @param {import('puppeteer').Browser} browser - Shared Puppeteer browser instance.
+ * @param {(page: import('puppeteer').Page) => Promise<T>} worker - Worker callback.
+ * @returns {Promise<T>}
+ */
+const withReusablePage = async (browser, worker) => {
+    const page = await browser.newPage()
+
+    try {
+        return await worker(page)
+    } finally {
+        await closePage(page)
+    }
 }
 
 /**
@@ -307,57 +378,44 @@ const waitForProviderSelectors = async (page, provider) => {
 
 /**
  * Execute a single provider attempt.
- * @param {import('puppeteer').Browser} browser - Shared Puppeteer browser instance.
+ * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
  * @param {{ name: string, url: string, selectors: string[], parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }} provider - Normalized provider config.
  * @returns {Promise<number>}
  */
-const scrapeProviderAttempt = async (browser, provider) => {
-    let page = null
+const scrapeProviderAttempt = async (page, provider) => {
+    provider.logger(`Navigating to ${provider.url}...`)
+    await configurePage(page, provider)
+    await page.goto(provider.url, {
+        waitUntil: provider.waitUntil,
+        timeout: provider.navigationTimeoutMs,
+    })
 
-    try {
-        provider.logger(`Navigating to ${provider.url}...`)
-        page = await browser.newPage()
-        await configurePage(page, provider)
-        await page.goto(provider.url, {
-            waitUntil: provider.waitUntil,
-            timeout: provider.navigationTimeoutMs,
-        })
+    provider.logger(`Collecting stats from ${provider.name}...`)
+    await waitForProviderSelectors(page, provider)
 
-        provider.logger(`Collecting stats from ${provider.name}...`)
-        await waitForProviderSelectors(page, provider)
-
-        const selectorArg = provider.selectorArgMode === 'single'
-            ? provider.selectors[0]
-            : provider.selectors
-        const value = await page.evaluate(provider.parseValue, selectorArg)
-        const normalizedValue = normalizeScrapedValue(value)
-        provider.logger(`Scrape done via ${provider.name}, scraped: ${normalizedValue}`)
-        return normalizedValue
-    } finally {
-        if (page) {
-            try {
-                await page.close()
-            } catch (closeError) {
-                // Ignore cleanup failures.
-            }
-        }
-    }
+    const selectorArg = provider.selectorArgMode === 'single'
+        ? provider.selectors[0]
+        : provider.selectors
+    const value = await page.evaluate(provider.parseValue, selectorArg)
+    const normalizedValue = normalizeScrapedValue(value)
+    provider.logger(`Scrape done via ${provider.name}, scraped: ${normalizedValue}`)
+    return normalizedValue
 }
 
 /**
  * Scrape a provider with bounded retries and classified failures.
- * @param {import('puppeteer').Browser} browser - Shared Puppeteer browser instance.
+ * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
  * @param {string} assetName - Asset cache key.
  * @param {ReturnType<typeof normalizeProviderConfig>} provider - Normalized provider config.
  * @param {number} maxRetries - Maximum retry count per provider.
  * @returns {Promise<{ value: number|null, failed: boolean, provider: string, reason: 'navigation'|'selector'|'parse'|'runtime', message: string }>} 
  */
-const scrapeProviderWithRetry = async (browser, assetName, provider, maxRetries) => {
+const scrapeProviderWithRetry = async (page, assetName, provider, maxRetries) => {
     let lastFailure = null
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-            const value = await scrapeProviderAttempt(browser, provider)
+            const value = await scrapeProviderAttempt(page, provider)
             return {
                 value,
                 failed: false,
@@ -391,14 +449,14 @@ const scrapeProviderWithRetry = async (browser, assetName, provider, maxRetries)
 
 /**
  * Resolve a single asset value through its provider chain and stale cache fallback.
- * @param {import('puppeteer').Browser} browser - Shared Puppeteer browser instance.
+ * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
  * @param {string} assetName - Asset cache key.
  * @param {{ cacheTtlMs: number, staleCacheTtlMs: number, providers: ReturnType<typeof normalizeProviderConfig>[] }} optionConfig - Normalized asset config.
  * @param {number} maxRetries - Maximum retry count per provider.
  * @param {boolean} refresh - Whether fresh cache should be bypassed.
  * @returns {Promise<{ value: number|null, failed: boolean, cached: boolean, stale: boolean, provider: string|null, reason: string|null }>} 
  */
-const scrapeOptionWithFallback = async (browser, assetName, optionConfig, maxRetries, refresh) => {
+const scrapeOptionWithFallback = async (page, assetName, optionConfig, maxRetries, refresh) => {
     const freshEntry = getFreshCacheEntry(assetName, optionConfig.cacheTtlMs)
     if (!refresh && freshEntry) {
         return {
@@ -415,7 +473,7 @@ const scrapeOptionWithFallback = async (browser, assetName, optionConfig, maxRet
     let lastFailure = null
 
     for (const provider of optionConfig.providers) {
-        const providerResult = await scrapeProviderWithRetry(browser, assetName, provider, maxRetries)
+        const providerResult = await scrapeProviderWithRetry(page, assetName, provider, maxRetries)
         if (!providerResult.failed && providerResult.value !== null) {
             writeCacheEntry(assetName, providerResult.value, {
                 provider: providerResult.provider,
@@ -469,7 +527,9 @@ const optionValueScraper = async (assetName, optionConfig, maxRetries = 0) => {
 
     try {
         const normalizedOptionConfig = normalizeOptionConfig(assetName, optionConfig)
-        const result = await scrapeOptionWithFallback(browser, assetName, normalizedOptionConfig, maxRetries, true)
+        const result = await withReusablePage(browser, async (page) => {
+            return scrapeOptionWithFallback(page, assetName, normalizedOptionConfig, maxRetries, true)
+        })
         if (result.failed || result.value === null) {
             throw new Error(`Scraper failed for ${assetName}`)
         }
@@ -529,21 +589,35 @@ const emitProgress = (onProgress, result, index, total) => {
 
 /**
  * Execute a list of async jobs with a bounded worker pool.
- * @template T
+ * @template T,R
  * @param {T[]} items - Jobs to process.
  * @param {number} concurrency - Maximum number of concurrent workers.
- * @param {(item: T) => Promise<void>} worker - Worker callback.
+ * @param {(item: T, resource: R | null) => Promise<void>} worker - Worker callback.
+ * @param {() => Promise<R | null>} [createWorkerResource=async () => null] - Optional per-worker resource factory.
+ * @param {(resource: R | null) => Promise<void>} [disposeWorkerResource=async () => {}] - Optional per-worker resource cleanup.
  * @returns {Promise<void>}
  */
-const runWithConcurrency = async (items, concurrency, worker) => {
+const runWithConcurrency = async (
+    items,
+    concurrency,
+    worker,
+    createWorkerResource = async () => null,
+    disposeWorkerResource = async () => {}
+) => {
     let nextIndex = 0
     const workerCount = Math.min(concurrency, items.length)
 
     const workers = Array.from({ length: workerCount }, async () => {
-        while (nextIndex < items.length) {
-            const currentIndex = nextIndex
-            nextIndex += 1
-            await worker(items[currentIndex])
+        const resource = await createWorkerResource()
+
+        try {
+            while (nextIndex < items.length) {
+                const currentIndex = nextIndex
+                nextIndex += 1
+                await worker(items[currentIndex], resource)
+            }
+        } finally {
+            await disposeWorkerResource(resource)
         }
     })
 
@@ -702,19 +776,25 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                 pendingOptions.push(entry)
             }
 
-            await runWithConcurrency(pendingOptions, DEFAULT_CONCURRENCY, async (entry) => {
-                const result = await scrapeOptionWithFallback(browser, entry.name, entry.optionConfig, maxRetries, refresh)
-                if (result.failed) {
-                    failures.add(entry.name)
-                    console.warn(`Scraper failed for ${entry.name}`)
-                }
+            await runWithConcurrency(
+                pendingOptions,
+                DEFAULT_CONCURRENCY,
+                async (entry, page) => {
+                    const result = await scrapeOptionWithFallback(page, entry.name, entry.optionConfig, maxRetries, refresh)
+                    if (result.failed) {
+                        failures.add(entry.name)
+                        console.warn(`Scraper failed for ${entry.name}`)
+                    }
 
-                completedCount += 1
-                emitProgress(onProgress, {
-                    ...result,
-                    name: entry.name,
-                }, completedCount, totalAssets)
-            })
+                    completedCount += 1
+                    emitProgress(onProgress, {
+                        ...result,
+                        name: entry.name,
+                    }, completedCount, totalAssets)
+                },
+                async () => browser.newPage(),
+                closePage
+            )
 
             return {
                 values: getCachedValuesSnapshot(normalizedOptions.map(entry => entry.name)),

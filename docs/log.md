@@ -27,3 +27,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Document low-memory scraper tuning
 - Extended `docs/scraper-runtime.md` with the deployment guidance for low-memory Linux servers, including the new production scraper env vars and the specific timeout pressure affecting justETF and gold scrapes.
 - Updated the scraper core structural doc so the low-memory runtime behavior is discoverable from the backend entry point.
+
+## [2026-05-01] update | Document scraper page reuse
+- Updated `docs/scraper-runtime.md` with the worker-local page reuse behavior now used by live scrapes to reduce repeated Puppeteer setup cost on small VPS hosts.
+- Refreshed the scraper structural docs so the runtime optimization is discoverable from the backend and docs entry points.
