@@ -4,6 +4,7 @@ const { HISTORY_USER_PASSWORD } = require('../fixtures/users')
 const { canvasHasPaint, openAuthenticatedPage } = require('../helpers/app')
 
 test('renders historical summaries, chart, and monthly table', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 240 })
   await openAuthenticatedPage(page, '/history/', HISTORY_USER_PASSWORD)
 
   await expect(page.locator('#current_total')).toContainText('€23,500')
@@ -17,6 +18,21 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
   await expect(page.locator('#history_table tbody tr').last().locator('td.change_cell .abs_value')).not.toContainText('€')
   await expect(page.locator('#history_table')).toContainText('Month')
   await expect(page.locator('#history_table')).toHaveCSS('overflow-y', 'auto')
+  await expect.poll(async () => {
+    return page.locator('#history_table').evaluate((table) => ({
+      maxScrollTop: table.scrollHeight - table.clientHeight,
+      scrollTop: table.scrollTop,
+    }))
+  }).toEqual(expect.objectContaining({
+    maxScrollTop: expect.any(Number),
+    scrollTop: expect.any(Number),
+  }))
+  const historyTableScrollState = await page.locator('#history_table').evaluate((table) => ({
+    maxScrollTop: table.scrollHeight - table.clientHeight,
+    scrollTop: table.scrollTop,
+  }))
+  expect(historyTableScrollState.maxScrollTop).toBeGreaterThan(0)
+  expect(historyTableScrollState.scrollTop).toBe(historyTableScrollState.maxScrollTop)
   await expect(page.locator('#history_table thead th').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#history_table thead th').first()).toHaveCSS('top', '0px')
   await expect(page.locator('#history_table thead th.col-equity')).toHaveCSS('background-color', 'rgb(228, 243, 229)')

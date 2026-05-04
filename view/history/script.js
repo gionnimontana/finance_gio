@@ -62,6 +62,19 @@ let cachedHistoryData = null;
 let cachedHistoryViewGroups = null;
 
 /**
+ * Keep the history table focused on the newest month after each render.
+ * @returns {void}
+ */
+const scrollHistoryTableToBottom = () => {
+    const historyTable = document.getElementById('history_table');
+    if (!historyTable) return;
+
+    window.requestAnimationFrame(() => {
+        historyTable.scrollTop = historyTable.scrollHeight;
+    });
+};
+
+/**
  * Load history data and render the summary cards, chart, and table.
  * @returns {Promise<void>}
  */
@@ -81,6 +94,7 @@ const renderHistory = async () => {
     
     // Render the detailed table
     HistoryChartModule.renderHistoryTable('history_table', historyData, viewGroups);
+    scrollHistoryTableToBottom();
 };
 
 window.addEventListener('absolute-visibility-change', () => {
@@ -88,6 +102,7 @@ window.addEventListener('absolute-visibility-change', () => {
     renderSummaryCards(cachedHistoryData);
     HistoryChartModule.renderColumnChart('history_chart', cachedHistoryData, cachedHistoryViewGroups);
     HistoryChartModule.renderHistoryTable('history_table', cachedHistoryData, cachedHistoryViewGroups);
+    scrollHistoryTableToBottom();
 });
 
 renderHistory();
