@@ -29,6 +29,9 @@ const ABS_VISIBILITY_KEY = 'hideAbsoluteValues';
 // Compact values formatting key
 const COMPACT_VALUES_KEY = 'useCompactAbsoluteValues';
 
+// Only EUR is supported today, so shared formatters default to this symbol.
+const CURRENCY_SYMBOL = '€';
+
 /**
  * Read the stored user password from localStorage.
  * @returns {string|null}
@@ -174,48 +177,79 @@ const authFetch = async (url, options = {}) => {
 const t = (number) => number.toFixed(2);
 
 /**
- * Format a number with separators and no decimals when compact suffixes are disabled.
- * @param {number} value - Numeric total to format.
+ * Prefix a formatted absolute-value label with the supported currency symbol unless disabled.
+ * @param {string} formattedValue - Preformatted numeric label.
+ * @param {{ includeCurrency?: boolean }} [options={}] - Formatting overrides.
  * @returns {string}
  */
-const formatExpandedValue = (value) => {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return '0';
+const withCurrencySymbol = (formattedValue, options = {}) => {
+    const { includeCurrency = true } = options;
+    const label = String(formattedValue);
 
-    return new Intl.NumberFormat('en-US', {
+    if (!includeCurrency) {
+        return label;
+    }
+
+    if (label.startsWith('+')) {
+        return `+${CURRENCY_SYMBOL}${label.slice(1)}`;
+    }
+
+    if (label.startsWith('-')) {
+        return `-${CURRENCY_SYMBOL}${label.slice(1)}`;
+    }
+
+    return `${CURRENCY_SYMBOL}${label}`;
+};
+
+/**
+ * Format a number with separators and no decimals when compact suffixes are disabled.
+ * @param {number} value - Numeric total to format.
+ * @param {{ includeCurrency?: boolean }} [options={}] - Formatting overrides.
+ * @returns {string}
+ */
+const formatExpandedValue = (value, options = {}) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return withCurrencySymbol('0', options);
+
+    const formattedValue = new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(numericValue);
+
+    return withCurrencySymbol(formattedValue, options);
 };
 
 /**
  * Format a number using full values by default, with optional compact suffixes.
  * @param {number} value - Numeric total to format.
  * @param {number} [fractionDigits=1] - Decimal precision for compact labels.
- * @param {{ forceCompact?: boolean }} [options={}] - Formatting overrides.
+ * @param {{ forceCompact?: boolean, includeCurrency?: boolean }} [options={}] - Formatting overrides.
  * @returns {string}
  */
 const formatCompactValue = (value, fractionDigits = 1, options = {}) => {
     const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return '0';
+    if (!Number.isFinite(numericValue)) return withCurrencySymbol('0', options);
 
-    const { forceCompact = false } = options;
+    const { forceCompact = false, includeCurrency = true } = options;
 
     if (!forceCompact && !isCompactValuesEnabled()) {
-        return formatExpandedValue(numericValue);
+        return formatExpandedValue(numericValue, { includeCurrency });
     }
 
     const trimTrailingZeros = (formattedValue) => formattedValue.replace(/\.0+$|(\.\d*[1-9])0+$/, '$1');
     const absValue = Math.abs(numericValue);
+    let compactValue = '';
 
     if (absValue < 1000) {
-        return numericValue.toFixed(0);
+        compactValue = numericValue.toFixed(0);
+        return withCurrencySymbol(compactValue, { includeCurrency });
     }
 
     if (absValue >= 1000000) {
         const millions = numericValue / 1000000;
         const digits = Math.abs(millions) >= 10 ? 0 : fractionDigits;
-        return `${trimTrailingZeros(millions.toFixed(digits))}m`;
+        compactValue = `${trimTrailingZeros(millions.toFixed(digits))}m`;
+        return withCurrencySymbol(compactValue, { includeCurrency });
     }
 
     const thousands = numericValue / 1000;
@@ -224,10 +258,12 @@ const formatCompactValue = (value, fractionDigits = 1, options = {}) => {
 
     if (Math.abs(roundedThousands) >= 1000) {
         const millions = numericValue / 1000000;
-        return `${trimTrailingZeros(millions.toFixed(fractionDigits))}m`;
+        compactValue = `${trimTrailingZeros(millions.toFixed(fractionDigits))}m`;
+        return withCurrencySymbol(compactValue, { includeCurrency });
     }
 
-    return `${trimTrailingZeros(thousands.toFixed(digits))}k`;
+    compactValue = `${trimTrailingZeros(thousands.toFixed(digits))}k`;
+    return withCurrencySymbol(compactValue, { includeCurrency });
 };
 
 // Calculate percentage

@@ -304,13 +304,13 @@ const updateProgress = (data) => {
         const diffClass = diff >= 0 ? 'positive' : 'negative';
         const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
         latestAssetDiff = { diff, diffPct, sign, diffClass };
-        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}€${formatCompactValue(diff)}</span>${renderPercentageValue(diffPctLabel)}</span>`;
+        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}${formatCompactValue(diff)}</span>${renderPercentageValue(diffPctLabel)}</span>`;
     }
 
     // Append asset to list
     const valueDisplay = failed 
         ? '<span class="asset_value failed">❌ Failed</span>'
-        : `<span class="asset_value"><span class="abs_value">€${formatCompactValue(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
+        : `<span class="asset_value"><span class="abs_value">${formatCompactValue(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
     
     const assetRow = document.createElement('div');
     assetRow.className = 'progress_asset_row';
@@ -330,7 +330,7 @@ const updateProgress = (data) => {
         const deltaPctLabel = diffPct === null ? '—' : `${assetSign}${t(diffPct)}%`;
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${runningSign}€${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${runningSign}${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} ${emoji}`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
@@ -466,7 +466,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
     let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
-    const formatDetailValue = (value) => formatCompactValue(value);
+    const formatDetailValue = (value) => formatCompactValue(value, 1, { includeCurrency: false });
 
     // Render subrows for details using displayName from API
     let subrowsHtml = '';

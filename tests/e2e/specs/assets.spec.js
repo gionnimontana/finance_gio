@@ -79,7 +79,7 @@ test('enables compact absolute values from settings', async ({ page }) => {
   await compactToggle.check()
 
   await page.goto('/dashboard/')
-  await expect(page.locator('#total_value')).toContainText('23.5k')
+  await expect(page.locator('#total_value')).toContainText('€23.5k')
 
   await page.goto('/history/')
   await expect(page.locator('#current_total')).toContainText('€23.5k')

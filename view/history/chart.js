@@ -116,7 +116,7 @@ const HistoryChartModule = (() => {
             // Label
             if (!hideAbsolute) {
                 ctx.fillStyle = '#333';
-                const labelValue = formatCompactValue(value, 0, { forceCompact: true });
+                const labelValue = formatCompactValue(value, 0, { forceCompact: true, includeCurrency: false });
                 ctx.fillText(labelValue, padding.left - 10, y);
             }
         }
@@ -163,7 +163,7 @@ const HistoryChartModule = (() => {
                 ctx.font = 'bold 11px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                const totalLabel = formatCompactValue(month.total, 1, { forceCompact: true });
+                const totalLabel = formatCompactValue(month.total, 1, { forceCompact: true, includeCurrency: false });
                 ctx.fillText(totalLabel, x + columnWidth / 2, currentY - 5);
             }
         });
@@ -263,7 +263,7 @@ const HistoryChartModule = (() => {
             const change = prevTotal ? month.total - prevTotal : null;
             const changeClass = change !== null ? (change >= 0 ? 'positive' : 'negative') : '';
             const changeLabel = change !== null 
-                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${formatCompactValue(change)}</span>${renderPercentageValue(`${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%`)}`
+                ? `<span class="abs_value">${change >= 0 ? '+' : ''}${formatCompactValue(change, 1, { includeCurrency: false })}</span>${renderPercentageValue(`${change >= 0 ? '+' : ''}${pct(change, prevTotal)}%`)}`
                 : '-';
 
             html += `<tr>
@@ -272,7 +272,7 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
                 const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                html += `<td class="col-${cls}"><span class="abs_value">${formatCompactValue(value)}</span>${pctSpan(value, month.total)}</td>`;
+                html += `<td class="col-${cls}"><span class="abs_value">${formatCompactValue(value, 1, { includeCurrency: false })}</span>${pctSpan(value, month.total)}</td>`;
             });
 
             html += `<td class="total_cell total_column"><span class="abs_value">${formatCompactValue(month.total)}</span>${pctSpan(month.total, month.total)}</td>
