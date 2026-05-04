@@ -5,6 +5,6 @@ This folder contains the authenticated historical portfolio page and its chart/t
 ## Files
 
 - [chart.js](./chart.js): Canvas-based stacked history chart and monthly breakdown table rendering, with always-compact bare canvas labels, currency-prefixed total cells, and bare non-total table values.
-- [index.html](./index.html): History page markup for summary cards, chart output, and detailed monthly data, with display preferences now managed from Settings.
-- [script.js](./script.js): History data loading, summary-card updates, visibility-change re-rendering, and auto-scrolling the monthly table to the newest month after each render.
+- [index.html](./index.html): History page markup for summary cards, chart output, detailed monthly data, and the runtime-updated page title, with display preferences now managed from Settings.
+- [script.js](./script.js): History data loading, title mood updates based on the latest historical ATH, summary-card updates, visibility-change re-rendering, and auto-scrolling the monthly table to the newest month after each render.
 - [styles.css](./styles.css): Page-specific styling for the history chart area and the scrollable breakdown table with a sticky, readable header row.

@@ -201,39 +201,6 @@ const setDashboardTitle = (mood = null) => {
 };
 
 /**
- * Resolve the ATH face and accessible label from the drawdown percentage.
- * @param {number} distancePercentage - Percentage distance from all-time high.
- * @returns {{ icon: string, label: string }}
- */
-const getAthMood = (distancePercentage) => {
-    if (distancePercentage >= 0) {
-        return { icon: '🤩', label: 'Portfolio at all time high' };
-    }
-
-    if (distancePercentage <= -50) {
-        return { icon: '😭', label: 'Portfolio is at least 50 percent below all time high' };
-    }
-
-    if (distancePercentage <= -35) {
-        return { icon: '😢', label: 'Portfolio is between 35 and 50 percent below all time high' };
-    }
-
-    if (distancePercentage <= -20) {
-        return { icon: '😟', label: 'Portfolio is between 20 and 35 percent below all time high' };
-    }
-
-    if (distancePercentage <= -10) {
-        return { icon: '😬', label: 'Portfolio is between 10 and 20 percent below all time high' };
-    }
-
-    if (distancePercentage <= -2) {
-        return { icon: '🙂', label: 'Portfolio is between 2 and 10 percent below all time high' };
-    }
-
-    return { icon: '😎', label: 'Portfolio is within 2 percent of all time high' };
-};
-
-/**
  * Render the dashboard ATH overview line with privacy-mode-safe text.
  * @param {{ total?: number, allTimeHighTotal?: number|null, allTimeHighLabel?: string|null }} portfolio - Portfolio payload.
  * @returns {void}

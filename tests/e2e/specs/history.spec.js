@@ -7,6 +7,7 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
   await page.setViewportSize({ width: 1280, height: 240 })
   await openAuthenticatedPage(page, '/history/', HISTORY_USER_PASSWORD)
 
+  await expect(page.locator('#history_title')).toContainText('🤩')
   await expect(page.locator('#current_total')).toContainText('€23,500')
   await expect(page.locator('#avg_growth')).toContainText('%')
   await expect(page.locator('#total_change')).toContainText('€3,300')
