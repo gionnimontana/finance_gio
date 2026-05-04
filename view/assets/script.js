@@ -388,6 +388,31 @@ const initExportPassword = () => {
 };
 
 /**
+ * Sync the hide-absolute checkbox with the stored display preference.
+ * @returns {void}
+ */
+const syncAbsoluteVisibilityPreference = () => {
+    const checkbox = el('hide_absolute_toggle');
+    if (!checkbox || typeof window.isAbsoluteHidden !== 'function') return;
+
+    checkbox.checked = window.isAbsoluteHidden();
+};
+
+/**
+ * Initialize the hide-absolute display preference control.
+ * @returns {void}
+ */
+const initAbsoluteVisibilityPreference = () => {
+    const checkbox = el('hide_absolute_toggle');
+    if (!checkbox || typeof window.setAbsoluteHidden !== 'function') return;
+
+    syncAbsoluteVisibilityPreference();
+    checkbox.addEventListener('change', () => {
+        window.setAbsoluteHidden(checkbox.checked);
+    });
+};
+
+/**
  * Sync the compact-values checkbox with the stored display preference.
  * @returns {void}
  */
@@ -631,6 +656,7 @@ window.saveGroups = async () => {
 // initial load
 window.addEventListener('load', () => {
     loadSchema();
+    initAbsoluteVisibilityPreference();
     initCompactValuesPreference();
     initExportPassword();
 });

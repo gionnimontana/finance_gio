@@ -50,7 +50,9 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.locator('#error_banner')).not.toHaveClass(/visible/)
   expect(await canvasHasPaint(page, '#portfolio_chart')).toBeTruthy()
 
-  await page.locator('#abs_toggle_btn').click()
+  await page.goto('/assets/')
+  await page.locator('#hide_absolute_toggle').check()
+  await page.goto('/dashboard/')
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
   await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
   await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
@@ -173,7 +175,9 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
     window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
   }, drawdownPortfolio)
 
-  await page.locator('#abs_toggle_btn').click()
+  await page.goto('/assets/')
+  await page.locator('#hide_absolute_toggle').check()
+  await page.goto('/dashboard/')
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
   await expect(page.locator('#ath_distance_value')).toContainText('-50.00%')
   await expect(page.locator('#ath_distance_value')).not.toContainText('(-50.00%)')

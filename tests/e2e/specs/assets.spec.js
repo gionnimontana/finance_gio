@@ -87,3 +87,21 @@ test('enables compact absolute values from settings', async ({ page }) => {
   await page.goto('/assets/')
   await expect(page.locator('#compact_values_toggle')).toBeChecked()
 })
+
+test('enables hidden absolute values from settings', async ({ page }) => {
+  await openAuthenticatedPage(page, '/assets/', DASHBOARD_USER_PASSWORD)
+
+  const hideAbsoluteToggle = page.locator('#hide_absolute_toggle')
+  await expect(hideAbsoluteToggle).not.toBeChecked()
+
+  await hideAbsoluteToggle.check()
+
+  await page.goto('/dashboard/')
+  await expect(page.locator('body')).toHaveClass(/hide_absolute/)
+
+  await page.goto('/history/')
+  await expect(page.locator('body')).toHaveClass(/hide_absolute/)
+
+  await page.goto('/assets/')
+  await expect(page.locator('#hide_absolute_toggle')).toBeChecked()
+})

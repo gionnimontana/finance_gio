@@ -14,7 +14,6 @@
         <div class="nav_links">
             <a href="../dashboard/" class="nav_link">🕵 Dashboard</a>
             <a href="../history/" class="nav_link">📊 History</a>
-            <button id="abs_toggle_btn" class="nav_link" type="button" aria-pressed="false" title="Hide absolute values">👁️</button>
         </div>
     </div>
 
@@ -70,6 +69,13 @@
 
     <div class="container">
         <div class="section_title">Display preferences</div>
+        <label class="preference_toggle" for="hide_absolute_toggle">
+            <span class="preference_copy">
+                <strong>Hide absolute values</strong>
+                <span>Show percentages only across dashboard and history summaries, charts, and tables.</span>
+            </span>
+            <input id="hide_absolute_toggle" type="checkbox" />
+        </label>
         <label class="preference_toggle" for="compact_values_toggle">
             <span class="preference_copy">
                 <strong>Compact absolute values</strong>

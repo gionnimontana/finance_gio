@@ -98,15 +98,6 @@ body {
     cursor: not-allowed;
 }
 
-#abs_toggle_btn {
-    background-color: #333;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-#abs_toggle_btn:hover {
-    background-color: #444;
-}
-
 /* Containers */
 .container {
     margin: 20px;
@@ -372,11 +363,6 @@ body.hide_absolute .pct_placeholder {
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 120px; /* Prevent single buttons from being too wide */
-    }
-
-    #abs_toggle_btn {
-        position: static;
-        box-shadow: none;
     }
 
     /* Adjust specific buttons on mobile if needed */

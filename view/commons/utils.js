@@ -72,26 +72,12 @@ const isCompactValuesEnabled = () => localStorage.getItem(COMPACT_VALUES_KEY) ==
 const setCompactValuesEnabled = (enabled) => localStorage.setItem(COMPACT_VALUES_KEY, enabled ? '1' : '0');
 
 /**
- * Sync the privacy-toggle button with the current visibility state.
- * @param {boolean} hidden - Whether absolute values are hidden.
- * @returns {void}
- */
-const updateAbsoluteToggleButton = (hidden) => {
-    const btn = el('abs_toggle_btn');
-    if (!btn) return;
-    btn.innerHTML = hidden ? '🙈' : '👁️';
-    btn.title = hidden ? 'Show absolute values' : 'Hide absolute values';
-    btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-};
-
-/**
  * Apply the absolute-value visibility state to the page and notify listeners.
  * @param {boolean} [hidden=isAbsoluteHidden()] - Whether absolute values should be hidden.
  * @returns {void}
  */
 const applyAbsoluteVisibility = (hidden = isAbsoluteHidden()) => {
     document.body.classList.toggle('hide_absolute', hidden);
-    updateAbsoluteToggleButton(hidden);
     window.dispatchEvent(new CustomEvent('absolute-visibility-change', { detail: { hidden } }));
 };
 
@@ -104,12 +90,6 @@ const setAbsoluteHidden = (hidden) => {
     localStorage.setItem(ABS_VISIBILITY_KEY, hidden ? '1' : '0');
     applyAbsoluteVisibility(hidden);
 };
-
-/**
- * Toggle the absolute-value visibility state.
- * @returns {void}
- */
-const toggleAbsoluteVisibility = () => setAbsoluteHidden(!isAbsoluteHidden());
 
 // Logout and redirect to login
 /**
@@ -409,18 +389,14 @@ if (document.readyState === 'loading') {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         applyAbsoluteVisibility();
-        const btn = el('abs_toggle_btn');
-        if (btn) btn.addEventListener('click', toggleAbsoluteVisibility);
     });
 } else {
     applyAbsoluteVisibility();
-    const btn = el('abs_toggle_btn');
-    if (btn) btn.addEventListener('click', toggleAbsoluteVisibility);
 }
 
 window.isAbsoluteHidden = isAbsoluteHidden;
 window.isCompactValuesEnabled = isCompactValuesEnabled;
 window.applyAbsoluteVisibility = applyAbsoluteVisibility;
+window.setAbsoluteHidden = setAbsoluteHidden;
 window.setCompactValuesEnabled = setCompactValuesEnabled;
-window.toggleAbsoluteVisibility = toggleAbsoluteVisibility;
 window.renderPercentageValue = renderPercentageValue;
