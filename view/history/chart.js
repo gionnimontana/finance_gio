@@ -116,7 +116,7 @@ const HistoryChartModule = (() => {
             // Label
             if (!hideAbsolute) {
                 ctx.fillStyle = '#333';
-                const labelValue = formatCompactValue(value, 0);
+                const labelValue = formatCompactValue(value, 0, { forceCompact: true });
                 ctx.fillText(labelValue, padding.left - 10, y);
             }
         }
@@ -163,7 +163,7 @@ const HistoryChartModule = (() => {
                 ctx.font = 'bold 11px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                const totalLabel = formatCompactValue(month.total);
+                const totalLabel = formatCompactValue(month.total, 1, { forceCompact: true });
                 ctx.fillText(totalLabel, x + columnWidth / 2, currentY - 5);
             }
         });

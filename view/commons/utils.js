@@ -192,13 +192,16 @@ const formatExpandedValue = (value) => {
  * Format a number using full values by default, with optional compact suffixes.
  * @param {number} value - Numeric total to format.
  * @param {number} [fractionDigits=1] - Decimal precision for compact labels.
+ * @param {{ forceCompact?: boolean }} [options={}] - Formatting overrides.
  * @returns {string}
  */
-const formatCompactValue = (value, fractionDigits = 1) => {
+const formatCompactValue = (value, fractionDigits = 1, options = {}) => {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return '0';
 
-    if (!isCompactValuesEnabled()) {
+    const { forceCompact = false } = options;
+
+    if (!forceCompact && !isCompactValuesEnabled()) {
         return formatExpandedValue(numericValue);
     }
 

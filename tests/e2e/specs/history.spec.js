@@ -22,3 +22,37 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
   await expect(page.locator('#total_change')).toContainText('%')
   await expect(page.locator('#total_change')).not.toContainText('(')
 })
+
+test('keeps compact canvas labels when the compact-values setting is disabled', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__canvasTextLog = {}
+
+    const originalGetContext = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = function (...args) {
+      const context = originalGetContext.apply(this, args)
+      if (!context || args[0] !== '2d' || context.__textCapturePatched) {
+        return context
+      }
+
+      const canvas = this
+      const originalFillText = context.fillText.bind(context)
+      context.fillText = function (text, ...fillArgs) {
+        const canvasId = canvas.id || 'unknown'
+        window.__canvasTextLog[canvasId] ??= []
+        window.__canvasTextLog[canvasId].push(String(text))
+        return originalFillText(text, ...fillArgs)
+      }
+      context.__textCapturePatched = true
+
+      return context
+    }
+  })
+
+  await openAuthenticatedPage(page, '/history/', HISTORY_USER_PASSWORD)
+
+  await expect(page.locator('#current_total')).toContainText('€23,500')
+
+  const chartLabels = await page.evaluate(() => window.__canvasTextLog.history_chart ?? [])
+  expect(chartLabels).toContain('23.5k')
+  expect(chartLabels).not.toContain('23,500')
+})
