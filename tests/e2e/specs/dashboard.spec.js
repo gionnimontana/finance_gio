@@ -31,6 +31,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
   await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
   await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
+  await expect(page.locator('#ath_distance_value')).toHaveClass(/positive/)
   await expect(page.locator('#dashboard_title')).toContainText('🤩')
 })
 
@@ -59,6 +60,7 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
   await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
   await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
+  await expect(page.locator('#ath_distance_value')).toHaveClass(/positive/)
   await expect(page.locator('#delta_value')).toContainText('%')
   await expect(page.locator('#delta_value')).not.toContainText('(')
   await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(2)
@@ -172,6 +174,7 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
   await expect(page.locator('#dashboard_title')).toHaveText('🕵️‍♂️ Billy Tracker 😭')
   await expect(page.locator('#ath_distance_value')).toContainText('(-50.00%)')
   await expect(page.locator('#ath_distance_value')).toContainText('Jan 2025')
+  await expect(page.locator('#ath_distance_value')).toHaveClass(/negative/)
   await expect(page.locator('#dashboard_title')).toContainText('😭')
 
   await page.evaluate((portfolio) => {

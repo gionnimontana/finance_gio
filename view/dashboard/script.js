@@ -220,13 +220,14 @@ const renderAthDistance = (portfolio) => {
     const total = typeof portfolio.total === 'number' && Number.isFinite(portfolio.total) ? portfolio.total : 0;
     const distanceAmount = total - allTimeHighTotal;
     const isAtAth = Math.abs(distanceAmount) < 0.005;
+    const isAboveHistoricalAth = distanceAmount > 0.005;
     const distancePercentage = allTimeHighTotal > 0 ? (distanceAmount / allTimeHighTotal) * 100 : 0;
     const athLabel = escapeHtml(portfolio.allTimeHighLabel || 'saved history');
     const mood = getAthMood(isAtAth ? 0 : distancePercentage);
 
     setDashboardTitle(mood);
 
-    el.className = `overview_value ${isAtAth ? 'positive' : 'negative'}`;
+    el.className = `overview_value ${(isAtAth || isAboveHistoricalAth) ? 'positive' : 'negative'}`;
 
     if (isAtAth) {
         el.innerHTML = `
