@@ -4,9 +4,10 @@ const { DASHBOARD_USER_PASSWORD, HISTORY_USER_PASSWORD } = require('../fixtures/
 const { canvasHasPaint, openAuthenticatedPage, storePassword } = require('../helpers/app')
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const currentMonthLabel = () => {
-  const now = new Date()
-  return `${monthNames[now.getMonth()]} ${now.getFullYear()}`
+const previousMonthLabel = () => {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
 }
 
 test('streams per-asset progress on the first dashboard load without cache', async ({ page }) => {
@@ -27,8 +28,9 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.mainrow .abs_value')).toContainText('€20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).toContainText('20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).not.toContainText('€')
-  await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
-  await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
+  await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
+  await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
+  await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
   await expect(page.locator('#dashboard_title')).toContainText('🤩')
 })
 
@@ -54,11 +56,12 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await page.locator('#hide_absolute_toggle').check()
   await page.goto('/dashboard/')
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
-  await expect(page.locator('#ath_distance_value')).toContainText('At ATH')
-  await expect(page.locator('#ath_distance_value')).toContainText(currentMonthLabel())
+  await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
+  await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
+  await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
   await expect(page.locator('#delta_value')).toContainText('%')
   await expect(page.locator('#delta_value')).not.toContainText('(')
-  await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(1)
+  await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(2)
   expect(await page.locator('#ath_distance_value .abs_value').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).display === 'none'))).toBeTruthy()
 })
 

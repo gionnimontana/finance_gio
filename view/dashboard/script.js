@@ -221,7 +221,7 @@ const renderAthDistance = (portfolio) => {
     const distanceAmount = total - allTimeHighTotal;
     const isAtAth = Math.abs(distanceAmount) < 0.005;
     const distancePercentage = allTimeHighTotal > 0 ? (distanceAmount / allTimeHighTotal) * 100 : 0;
-    const athLabel = escapeHtml(portfolio.allTimeHighLabel || 'current month');
+    const athLabel = escapeHtml(portfolio.allTimeHighLabel || 'saved history');
     const mood = getAthMood(isAtAth ? 0 : distancePercentage);
 
     setDashboardTitle(mood);

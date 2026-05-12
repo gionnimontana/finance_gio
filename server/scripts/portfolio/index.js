@@ -23,38 +23,50 @@ const isRefreshEnabled = (refresh) => refresh === true || String(refresh).toLowe
 const isDynamicAsset = (asset) => dynamicCategories.includes(asset[0])
 
 /**
- * Format the current month label used when a live portfolio total sets a new ATH.
+ * Format the current month label used by persisted historical entries.
  * @param {Date} [date=new Date()] - Reference date.
  * @returns {string}
  */
 const getCurrentMonthLabel = (date = new Date()) => `${monthNames[date.getMonth()]} ${date.getFullYear()}`
 
 /**
- * Resolve the portfolio all-time high from saved history plus the current live total.
- * @param {Array<{ total?: number, label?: string }>} historicalData - Historical monthly snapshots.
- * @param {number} currentTotal - Current live portfolio total.
+ * Format the current month key used in persisted historical entries.
+ * @param {Date} [date=new Date()] - Reference date.
+ * @returns {string}
+ */
+const getCurrentMonthDateKey = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+/**
+ * Determine whether a saved historical entry belongs to the current in-progress month.
+ * @param {{ date?: string, label?: string } | null | undefined} entry - Historical entry candidate.
+ * @param {Date} [date=new Date()] - Reference date.
+ * @returns {boolean}
+ */
+const isCurrentMonthHistoryEntry = (entry, date = new Date()) => {
+    if (!entry || typeof entry !== 'object') return false
+
+    return entry.date === getCurrentMonthDateKey(date) || entry.label === getCurrentMonthLabel(date)
+}
+
+/**
+ * Resolve the portfolio all-time high from saved history prior to the current month.
+ * @param {Array<{ total?: number, label?: string, date?: string }>} historicalData - Historical monthly snapshots.
  * @returns {{ allTimeHighTotal: number|null, allTimeHighLabel: string|null }}
  */
-const getAllTimeHighSummary = (historicalData, currentTotal) => {
-    const historyEntries = Array.isArray(historicalData) ? historicalData : []
+const getAllTimeHighSummary = (historicalData) => {
+    const historyEntries = Array.isArray(historicalData)
+        ? historicalData.filter(entry => !isCurrentMonthHistoryEntry(entry))
+        : []
     const highestHistoricalEntry = historyEntries.reduce((highestEntry, entry) => {
-        if (!entry || typeof entry.total !== 'number') return highestEntry
+        if (!entry || typeof entry.total !== 'number' || !Number.isFinite(entry.total)) return highestEntry
         if (!highestEntry || entry.total > highestEntry.total) return entry
         return highestEntry
     }, null)
 
-    const hasCurrentTotal = typeof currentTotal === 'number' && Number.isFinite(currentTotal)
-    if (!highestHistoricalEntry && !hasCurrentTotal) {
+    if (!highestHistoricalEntry) {
         return {
             allTimeHighTotal: null,
             allTimeHighLabel: null
-        }
-    }
-
-    if (hasCurrentTotal && (!highestHistoricalEntry || currentTotal > highestHistoricalEntry.total)) {
-        return {
-            allTimeHighTotal: Math.round(currentTotal * 100) / 100,
-            allTimeHighLabel: getCurrentMonthLabel()
         }
     }
 
@@ -120,7 +132,7 @@ const buildPortfolioPayload = (assetsSchema, assetValues, failures, historicalDa
         const asset = assetsSchema.assets.find(a => a[1] === failureId)
         return asset ? asset[3] : failureId
     })
-    const { allTimeHighTotal, allTimeHighLabel } = getAllTimeHighSummary(historicalData, totalPortfolio)
+    const { allTimeHighTotal, allTimeHighLabel } = getAllTimeHighSummary(historicalData)
 
     return {
         prevMonthTotal: assetsSchema.prevMonthTotal,
