@@ -28,7 +28,8 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.mainrow .abs_value')).toContainText('€20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).toContainText('20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).not.toContainText('€')
-  await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
+  await expect(page.locator('#ath_distance_value')).toContainText('from €22,400')
+  await expect(page.locator('#ath_distance_value')).not.toContainText('ATH')
   await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
   await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
   await expect(page.locator('#ath_distance_value')).toHaveClass(/positive/)
@@ -57,7 +58,8 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await page.locator('#hide_absolute_toggle').check()
   await page.goto('/dashboard/')
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
-  await expect(page.locator('#ath_distance_value')).toContainText('from ATH')
+  await expect(page.locator('#ath_distance_value')).toContainText('from')
+  await expect(page.locator('#ath_distance_value')).not.toContainText('ATH')
   await expect(page.locator('#ath_distance_value')).toContainText('4.91%')
   await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
   await expect(page.locator('#ath_distance_value')).toHaveClass(/positive/)
@@ -187,4 +189,63 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
   await expect(page.locator('body')).toHaveClass(/hide_absolute/)
   await expect(page.locator('#ath_distance_value')).toContainText('-50.00%')
   await expect(page.locator('#ath_distance_value')).not.toContainText('(-50.00%)')
+})
+
+test('does not repeat ATH in the exact-peak dashboard summary', async ({ page }) => {
+  const atAthSchema = {
+    assets: [
+      ['Other', 'cash-wallet', 1500, 'Cash Wallet', 'Liquidity'],
+      ['Crypto', 'BTC', 0.5, 'Bitcoin Stack', 'Crypto'],
+      ['Gold', 'physical-gold', 20, 'Gold Reserve', 'Gold'],
+      ['Isin', 'IE00B4L5Y983', 10, 'World ETF', 'Equity'],
+    ],
+    viewGroups: ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'],
+  }
+  const atAthPortfolio = {
+    total: 23500,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 23500,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: JSON.stringify(atAthSchema),
+    viewGroups: atAthSchema.viewGroups,
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 20000,
+      details: {
+        BTC: { total: 20000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Gold: {
+      total: 1000,
+      details: {
+        'physical-gold': { total: 1000, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 1000,
+      details: {
+        IE00B4L5Y983: { total: 1000, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  await page.addInitScript((portfolio) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+  }, atAthPortfolio)
+
+  await storePassword(page, HISTORY_USER_PASSWORD)
+
+  await page.goto('/dashboard/')
+
+  await expect(page.locator('#ath_distance_value')).toContainText('At €23,500')
+  await expect(page.locator('#ath_distance_value')).toContainText(previousMonthLabel())
+  await expect(page.locator('#ath_distance_value')).not.toContainText('ATH')
+  await expect(page.locator('#ath_distance_value')).toHaveClass(/positive/)
 })

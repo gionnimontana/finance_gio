@@ -231,7 +231,7 @@ const renderAthDistance = (portfolio) => {
 
     if (isAtAth) {
         el.innerHTML = `
-            <span class="overview_context">At ATH</span>
+            <span class="overview_context">At</span>
             <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
             <span class="overview_context"> in ${athLabel}</span>
         `;
@@ -241,7 +241,7 @@ const renderAthDistance = (portfolio) => {
     el.innerHTML = `
         <span class="abs_value">${formatCompactValue(distanceAmount)}</span>
         ${renderPercentageValue(`${t(distancePercentage)}%`)}
-        <span class="overview_context"> from ATH</span>
+        <span class="overview_context"> from</span>
         <span class="abs_value"> ${formatCompactValue(allTimeHighTotal)}</span>
         <span class="overview_context"> in ${athLabel}</span>
     `;
