@@ -10,6 +10,23 @@ const previousMonthLabel = () => {
   return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
 }
 
+const defaultSchema = {
+  assets: [
+    ['Other', 'cash-wallet', 1500, 'Cash Wallet', 'Liquidity'],
+    ['Crypto', 'BTC', 0.5, 'Bitcoin Stack', 'Crypto'],
+    ['Gold', 'physical-gold', 20, 'Gold Reserve', 'Gold'],
+    ['Isin', 'IE00B4L5Y983', 10, 'World ETF', 'Equity'],
+  ],
+  viewGroups: ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'],
+  prevMonthTotal: 22400,
+  initYearNetworth: 18000,
+}
+
+const defaultSchemaCacheKey = JSON.stringify({
+  assets: defaultSchema.assets,
+  viewGroups: defaultSchema.viewGroups,
+})
+
 test('streams per-asset progress on the first dashboard load without cache', async ({ page }) => {
   await storePassword(page, DASHBOARD_USER_PASSWORD)
 
@@ -67,6 +84,63 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.locator('#delta_value')).not.toContainText('(')
   await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(2)
   expect(await page.locator('#ath_distance_value .abs_value').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).display === 'none'))).toBeTruthy()
+})
+
+test('groups completed refresh progress by view group and shows grouped diffs', async ({ page }) => {
+  const cachedPortfolio = {
+    total: 21200,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 18000,
+      details: {
+        BTC: { total: 18000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Gold: {
+      total: 900,
+      details: {
+        'physical-gold': { total: 900, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 800,
+      details: {
+        IE00B4L5Y983: { total: 800, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  await page.addInitScript((portfolio) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+  }, cachedPortfolio)
+
+  await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
+
+  await expect(page.locator('#total_value')).toContainText('€21,200')
+
+  await page.locator('#refresh_button').click()
+
+  await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#progress_assets_list .progress_group_name')).toHaveText(['Crypto:', 'Gold:', 'Equity:'])
+  await expect(page.locator('[data-testid="progress-group-Liquidity"]')).toHaveCount(0)
+  await expect(page.getByTestId('progress-group-Crypto').locator('.progress_group_diff .abs_value')).toContainText('+€2,000')
+  await expect(page.getByTestId('progress-group-Gold').locator('.progress_group_diff .abs_value')).toContainText('+€100')
+  await expect(page.getByTestId('progress-group-Equity').locator('.progress_group_diff .abs_value')).toContainText('+€200')
+  await expect(page.getByTestId('progress-group-Crypto').getByTestId('progress-asset-BTC')).toBeVisible()
+  await expect(page.getByTestId('progress-group-Gold').getByTestId('progress-asset-physical-gold')).toBeVisible()
+  await expect(page.getByTestId('progress-group-Equity').getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
 })
 
 test('falls back to a regular refresh when the event stream cannot connect', async ({ page }) => {

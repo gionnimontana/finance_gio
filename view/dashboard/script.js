@@ -12,6 +12,7 @@ let initialPortfolioTotal = null;
 let previousAssetValues = {}; // Map of assetId -> previous total value
 let previousCachedTotal = null; // Total from cached portfolio for delta calculation
 let runningDelta = 0; // Accumulated delta from individual asset changes
+let progressAssetItems = []; // Streamed assets shown in the progress banner
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
@@ -46,6 +47,7 @@ const resetProgressBanner = () => {
     document.getElementById('progress_delta').className = 'progress_delta';
     document.getElementById('progress_close').style.display = 'none';
     runningDelta = 0; // Reset running delta
+    progressAssetItems = [];
 };
 
 /**
@@ -248,6 +250,209 @@ const renderAthDistance = (portfolio) => {
 };
 
 /**
+ * Resolve the view-group rendering order for a portfolio payload.
+ * @param {object|null} portfolio - Portfolio data.
+ * @returns {string[]}
+ */
+const getPortfolioViewGroups = (portfolio) => {
+    if (!portfolio || typeof portfolio !== 'object') return [];
+
+    if (Array.isArray(portfolio.viewGroups) && portfolio.viewGroups.length) {
+        return portfolio.viewGroups;
+    }
+
+    return Object.keys(portfolio).filter(key => {
+        const group = portfolio[key];
+        return group && typeof group === 'object' && typeof group.total === 'number';
+    });
+};
+
+/**
+ * Build a lookup of asset ids to their portfolio view-group metadata.
+ * @param {object|null} portfolio - Portfolio data.
+ * @returns {Record<string, { groupName: string, total: number|null, displayName: string }>}
+ */
+const buildPortfolioAssetLookup = (portfolio) => {
+    const lookup = {};
+
+    for (const groupName of getPortfolioViewGroups(portfolio)) {
+        const details = portfolio?.[groupName]?.details;
+        if (!details || typeof details !== 'object') continue;
+
+        for (const [assetId, detail] of Object.entries(details)) {
+            lookup[assetId] = {
+                groupName,
+                total: typeof detail.total === 'number' && Number.isFinite(detail.total) ? detail.total : null,
+                displayName: detail.displayName || assetId
+            };
+        }
+    }
+
+    return lookup;
+};
+
+/**
+ * Convert an arbitrary label into a stable data-testid suffix.
+ * @param {string} value - Raw identifier.
+ * @returns {string}
+ */
+const toProgressBannerSlug = (value) => String(value).replaceAll(/[^a-zA-Z0-9_-]+/g, '-');
+
+/**
+ * Build the progress-banner asset row test id from an asset id.
+ * @param {string} assetId - Asset identifier.
+ * @returns {string}
+ */
+const getProgressAssetTestId = (assetId) => `progress-asset-${toProgressBannerSlug(assetId)}`;
+
+/**
+ * Build the progress-banner group row test id from a view-group name.
+ * @param {string} groupName - View-group label.
+ * @returns {string}
+ */
+const getProgressGroupTestId = (groupName) => `progress-group-${toProgressBannerSlug(groupName)}`;
+
+/**
+ * Calculate absolute and percentage delta metadata for progress rows.
+ * @param {number|null} currentValue - Current value.
+ * @param {number|null|undefined} previousValue - Previous cached value.
+ * @returns {{ diff: number, diffPct: number|null, sign: string, diffClass: string, diffPctLabel: string }|null}
+ */
+const getProgressDiffMeta = (currentValue, previousValue) => {
+    if (typeof currentValue !== 'number' || !Number.isFinite(currentValue)) return null;
+    if (typeof previousValue !== 'number' || !Number.isFinite(previousValue)) return null;
+
+    const diff = currentValue - previousValue;
+    const diffPct = previousValue !== 0 ? (diff / previousValue) * 100 : null;
+    const sign = diff >= 0 ? '+' : '';
+    const diffClass = diff >= 0 ? 'positive' : 'negative';
+    const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
+
+    return {
+        diff,
+        diffPct,
+        sign,
+        diffClass,
+        diffPctLabel
+    };
+};
+
+/**
+ * Render a progress-banner diff badge.
+ * @param {{ diff: number, sign: string, diffClass: string, diffPctLabel: string }|null} diffMeta - Precomputed diff metadata.
+ * @param {string} [className='asset_diff'] - CSS class applied to the diff badge.
+ * @param {string} [emptyLabel=''] - Placeholder shown when no baseline exists.
+ * @returns {string}
+ */
+const renderProgressDiffHtml = (diffMeta, className = 'asset_diff', emptyLabel = '') => {
+    if (!diffMeta) {
+        return emptyLabel ? `<span class="${className} empty">${emptyLabel}</span>` : '';
+    }
+
+    return `<span class="${className} ${diffMeta.diffClass}"><span class="abs_value">${diffMeta.sign}${formatCompactValue(diffMeta.diff)}</span>${renderPercentageValue(diffMeta.diffPctLabel)}</span>`;
+};
+
+/**
+ * Render one progress-banner asset row.
+ * @param {{ assetName: string, assetId: string, assetTotal: number|null, failed: boolean }} asset - Streamed asset metadata.
+ * @param {{ grouped?: boolean, displayName?: string, assetTotal?: number|null }} [options={}] - Row rendering overrides.
+ * @returns {string}
+ */
+const renderProgressAssetRow = (asset, options = {}) => {
+    const {
+        grouped = false,
+        displayName = asset.assetName,
+        assetTotal = asset.assetTotal
+    } = options;
+
+    const rowClasses = ['progress_asset_row'];
+    if (grouped) {
+        rowClasses.push('progress_asset_subrow');
+    }
+
+    const diffMeta = asset.failed ? null : getProgressDiffMeta(assetTotal, previousAssetValues[asset.assetId]);
+    const resolvedAssetTotal = typeof assetTotal === 'number' && Number.isFinite(assetTotal) ? assetTotal : 0;
+    const valueDisplay = asset.failed
+        ? '<span class="asset_value failed">❌ Failed</span>'
+        : `<span class="asset_value"><span class="abs_value">${formatCompactValue(resolvedAssetTotal)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${renderProgressDiffHtml(diffMeta)}`;
+
+    return `<div class="${rowClasses.join(' ')}" data-testid="${getProgressAssetTestId(asset.assetId)}"><span class="asset_name">${escapeHtml(displayName)}</span><span>${valueDisplay}</span></div>`;
+};
+
+/**
+ * Re-render completed streamed assets grouped by dashboard view group.
+ * @param {object} portfolio - Final portfolio payload from the stream.
+ * @param {object|null} cachedPortfolio - Previous cached portfolio used as the diff baseline.
+ * @returns {void}
+ */
+const renderCompletedProgressAssets = (portfolio, cachedPortfolio = null) => {
+    const listEl = document.getElementById('progress_assets_list');
+    const currentAssetLookup = buildPortfolioAssetLookup(portfolio);
+    const previousAssetLookup = buildPortfolioAssetLookup(cachedPortfolio);
+    const groupedAssets = new Map();
+
+    for (const asset of progressAssetItems) {
+        const currentAsset = currentAssetLookup[asset.assetId];
+        const previousAsset = previousAssetLookup[asset.assetId];
+        const groupName = currentAsset?.groupName || previousAsset?.groupName || 'Ungrouped';
+        const resolvedCurrentTotal = typeof currentAsset?.total === 'number'
+            ? currentAsset.total
+            : (typeof asset.assetTotal === 'number' && Number.isFinite(asset.assetTotal) ? asset.assetTotal : null);
+        const resolvedPreviousTotal = typeof previousAsset?.total === 'number'
+            ? previousAsset.total
+            : (typeof previousAssetValues[asset.assetId] === 'number' && Number.isFinite(previousAssetValues[asset.assetId])
+                ? previousAssetValues[asset.assetId]
+                : null);
+
+        if (!groupedAssets.has(groupName)) {
+            groupedAssets.set(groupName, {
+                currentTotal: 0,
+                previousTotal: 0,
+                hasPrevious: false,
+                items: []
+            });
+        }
+
+        const group = groupedAssets.get(groupName);
+        if (resolvedCurrentTotal !== null) {
+            group.currentTotal += resolvedCurrentTotal;
+        }
+        if (resolvedPreviousTotal !== null) {
+            group.previousTotal += resolvedPreviousTotal;
+            group.hasPrevious = true;
+        }
+
+        group.items.push({
+            ...asset,
+            assetName: currentAsset?.displayName || previousAsset?.displayName || asset.assetName,
+            assetTotal: resolvedCurrentTotal
+        });
+    }
+
+    const orderedGroupNames = getPortfolioViewGroups(portfolio).filter(groupName => groupedAssets.has(groupName));
+    for (const groupName of groupedAssets.keys()) {
+        if (!orderedGroupNames.includes(groupName)) {
+            orderedGroupNames.push(groupName);
+        }
+    }
+
+    listEl.innerHTML = orderedGroupNames.map(groupName => {
+        const group = groupedAssets.get(groupName);
+        const groupDiffMeta = group.hasPrevious ? getProgressDiffMeta(group.currentTotal, group.previousTotal) : null;
+
+        return `
+            <div class="progress_group_section" data-testid="${getProgressGroupTestId(groupName)}">
+                <div class="progress_group_row">
+                    <span class="progress_group_name">${escapeHtml(groupName)}:</span>
+                    <span class="progress_group_summary">${renderProgressDiffHtml(groupDiffMeta, 'progress_group_diff', '—')}</span>
+                </div>
+                ${group.items.map(asset => renderProgressAssetRow(asset, { grouped: true, displayName: asset.assetName, assetTotal: asset.assetTotal })).join('')}
+            </div>
+        `;
+    }).join('');
+};
+
+/**
  * Append a streamed refresh update to the progress banner.
  * @param {{ assetName: string, assetId: string, value: number|null, assetTotal: number|null, failed: boolean, index: number, total: number, currentPortfolioTotal: number, prevMonthTotal: number|null }} data - Progress payload from SSE.
  * @returns {void}
@@ -262,31 +467,22 @@ const updateProgress = (data) => {
     document.getElementById('progress_counter').textContent = `${index}/${total}`;
 
     // Calculate diff from previous value
-    let diffHtml = '';
     if (!failed && assetTotal !== null && previousAssetValues[assetId] !== undefined) {
-        const prevValue = previousAssetValues[assetId];
-        const diff = assetTotal - prevValue;
-        runningDelta += diff; // Accumulate delta
-        const diffPct = prevValue !== 0 ? (diff / prevValue) * 100 : null;
-        const sign = diff >= 0 ? '+' : '';
-        const diffClass = diff >= 0 ? 'positive' : 'negative';
-        const diffPctLabel = diffPct === null ? '—' : `${sign}${t(diffPct)}%`;
-        latestAssetDiff = { diff, diffPct, sign, diffClass };
-        diffHtml = `<span class="asset_diff ${diffClass}"><span class="abs_value">${sign}${formatCompactValue(diff)}</span>${renderPercentageValue(diffPctLabel)}</span>`;
+        latestAssetDiff = getProgressDiffMeta(assetTotal, previousAssetValues[assetId]);
+        runningDelta += latestAssetDiff.diff; // Accumulate delta
+    }
+
+    const nextAssetState = { assetName, assetId, assetTotal, failed };
+    const existingIndex = progressAssetItems.findIndex(asset => asset.assetId === assetId);
+    if (existingIndex === -1) {
+        progressAssetItems.push(nextAssetState);
+    } else {
+        progressAssetItems[existingIndex] = nextAssetState;
     }
 
     // Append asset to list
-    const valueDisplay = failed 
-        ? '<span class="asset_value failed">❌ Failed</span>'
-        : `<span class="asset_value"><span class="abs_value">${formatCompactValue(assetTotal || 0)} ✓</span><span class="pct_value pct_placeholder">—</span></span>${diffHtml}`;
-    
-    const assetRow = document.createElement('div');
-    assetRow.className = 'progress_asset_row';
-    assetRow.setAttribute('data-testid', `progress-asset-${String(assetId).replaceAll(/[^a-zA-Z0-9_-]+/g, '-')}`);
-    assetRow.innerHTML = `<span class="asset_name">${assetName}</span><span>${valueDisplay}</span>`;
-    
     const listEl = document.getElementById('progress_assets_list');
-    listEl.appendChild(assetRow);
+    listEl.insertAdjacentHTML('beforeend', renderProgressAssetRow(nextAssetState));
     // Auto-scroll to bottom
     listEl.scrollTop = listEl.scrollHeight;
 
@@ -385,6 +581,7 @@ const streamPortfolioRefresh = (options = {}) => {
 
             localStorage.setItem('portfolio', JSON.stringify(portfolio));
             setLastUpdateNow();
+            renderCompletedProgressAssets(portfolio, cachedPortfolio);
             completeProgressBanner(persistCompletedBanner);
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
@@ -471,9 +668,7 @@ const renderTableView = (portfolio) => {
     const tableView = document.getElementById('table_view');
     let html = '';
 
-    const viewGroupsOrder = Array.isArray(portfolio.viewGroups) && portfolio.viewGroups.length
-        ? portfolio.viewGroups
-        : Object.keys(portfolio).filter(k => portfolio[k] && typeof portfolio[k] === 'object' && typeof portfolio[k].total === 'number');
+    const viewGroupsOrder = getPortfolioViewGroups(portfolio);
 
     for (const viewGroup of viewGroupsOrder) {
         if (portfolio[viewGroup]) {
