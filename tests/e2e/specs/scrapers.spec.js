@@ -191,14 +191,30 @@ test('parses the Young Platform fixture', async ({ page }) => {
 })
 
 test('parses the Yahoo Finance fixture', async ({ page }) => {
-  await expectFixtureValue(page, yahooFinanceScraper.createYahooFinanceProvider('BTC'), 'yahoo-finance.html', 65137.13)
+  await expectFixtureValue(page, yahooFinanceScraper.createYahooFinancePageProvider('BTC'), 'yahoo-finance.html', 65137.13)
 })
 
 test('parses Yahoo Finance small decimal quotes', async ({ page }) => {
-  const provider = yahooFinanceScraper.createYahooFinanceProvider('USDT')
+  const provider = yahooFinanceScraper.createYahooFinancePageProvider('USDT')
   await page.setContent('<div data-testid="qsp-price">0,8523</div>')
   const value = await page.evaluate(provider.parseValue, provider.selectors)
   expect(value).toBeCloseTo(0.8523, 4)
+})
+
+test('parses the Yahoo Finance chart API payload', async () => {
+  const value = yahooFinanceScraper.extractYahooFinanceChartPrice({
+    chart: {
+      result: [
+        {
+          meta: {
+            regularMarketPrice: 65137.13,
+          },
+        },
+      ],
+    },
+  })
+
+  expect(value).toBeCloseTo(65137.13, 2)
 })
 
 test('parses the XE fixture', async ({ page }) => {
@@ -366,6 +382,43 @@ test('supports fetch-only providers without DOM parsing', async () => {
 
   expect(result.failures).toEqual([])
   expect(result.values.FETCHED).toBeCloseTo(117.09, 2)
+})
+
+test('optionValueScraper skips browser launch for fetch-only providers', async () => {
+  const value = await scraperCore.optionValueScraper('FETCH_ONLY_SINGLE', {
+    providers: [createFetchOnlyProvider('fetch-only-single-provider', 42.5)],
+  }, 0)
+
+  expect(value).toBeCloseTo(42.5, 2)
+  expect(scraperCore.getScraperDiagnostics()).toEqual({
+    browserLaunches: 0,
+    pagesCreated: 0,
+  })
+})
+
+test('multipleUrlSelectorScraper skips browser launch when every provider is fetch-only', async () => {
+  const result = await scraperCore.multipleUrlSelectorScraper([
+    {
+      FETCH_A: {
+        providers: [createFetchOnlyProvider('fetch-only-provider-a', 11.1)],
+      },
+    },
+    {
+      FETCH_B: {
+        providers: [createFetchOnlyProvider('fetch-only-provider-b', 22.2)],
+      },
+    },
+  ], 0, true)
+
+  expect(result.failures).toEqual([])
+  expect(result.values).toEqual({
+    FETCH_A: 11.1,
+    FETCH_B: 22.2,
+  })
+  expect(scraperCore.getScraperDiagnostics()).toEqual({
+    browserLaunches: 0,
+    pagesCreated: 0,
+  })
 })
 
 test('reports failures when every provider fails and no cache exists', async () => {

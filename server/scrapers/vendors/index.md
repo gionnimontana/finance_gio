@@ -9,5 +9,5 @@ This folder contains source-specific scraping adapters that translate each upstr
 - [goldPriceScraper.js](./goldPriceScraper.js): Resolves the current gold price per gram in EUR from goldpreis.de using table parsing backed by the shared provider contract.
 - [justETFscraper.js](./justETFscraper.js): Resolves ETF quote values by ISIN from justETF through the site's quote API, using the shared fetch-only provider path instead of the rendered quote shell.
 - [xeScraper.js](./xeScraper.js): Exposes XE crypto-to-EUR providers used as the last fallback source.
-- [yahooFinance.js](./yahooFinance.js): Exposes Yahoo Finance crypto-to-EUR providers used as the preferred live crypto source.
-- [youngPlatformScraper.js](./youngPlatformScraper.js): Builds the active crypto quote chain, preferring Yahoo Finance before Young Platform and XE.
+- [yahooFinance.js](./yahooFinance.js): Exposes Yahoo Finance crypto-to-EUR providers that hit the chart API first and fall back to page parsing only when needed.
+- [youngPlatformScraper.js](./youngPlatformScraper.js): Builds the active crypto quote chain, preferring Yahoo Finance's API-first provider stack before Young Platform and XE.

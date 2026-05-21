@@ -26,6 +26,10 @@ const BLOCKED_URL_PATTERNS = [/google-analytics/i, /googletagmanager/i, /doublec
 
 const cacheEntries = new Map()
 const pageRuntimeState = new WeakMap()
+const scraperDiagnostics = {
+    browserLaunches: 0,
+    pagesCreated: 0,
+}
 
 // Lock to prevent concurrent refresh passes.
 let isScrapingInProgress = false
@@ -65,6 +69,15 @@ const getBrowserLaunchOptions = () => ({
         '--disable-renderer-backgrounding',
     ],
 })
+
+/**
+ * Launch Puppeteer while recording lightweight runtime diagnostics.
+ * @returns {Promise<import('puppeteer').Browser>}
+ */
+const launchBrowser = async () => {
+    scraperDiagnostics.browserLaunches += 1
+    return puppeteer.launch(getBrowserLaunchOptions())
+}
 
 /**
  * Read the configured deterministic scraper fixture for test mode.
@@ -182,6 +195,20 @@ const normalizeOptionConfig = (assetName, optionConfig) => {
         providers: providerConfigs.map((providerConfig, providerIndex) => normalizeProviderConfig(assetName, providerConfig, providerIndex)),
     }
 }
+
+/**
+ * Determine whether a provider needs a browser page.
+ * @param {{ fetchValue: Function|null }} provider - Normalized provider config.
+ * @returns {boolean}
+ */
+const providerNeedsBrowser = (provider) => !provider.fetchValue
+
+/**
+ * Determine whether an option chain needs browser automation.
+ * @param {{ providers: ReturnType<typeof normalizeProviderConfig>[] }} optionConfig - Normalized asset config.
+ * @returns {boolean}
+ */
+const optionConfigNeedsBrowser = (optionConfig) => optionConfig.providers.some(providerNeedsBrowser)
 
 /**
  * Store a successful value in the shared cache.
@@ -344,6 +371,7 @@ const configurePage = async (page, provider) => {
  * @returns {Promise<import('puppeteer').Page>}
  */
 const createScraperPage = async (browser) => {
+    scraperDiagnostics.pagesCreated += 1
     const page = await browser.newPage()
 
     await page.setUserAgent(DEFAULT_SCRAPER_USER_AGENT)
@@ -386,6 +414,41 @@ const closePage = async (page) => {
         await page.close()
     } catch (closeError) {
         // Ignore cleanup failures.
+    }
+}
+
+/**
+ * Create a worker-local page resource that only opens a page on first browser-backed use.
+ * @param {import('puppeteer').Browser | null} browser - Shared Puppeteer browser instance.
+ * @returns {{ getPage: () => Promise<import('puppeteer').Page>, close: () => Promise<void> }}
+ */
+const createLazyPageResource = (browser) => {
+    let pagePromise = null
+
+    return {
+        getPage: async () => {
+            if (!browser) {
+                throw new Error('Browser page unavailable for browser-backed provider')
+            }
+
+            if (!pagePromise) {
+                pagePromise = createScraperPage(browser).catch((error) => {
+                    pagePromise = null
+                    throw error
+                })
+            }
+
+            return pagePromise
+        },
+        close: async () => {
+            if (!pagePromise) {
+                return
+            }
+
+            const page = await pagePromise.catch(() => null)
+            pagePromise = null
+            await closePage(page)
+        },
     }
 }
 
@@ -433,11 +496,11 @@ const waitForProviderSelectors = async (page, provider) => {
 
 /**
  * Execute a single provider attempt.
- * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
+ * @param {{ getPage: () => Promise<import('puppeteer').Page> }} pageResource - Worker-local page resource.
  * @param {{ name: string, url: string, selectors: string[], waitSelectors: string[], waitForNonEmptyText: boolean, fetchValue: Function|null, parseValue: Function, selectorArgMode: 'single'|'list', logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }} provider - Normalized provider config.
  * @returns {Promise<number>}
  */
-const scrapeProviderAttempt = async (page, provider) => {
+const scrapeProviderAttempt = async (pageResource, provider) => {
     if (provider.fetchValue) {
         provider.logger(`Fetching stats from ${provider.name}...`)
         const value = await provider.fetchValue()
@@ -446,6 +509,7 @@ const scrapeProviderAttempt = async (page, provider) => {
         return normalizedValue
     }
 
+    const page = await pageResource.getPage()
     provider.logger(`Navigating to ${provider.url}...`)
     await configurePage(page, provider)
     await page.goto(provider.url, {
@@ -467,18 +531,18 @@ const scrapeProviderAttempt = async (page, provider) => {
 
 /**
  * Scrape a provider with bounded retries and classified failures.
- * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
+ * @param {{ getPage: () => Promise<import('puppeteer').Page> }} pageResource - Worker-local page resource.
  * @param {string} assetName - Asset cache key.
  * @param {ReturnType<typeof normalizeProviderConfig>} provider - Normalized provider config.
  * @param {number} maxRetries - Maximum retry count per provider.
  * @returns {Promise<{ value: number|null, failed: boolean, provider: string, reason: 'navigation'|'selector'|'parse'|'runtime', message: string }>} 
  */
-const scrapeProviderWithRetry = async (page, assetName, provider, maxRetries) => {
+const scrapeProviderWithRetry = async (pageResource, assetName, provider, maxRetries) => {
     let lastFailure = null
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-            const value = await scrapeProviderAttempt(page, provider)
+            const value = await scrapeProviderAttempt(pageResource, provider)
             return {
                 value,
                 failed: false,
@@ -512,14 +576,14 @@ const scrapeProviderWithRetry = async (page, assetName, provider, maxRetries) =>
 
 /**
  * Resolve a single asset value through its provider chain and stale cache fallback.
- * @param {import('puppeteer').Page} page - Reusable Puppeteer page.
+ * @param {{ getPage: () => Promise<import('puppeteer').Page> }} pageResource - Worker-local page resource.
  * @param {string} assetName - Asset cache key.
  * @param {{ cacheTtlMs: number, staleCacheTtlMs: number, providers: ReturnType<typeof normalizeProviderConfig>[] }} optionConfig - Normalized asset config.
  * @param {number} maxRetries - Maximum retry count per provider.
  * @param {boolean} refresh - Whether fresh cache should be bypassed.
  * @returns {Promise<{ value: number|null, failed: boolean, cached: boolean, stale: boolean, provider: string|null, reason: string|null }>} 
  */
-const scrapeOptionWithFallback = async (page, assetName, optionConfig, maxRetries, refresh) => {
+const scrapeOptionWithFallback = async (pageResource, assetName, optionConfig, maxRetries, refresh) => {
     const freshEntry = getFreshCacheEntry(assetName, optionConfig.cacheTtlMs)
     if (!refresh && freshEntry) {
         return {
@@ -536,7 +600,7 @@ const scrapeOptionWithFallback = async (page, assetName, optionConfig, maxRetrie
     let lastFailure = null
 
     for (const provider of optionConfig.providers) {
-        const providerResult = await scrapeProviderWithRetry(page, assetName, provider, maxRetries)
+        const providerResult = await scrapeProviderWithRetry(pageResource, assetName, provider, maxRetries)
         if (!providerResult.failed && providerResult.value !== null) {
             writeCacheEntry(assetName, providerResult.value, {
                 provider: providerResult.provider,
@@ -586,20 +650,22 @@ const scrapeOptionWithFallback = async (page, assetName, optionConfig, maxRetrie
  * @returns {Promise<number>}
  */
 const optionValueScraper = async (assetName, optionConfig, maxRetries = 0) => {
-    const browser = await puppeteer.launch(getBrowserLaunchOptions())
+    const normalizedOptionConfig = normalizeOptionConfig(assetName, optionConfig)
+    const browser = optionConfigNeedsBrowser(normalizedOptionConfig)
+        ? await launchBrowser()
+        : null
+    const pageResource = createLazyPageResource(browser)
 
     try {
-        const normalizedOptionConfig = normalizeOptionConfig(assetName, optionConfig)
-        const result = await withReusablePage(browser, async (page) => {
-            return scrapeOptionWithFallback(page, assetName, normalizedOptionConfig, maxRetries, true)
-        })
+        const result = await scrapeOptionWithFallback(pageResource, assetName, normalizedOptionConfig, maxRetries, true)
         if (result.failed || result.value === null) {
             throw new Error(`Scraper failed for ${assetName}`)
         }
         return result.value
     } finally {
+        await pageResource.close()
         try {
-            await browser.close()
+            await browser?.close()
         } catch (closeError) {
             // Ignore cleanup failures.
         }
@@ -806,7 +872,6 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
 
     isScrapingInProgress = true
     scrapingPromise = (async () => {
-        const browser = await puppeteer.launch(getBrowserLaunchOptions())
         const normalizedOptions = options.map((option) => {
             const [name, rawOptionConfig] = Object.entries(option)[0]
             return {
@@ -818,6 +883,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
         const failures = new Set()
         const pendingOptions = []
         let completedCount = 0
+        let browser = null
 
         try {
             for (const entry of normalizedOptions) {
@@ -839,11 +905,15 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                 pendingOptions.push(entry)
             }
 
+            browser = pendingOptions.some((entry) => optionConfigNeedsBrowser(entry.optionConfig))
+                ? await launchBrowser()
+                : null
+
             await runWithConcurrency(
                 pendingOptions,
                 DEFAULT_CONCURRENCY,
-                async (entry, page) => {
-                    const result = await scrapeOptionWithFallback(page, entry.name, entry.optionConfig, maxRetries, refresh)
+                async (entry, pageResource) => {
+                    const result = await scrapeOptionWithFallback(pageResource, entry.name, entry.optionConfig, maxRetries, refresh)
                     if (result.failed) {
                         failures.add(entry.name)
                         console.warn(`Scraper failed for ${entry.name}`)
@@ -855,8 +925,8 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                         name: entry.name,
                     }, completedCount, totalAssets)
                 },
-                async () => createScraperPage(browser),
-                closePage
+                async () => createLazyPageResource(browser),
+                async (pageResource) => pageResource?.close()
             )
 
             return {
@@ -871,7 +941,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
             }
         } finally {
             try {
-                await browser.close()
+                await browser?.close()
             } catch (closeError) {
                 // Ignore cleanup failures.
             }
@@ -891,11 +961,20 @@ const resetScraperState = () => {
     cacheEntries.clear()
     isScrapingInProgress = false
     scrapingPromise = null
+    scraperDiagnostics.browserLaunches = 0
+    scraperDiagnostics.pagesCreated = 0
 }
+
+/**
+ * Read lightweight runtime counters used by the scraper regression tests.
+ * @returns {{ browserLaunches: number, pagesCreated: number }}
+ */
+const getScraperDiagnostics = () => ({ ...scraperDiagnostics })
 
 module.exports = {
     urlSelectorScraper,
     optionValueScraper,
     multipleUrlSelectorScraper,
+    getScraperDiagnostics,
     resetScraperState,
 }

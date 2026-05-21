@@ -16,6 +16,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Updated `deploy.sh` and `finance-site.nginx.template` so deploys now reload Nginx, expose `/health` through the checked-in vhost template, and verify service health at `https://$PFB_DEPLOY_SITE_DOMAIN/health` from the server itself.
 - Refreshed the deploy/runtime wiki notes because the post-restart probe now validates the live domain-backed surface instead of curling the backend directly on `127.0.0.1:8085`.
 
+## [2026-05-21] update | Speed up crypto scraper runtime
+- Updated the shared scraper runtime to avoid launching Puppeteer pages for fetch-only provider chains, so API-backed scrapes no longer pay browser startup costs.
+- Refreshed the scraper wiki notes because Yahoo Finance crypto quotes now use the chart API first and only fall back to browser-backed sources when the fast path fails.
+
 ## [2026-05-21] update | Add remote deploy helper
 - Added `npm run deploy:remote`, which reuses the local SSH credentials from `.env` plus `PFB_DEPLOY_APP_PATH` to run `bash ./deploy.sh` from the configured remote app directory.
 - Updated the deploy/runtime wiki notes and `.env.example` so the remote repository path is configured explicitly instead of being hard-coded into the helper.

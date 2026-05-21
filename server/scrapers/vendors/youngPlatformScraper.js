@@ -84,6 +84,7 @@ const cryptoOptionsCreator = (crypto) => {
         [crypto]: {
             providers: [
                 yahooFinance.createYahooFinanceProvider(crypto),
+                yahooFinance.createYahooFinancePageProvider(crypto),
                 createYoungPlatformProvider(crypto),
                 xeScraper.createXeProvider(crypto),
             ],
