@@ -8,6 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+DEPLOY_REEXEC_GUARD="${PFB_DEPLOY_REEXEC_AFTER_PULL:-0}"
 ENV_FILE="$SCRIPT_DIR/.env"
 SERVICE_NAME="finance-bot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
@@ -44,7 +45,14 @@ version_at_least() {
 }
 
 echo "📥 Pulling latest changes..."
+PRE_PULL_HEAD="$(git rev-parse HEAD)"
 git pull origin main
+POST_PULL_HEAD="$(git rev-parse HEAD)"
+
+if [[ "$DEPLOY_REEXEC_GUARD" != "1" && "$PRE_PULL_HEAD" != "$POST_PULL_HEAD" ]]; then
+	echo "🔁 Restarting deploy script to use freshly pulled changes..."
+	exec env PFB_DEPLOY_REEXEC_AFTER_PULL=1 "${BASH:-/bin/bash}" "$SCRIPT_DIR/deploy.sh" "$@"
+fi
 
 NODE_BIN="$(command -v node || true)"
 if [[ -z "$NODE_BIN" ]]; then

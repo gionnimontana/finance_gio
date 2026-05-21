@@ -26,6 +26,7 @@ This page documents how production frontend releases force browsers to fetch fre
 - The deploy script now probes `http://127.0.0.1:8085/health` after restarting systemd and prints service status plus recent journald logs before failing, so a dead upstream is caught during deploy instead of surfacing later as Nginx `502 Bad Gateway` responses.
 - The markdown files under `view/` remain source-only navigation docs for contributors and should never be edited inside `.deploy/view/`.
 - The deploy version defaults to the current git short SHA and falls back to a timestamp when git metadata is unavailable. `PFB_FRONTEND_VERSION` can override it when a manual release identifier is needed.
+- When `git pull` updates the checked-out commit, `deploy.sh` immediately re-execs itself once before continuing so the active deploy process uses the freshly pulled script and template files instead of any stale pre-pull shell state.
 - This strategy guarantees fresh frontend resources on the next page load after deploy. It does not force already-open tabs to auto-reload.
 
 ## Related
