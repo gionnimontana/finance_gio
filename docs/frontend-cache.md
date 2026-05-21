@@ -5,6 +5,7 @@ This page documents how production frontend releases force browsers to fetch fre
 ## Current State
 - Production serves the finance frontend from Nginx under `/var/www/$PFB_DEPLOY_SITE_DOMAIN`.
 - `deploy.sh` loads `PFB_DEPLOY_SITE_DOMAIN` from `.env` or the current shell, builds a generated frontend release tree under `.deploy/view/`, renders the checked-in `finance-site.nginx.template` into `.deploy/$PFB_DEPLOY_SITE_DOMAIN.nginx`, syncs the frontend files to the Nginx root, and installs the matching Nginx include file at `/var/www/$PFB_DEPLOY_SITE_DOMAIN/$PFB_DEPLOY_SITE_DOMAIN.nginx`.
+- `deploy.sh` validates the rendered include with `nginx -t` and reloads the `nginx` service after the backend health check so route changes in the checked-in template become live immediately.
 - `deploy.sh` resolves the active `node` binary before writing the systemd unit, so the long-running backend uses the same runtime that satisfied the repo's Node engine requirement during deploy. The current repo baseline is Node 24.15.0.
 - `npm run ssh:connect` opens an SSH session to the deployed host by reading connection settings from the gitignored `.env` file or the current shell environment.
 - `npm run ssh:connect` accepts `PFB_DEPLOY_SSH_PASSWORD` as an optional local-only fallback, letting the helper satisfy password prompts non-interactively through `SSH_ASKPASS` when the host does not accept the local keychain.
@@ -20,6 +21,7 @@ This page documents how production frontend releases force browsers to fetch fre
 - The settings page and the `/assets/schema` API share the `/assets` prefix, so the production Nginx config must use exact API route matches before the static `/assets/` page route.
 - `finance-site.nginx.template` is the checked-in finance site server-block template, and `deploy.sh` renders it into `.deploy/$PFB_DEPLOY_SITE_DOMAIN.nginx` before installing it at `/var/www/$PFB_DEPLOY_SITE_DOMAIN/$PFB_DEPLOY_SITE_DOMAIN.nginx` on the host.
 - `/etc/nginx/nginx.conf` should include `/var/www/$PFB_DEPLOY_SITE_DOMAIN/$PFB_DEPLOY_SITE_DOMAIN.nginx` from the remote `http { ... }` block so future deploys update the live finance site config without hand-editing the main file.
+- Updating the include file on disk is not enough by itself; Nginx only starts serving route changes after a successful reload.
 - Local secrets belong in `.env`, which is ignored by git. `.env.example` documents the supported app and deploy variables, including `PFB_DEPLOY_SITE_DOMAIN` plus the current remote app path setting `PFB_DEPLOY_APP_PATH=/home/financegio`, and should stay credential-free.
 - Prefer `PFB_DEPLOY_SSH_PRIVATE_KEY_PATH` over embedding a raw key, but the helper also accepts `PFB_DEPLOY_SSH_PRIVATE_KEY` and writes it to a temporary `0600` file for the duration of the session.
 - When a server still requires password auth, set `PFB_DEPLOY_SSH_PASSWORD` locally; the helper writes a short-lived askpass script in a temp directory and removes it after the session ends.

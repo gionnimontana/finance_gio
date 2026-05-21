@@ -24,6 +24,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Updated Express and the deployed Nginx template so unknown non-asset app URLs redirect to `/login/` instead of leaving the browser on a dead route or serving the login shell under the wrong path.
 - Refreshed the frontend routing wiki notes so contributors know authenticated users still land on `/dashboard/` through the existing login-page handoff.
 
+## [2026-05-21] update | Reload nginx after deploy config changes
+- Updated `deploy.sh` to validate the rendered finance site include file with `nginx -t` and reload the live `nginx` service after the backend restart so route and cache changes in the checked-in template actually take effect on the server.
+- Extended the frontend deploy wiki notes because copying the include file into `/var/www/...` is not enough to change live route handling by itself.
+
 ## [2026-05-21] update | Re-exec deploy after pull
 - Updated `deploy.sh` to restart itself once when `git pull` advances the checked-out commit, so the running deploy process uses the freshly pulled script body and Nginx template instead of continuing with stale pre-pull shell code.
 - Extended the frontend deploy wiki notes with the self-reexec behavior because deploy-time script updates are now part of the supported production workflow.

@@ -96,6 +96,9 @@ sudo rsync -a --delete "${FRONTEND_DEPLOY_DIR}/" "${NGINX_SITE_ROOT}/"
 sudo install -m 0644 "$NGINX_CONFIG_OUTPUT" "$NGINX_CONFIG_DEPLOY_PATH"
 sudo chown -R www-data:www-data "$NGINX_SITE_ROOT"
 
+echo "🧪 Validating nginx config..."
+sudo nginx -t
+
 echo "🛠️  Ensuring systemd service exists..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
@@ -144,6 +147,9 @@ for attempt in {1..15}; do
 
 	sleep 2
 done
+
+echo "♻️  Reloading nginx to activate the updated site config..."
+sudo systemctl reload nginx
 
 echo "✅ Service restarted successfully"
 echo "📄 Logs: journalctl -u $SERVICE_NAME -f"
