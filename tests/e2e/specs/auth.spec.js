@@ -32,3 +32,18 @@ test('redirects away from login when a valid password is already stored', async 
   await expect(page).toHaveURL(/\/dashboard\/$/)
   await expect(page.locator('#total_value')).toContainText('23,500')
 })
+
+test('redirects unknown routes to login when unauthenticated', async ({ page }) => {
+  await page.goto('/definitely-not-a-route/')
+
+  await expect(page).toHaveURL(/\/login\/$/)
+  await expect(page.locator('#login_btn')).toBeVisible()
+})
+
+test('redirects unknown routes to dashboard when a valid password is already stored', async ({ page }) => {
+  await storePassword(page, DASHBOARD_USER_PASSWORD)
+  await page.goto('/definitely-not-a-route/')
+
+  await expect(page).toHaveURL(/\/dashboard\/$/)
+  await expect(page.locator('#total_value')).toContainText('23,500')
+})

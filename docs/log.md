@@ -16,6 +16,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Replaced the checked-in finance Nginx file with `finance-site.nginx.template` and updated `deploy.sh` to render the deploy target paths from `PFB_DEPLOY_SITE_DOMAIN` instead of keeping the production hostname hard-coded in the script and template.
 - Added `.env.example` plus refreshed the deploy/runtime wiki notes so contributors know the shared `.env` file now carries the site domain used for deploy-time Nginx rendering.
 
+## [2026-05-21] update | Redirect unknown app routes home
+- Updated Express and the deployed Nginx template so unknown non-asset app URLs redirect to `/login/` instead of leaving the browser on a dead route or serving the login shell under the wrong path.
+- Refreshed the frontend routing wiki notes so contributors know authenticated users still land on `/dashboard/` through the existing login-page handoff.
+
 ## [2026-05-21] update | Re-exec deploy after pull
 - Updated `deploy.sh` to restart itself once when `git pull` advances the checked-out commit, so the running deploy process uses the freshly pulled script body and Nginx template instead of continuing with stale pre-pull shell code.
 - Extended the frontend deploy wiki notes with the self-reexec behavior because deploy-time script updates are now part of the supported production workflow.

@@ -74,6 +74,10 @@ server {
         add_header Cache-Control "no-cache, no-store, must-revalidate" always;
         add_header Pragma "no-cache" always;
         add_header Expires "0" always;
-        try_files $uri $uri/ /login/index.html;
+        try_files $uri $uri/ @app_home;
+    }
+
+    location @app_home {
+        return 302 /login/;
     }
 }
