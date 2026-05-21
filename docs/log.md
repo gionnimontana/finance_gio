@@ -59,3 +59,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-21] update | Cross-link metrics and state docs
 - Added `docs/portfolio-metrics.md` to define the dashboard ATH baseline, the history title-mood rule, and the persisted summary baselines derived from saved history.
 - Expanded `docs/data-model.md` and the structural entry points so state-model, deploy-runtime, scraper-runtime, and portfolio-metrics pages are easier to discover from the README and folder navigation docs.
+
+## [2026-05-21] update | Raise Node runtime baseline
+- Updated the repo runtime pins, contributor instructions, and CI workflow from Node 18.19.1 to Node 24.15.0 so local installs, deploys, and e2e automation share the same supported floor.
+- Refreshed the deploy/runtime wiki guidance because Puppeteer 25.x now depends on a newer Node baseline than the repo used previously.

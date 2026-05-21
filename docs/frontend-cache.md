@@ -5,7 +5,7 @@ This page documents how production frontend releases force browsers to fetch fre
 ## Current State
 - Production serves the finance frontend from Nginx under `/var/www/finance.gingergio.it`.
 - `deploy.sh` builds a generated frontend release tree under `.deploy/view/` before syncing files to the Nginx root.
-- `deploy.sh` resolves the active `node` binary before writing the systemd unit, so the long-running backend uses the same runtime that satisfied the repo's Node engine requirement during deploy.
+- `deploy.sh` resolves the active `node` binary before writing the systemd unit, so the long-running backend uses the same runtime that satisfied the repo's Node engine requirement during deploy. The current repo baseline is Node 24.15.0.
 - The release build copies deployable files from `view/`, skips source markdown docs such as the folder `index.md` pages, and appends one release-version query string to each local CSS and JS reference in the generated HTML shells.
 - Nginx serves page shells such as `/login/`, `/dashboard/`, `/history/`, and `/assets/` with `Cache-Control: no-cache, no-store, must-revalidate` so browsers always revalidate HTML on navigation or reload.
 - Nginx serves versioned CSS and JS files with long-lived immutable caching because the query string changes on each deploy.

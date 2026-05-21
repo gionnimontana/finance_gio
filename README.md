@@ -12,7 +12,7 @@ A personal finance tracker that scrapes live asset prices, stores per-user portf
 
 ## Run Locally
 
-Use Node.js 18.19.1 or newer.
+Use Node.js 24.15.0 or newer.
 On Apple Silicon, use an arm64 Node build. An x64 Node binary running through Rosetta can make the Puppeteer-backed scraper tests much slower and will emit degraded-performance warnings.
 
 ```bash
@@ -43,7 +43,7 @@ Install both browser runtimes once after `npm install`, or let the e2e scripts d
 npm run browsers:install
 ```
 
-If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm run browsers:install`. Puppeteer downloads and manages its browser separately from Playwright, and its cache location can change with configuration, so rerunning the install is the safest recovery step after runtime or browser-config changes.
+If you ran `npm install` before switching this repo to Node 24.15.0+, rerun `npm run browsers:install`. Puppeteer downloads and manages its browser separately from Playwright, and its cache location can change with configuration, so rerunning the install is the safest recovery step after runtime or browser-config changes.
 
 ## Commit And CI Automation
 

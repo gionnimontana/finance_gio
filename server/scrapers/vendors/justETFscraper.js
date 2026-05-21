@@ -66,7 +66,7 @@ const createJustEtfProvider = (isin) => {
      */
     const fetchValue = async () => {
         if (typeof fetch !== 'function') {
-            throw new Error('Global fetch is unavailable. Use Node 18.19.1 or newer.')
+            throw new Error('Global fetch is unavailable. Use Node 24.15.0 or newer.')
         }
 
         const response = await fetch(url, {

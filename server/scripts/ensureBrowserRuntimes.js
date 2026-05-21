@@ -30,7 +30,7 @@ const runNodeScript = (scriptPath, args = []) => {
  */
 const ensurePlaywrightBrowsers = () => {
   if (!fs.existsSync(playwrightCliPath)) {
-    throw new Error('Playwright CLI not found. Run npm install with Node 18.19.1 or newer.')
+    throw new Error('Playwright CLI not found. Run npm install with Node 24.15.0 or newer.')
   }
 
   if (fs.existsSync(chromium.executablePath())) {
@@ -42,11 +42,12 @@ const ensurePlaywrightBrowsers = () => {
 
 /**
  * Resolve whether Puppeteer already has a Chrome binary available.
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-const hasPuppeteerBrowser = () => {
+const hasPuppeteerBrowser = async () => {
   try {
-    return fs.existsSync(puppeteer.executablePath())
+    const executablePath = await puppeteer.executablePath()
+    return typeof executablePath === 'string' && executablePath.length > 0 && fs.existsSync(executablePath)
   } catch (error) {
     return false
   }
@@ -54,15 +55,26 @@ const hasPuppeteerBrowser = () => {
 
 /**
  * Ensure Puppeteer's managed Chrome binary is present.
- * @returns {void}
+ * @returns {Promise<void>}
  */
-const ensurePuppeteerBrowser = () => {
-  if (hasPuppeteerBrowser()) {
+const ensurePuppeteerBrowser = async () => {
+  if (await hasPuppeteerBrowser()) {
     return
   }
 
   runNodeScript(puppeteerInstallerPath)
 }
 
-ensurePlaywrightBrowsers()
-ensurePuppeteerBrowser()
+/**
+ * Ensure both browser toolchains are ready for local automation.
+ * @returns {Promise<void>}
+ */
+const main = async () => {
+  ensurePlaywrightBrowsers()
+  await ensurePuppeteerBrowser()
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
