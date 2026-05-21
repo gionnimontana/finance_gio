@@ -1,5 +1,5 @@
-# Extracted from /etc/nginx/nginx.conf on the deployed host.
-# Intended to be included from the remote http { ... } block.
+# Checked-in finance.gingergio.it server block.
+# Deploy to /var/www/finance.gingergio.it/finance.gingergio.it.nginx and include from the remote http { ... } block.
 server {
     listen 443 ssl;
     server_name finance.gingergio.it;

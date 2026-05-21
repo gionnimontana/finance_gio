@@ -15,6 +15,8 @@ DEPLOY_ROOT="$SCRIPT_DIR/.deploy"
 FRONTEND_DEPLOY_DIR="${DEPLOY_ROOT}/view"
 NGINX_CONFIG_SOURCE="$SCRIPT_DIR/finance.gingergio.it.nginx"
 NGINX_CONFIG_OUTPUT="${DEPLOY_ROOT}/finance.gingergio.it.nginx"
+NGINX_SITE_ROOT="/var/www/finance.gingergio.it"
+NGINX_CONFIG_DEPLOY_PATH="${NGINX_SITE_ROOT}/finance.gingergio.it.nginx"
 
 resolve_min_node_version() {
 	node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const spec = String((pkg.engines && pkg.engines.node) || '>=18.19.1'); const match = spec.match(/>=\s*([0-9]+(?:\.[0-9]+){0,2})/); process.stdout.write(match ? match[1] : '18.19.1');"
@@ -66,9 +68,10 @@ sudo apt-get install -y \
 	libgtk-3-0 libgbm1 libdrm2 libxshmfence1
 
 echo "📂 Deploying frontend to nginx..."
-sudo mkdir -p /var/www/finance.gingergio.it
-sudo rsync -a --delete "${FRONTEND_DEPLOY_DIR}/" /var/www/finance.gingergio.it/
-sudo chown -R www-data:www-data /var/www/finance.gingergio.it
+sudo mkdir -p "$NGINX_SITE_ROOT"
+sudo rsync -a --delete "${FRONTEND_DEPLOY_DIR}/" "${NGINX_SITE_ROOT}/"
+sudo install -m 0644 "$NGINX_CONFIG_OUTPUT" "$NGINX_CONFIG_DEPLOY_PATH"
+sudo chown -R www-data:www-data "$NGINX_SITE_ROOT"
 
 echo "🛠️  Ensuring systemd service exists..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF

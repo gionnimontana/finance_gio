@@ -83,3 +83,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-21] update | Include nginx config in deploy artifact
 - Updated `deploy.sh` so the generated `.deploy/` output now includes `finance.gingergio.it.nginx` alongside the versioned frontend release files.
 - Refreshed the deployment wiki notes so contributors know the deploy artifact now carries the checked-in Nginx reference file as well as the static frontend tree.
+
+## [2026-05-21] update | Deploy nginx include file
+- Updated `deploy.sh` so deploys now install `finance.gingergio.it.nginx` into `/var/www/finance.gingergio.it/finance.gingergio.it.nginx` on the server, keeping the live include file aligned with the checked-in config.
+- Refreshed the finance Nginx reference and deployment wiki notes so contributors know `/etc/nginx/nginx.conf` should include the deployed file instead of embedding the finance server block inline.

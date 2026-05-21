@@ -4,7 +4,7 @@ This page documents how production frontend releases force browsers to fetch fre
 
 ## Current State
 - Production serves the finance frontend from Nginx under `/var/www/finance.gingergio.it`.
-- `deploy.sh` builds a generated frontend release tree under `.deploy/view/`, copies the checked-in `finance.gingergio.it.nginx` file into `.deploy/finance.gingergio.it.nginx`, and then syncs the frontend files to the Nginx root.
+- `deploy.sh` builds a generated frontend release tree under `.deploy/view/`, copies the checked-in `finance.gingergio.it.nginx` file into `.deploy/finance.gingergio.it.nginx`, syncs the frontend files to the Nginx root, and installs the matching Nginx include file at `/var/www/finance.gingergio.it/finance.gingergio.it.nginx`.
 - `deploy.sh` resolves the active `node` binary before writing the systemd unit, so the long-running backend uses the same runtime that satisfied the repo's Node engine requirement during deploy. The current repo baseline is Node 24.15.0.
 - `npm run ssh:connect` opens an SSH session to the deployed host by reading connection settings from the gitignored `.env` file or the current shell environment.
 - `npm run ssh:connect` accepts `PFB_DEPLOY_SSH_PASSWORD` as an optional local-only fallback, letting the helper satisfy password prompts non-interactively through `SSH_ASKPASS` when the host does not accept the local keychain.
@@ -16,8 +16,8 @@ This page documents how production frontend releases force browsers to fetch fre
 
 ## Notes
 - The settings page and the `/assets/schema` API share the `/assets` prefix, so the production Nginx config must use exact API route matches before the static `/assets/` page route.
-- `finance.gingergio.it.nginx` is a checked-in extract of the live production server block, and `deploy.sh` mirrors it into `.deploy/` so the generated deploy artifact keeps the matching Nginx reference beside the versioned frontend output.
-- `/etc/nginx/nginx.conf` on the host remains the source of truth until the remote config is updated to include that file explicitly.
+- `finance.gingergio.it.nginx` is the checked-in finance site server block, and `deploy.sh` mirrors it into `.deploy/` before installing it at `/var/www/finance.gingergio.it/finance.gingergio.it.nginx` on the host.
+- `/etc/nginx/nginx.conf` should include `/var/www/finance.gingergio.it/finance.gingergio.it.nginx` from the remote `http { ... }` block so future deploys update the live finance site config without hand-editing the main file.
 - Local secrets belong in `.env`, which is ignored by git. `.env.example` documents the supported app and deploy variables and should stay credential-free.
 - Prefer `PFB_DEPLOY_SSH_PRIVATE_KEY_PATH` over embedding a raw key, but the helper also accepts `PFB_DEPLOY_SSH_PRIVATE_KEY` and writes it to a temporary `0600` file for the duration of the session.
 - When a server still requires password auth, set `PFB_DEPLOY_SSH_PASSWORD` locally; the helper writes a short-lived askpass script in a temp directory and removes it after the session ends.
