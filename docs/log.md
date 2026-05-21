@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-21] update | Externalize deploy site domain
+- Replaced the checked-in finance Nginx file with `finance-site.nginx.template` and updated `deploy.sh` to render the deploy target paths from `PFB_DEPLOY_SITE_DOMAIN` instead of keeping the production hostname hard-coded in the script and template.
+- Added `.env.example` plus refreshed the deploy/runtime wiki notes so contributors know the shared `.env` file now carries the site domain used for deploy-time Nginx rendering.
+
 ## [2026-04-24] bootstrap | Create docs wiki
 - Added the initial `docs/` wiki shell with `index.md`, `schema.md`, and `log.md`.
 - Defined `docs/` as the home for cross-cutting project knowledge rather than code-structure inventory.

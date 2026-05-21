@@ -8,15 +8,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+ENV_FILE="$SCRIPT_DIR/.env"
 SERVICE_NAME="finance-bot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 SERVICE_HEALTH_URL="http://127.0.0.1:8085/health"
 DEPLOY_ROOT="$SCRIPT_DIR/.deploy"
 FRONTEND_DEPLOY_DIR="${DEPLOY_ROOT}/view"
-NGINX_CONFIG_SOURCE="$SCRIPT_DIR/finance.gingergio.it.nginx"
-NGINX_CONFIG_OUTPUT="${DEPLOY_ROOT}/finance.gingergio.it.nginx"
-NGINX_SITE_ROOT="/var/www/finance.gingergio.it"
-NGINX_CONFIG_DEPLOY_PATH="${NGINX_SITE_ROOT}/finance.gingergio.it.nginx"
+NGINX_CONFIG_TEMPLATE="$SCRIPT_DIR/finance-site.nginx.template"
+
+if [[ -f "$ENV_FILE" ]]; then
+	set -a
+	. "$ENV_FILE"
+	set +a
+fi
+
+DEPLOY_SITE_DOMAIN="${PFB_DEPLOY_SITE_DOMAIN:-}"
+if [[ -z "$DEPLOY_SITE_DOMAIN" ]]; then
+	echo "❌ Missing PFB_DEPLOY_SITE_DOMAIN in .env or the shell environment" >&2
+	exit 1
+fi
+
+NGINX_CONFIG_OUTPUT="${DEPLOY_ROOT}/${DEPLOY_SITE_DOMAIN}.nginx"
+NGINX_SITE_ROOT="/var/www/${DEPLOY_SITE_DOMAIN}"
+NGINX_CONFIG_DEPLOY_PATH="${NGINX_SITE_ROOT}/${DEPLOY_SITE_DOMAIN}.nginx"
 
 resolve_min_node_version() {
 	node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const spec = String((pkg.engines && pkg.engines.node) || '>=18.19.1'); const match = spec.match(/>=\s*([0-9]+(?:\.[0-9]+){0,2})/); process.stdout.write(match ? match[1] : '18.19.1');"
@@ -48,15 +62,16 @@ if ! version_at_least "$CURRENT_NODE_VERSION" "$MIN_NODE_VERSION"; then
 fi
 
 echo "🧮 Using Node runtime: ${NODE_BIN} (v${CURRENT_NODE_VERSION})"
+echo "🌍 Using deploy site domain: ${DEPLOY_SITE_DOMAIN}"
 
 echo "📦 Installing dependencies..."
 npm install
 
 echo "🏷️  Building versioned frontend release..."
 npm run build:frontend:release
-echo "🧾 Copying nginx config into deploy artifact..."
+echo "🧾 Rendering nginx config into deploy artifact..."
 mkdir -p "$DEPLOY_ROOT"
-cp "$NGINX_CONFIG_SOURCE" "$NGINX_CONFIG_OUTPUT"
+sed "s/__PFB_DEPLOY_SITE_DOMAIN__/${DEPLOY_SITE_DOMAIN}/g" "$NGINX_CONFIG_TEMPLATE" > "$NGINX_CONFIG_OUTPUT"
 FRONTEND_VERSION="$(tr -d '\n' < .deploy/frontend-version.txt)"
 echo "🌐 Frontend release version: ${FRONTEND_VERSION}"
 
