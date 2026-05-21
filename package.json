@@ -6,6 +6,7 @@
   "scripts": {
     "browsers:install": "node server/scripts/ensureBrowserRuntimes.js",
     "build:frontend:release": "node server/scripts/buildFrontendRelease.js",
+    "deploy:remote": "node server/scripts/runRemoteDeploy.js",
     "ssh:connect": "node server/scripts/connectDeployServer.js",
     "start": "node server/index.js",
     "start:live": "node server/index.js",

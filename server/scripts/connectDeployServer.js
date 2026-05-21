@@ -422,6 +422,7 @@ module.exports = {
   createDeployConfigFromEnv,
   createTemporaryAskpassScript,
   createTemporaryPrivateKeyFile,
+  ensureSshClient,
   loadDeployConfig,
   normalizePrivateKey,
   parseBoolean,
