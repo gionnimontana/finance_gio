@@ -4,7 +4,6 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 const express = require('express')
 const cors = require('cors')
-const bodyParser = require('body-parser')
 const portfolioScripts = require('./scripts/portfolio')
 const {
   buildAssetsSchemaCacheKey,
@@ -26,8 +25,8 @@ const app = express()
 const port = Number(process.env.PORT || 8085)
 
 app.use(cors())
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: true }))
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 app.use(express.static(path.resolve(__dirname, '../view')))
 
 // Legacy base-path support: redirect /financegio/* to root

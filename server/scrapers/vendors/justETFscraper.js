@@ -2,7 +2,6 @@
  * Scrape ETF quote data from justETF using the shared browser helpers.
  */
 const core = require('../core')
-const fetchImpl = global.fetch || require('cross-fetch')
 
 /**
  * Parse the justETF quote payload into a numeric quote.
@@ -66,7 +65,11 @@ const createJustEtfProvider = (isin) => {
      * @returns {Promise<number>}
      */
     const fetchValue = async () => {
-        const response = await fetchImpl(url, {
+        if (typeof fetch !== 'function') {
+            throw new Error('Global fetch is unavailable. Use Node 18.19.1 or newer.')
+        }
+
+        const response = await fetch(url, {
             headers: {
                 Accept: 'application/json',
                 'Accept-Language': 'en-US,en;q=0.9',
