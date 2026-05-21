@@ -79,3 +79,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-21] update | Consolidate local env files
 - Renamed the SSH helper entrypoint from `npm run ssh:deploy` to `npm run ssh:connect` so the command name matches its purpose more closely.
 - Consolidated the documented local configuration around one shared `.env` file and replaced `.env.deploy.example` with `.env.example`.
+
+## [2026-05-21] update | Include nginx config in deploy artifact
+- Updated `deploy.sh` so the generated `.deploy/` output now includes `finance.gingergio.it.nginx` alongside the versioned frontend release files.
+- Refreshed the deployment wiki notes so contributors know the deploy artifact now carries the checked-in Nginx reference file as well as the static frontend tree.
