@@ -12,7 +12,6 @@ DEPLOY_REEXEC_GUARD="${PFB_DEPLOY_REEXEC_AFTER_PULL:-0}"
 ENV_FILE="$SCRIPT_DIR/.env"
 SERVICE_NAME="finance-bot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-SERVICE_HEALTH_URL="http://127.0.0.1:8085/health"
 DEPLOY_ROOT="$SCRIPT_DIR/.deploy"
 FRONTEND_DEPLOY_DIR="${DEPLOY_ROOT}/view"
 NGINX_CONFIG_TEMPLATE="$SCRIPT_DIR/finance-site.nginx.template"
@@ -28,6 +27,14 @@ if [[ -z "$DEPLOY_SITE_DOMAIN" ]]; then
 	echo "❌ Missing PFB_DEPLOY_SITE_DOMAIN in .env or the shell environment" >&2
 	exit 1
 fi
+
+SERVICE_HEALTH_URL="https://${DEPLOY_SITE_DOMAIN}/health"
+SERVICE_HEALTH_CURL_ARGS=(
+	--fail
+	--silent
+	--show-error
+	--resolve "${DEPLOY_SITE_DOMAIN}:443:127.0.0.1"
+)
 
 NGINX_CONFIG_OUTPUT="${DEPLOY_ROOT}/${DEPLOY_SITE_DOMAIN}.nginx"
 NGINX_SITE_ROOT="/var/www/${DEPLOY_SITE_DOMAIN}"
@@ -131,9 +138,12 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$SERVICE_NAME" >/dev/null
 sudo systemctl restart "$SERVICE_NAME"
 
+echo "♻️  Reloading nginx to activate the updated site config..."
+sudo systemctl reload nginx
+
 echo "🩺 Verifying backend health on ${SERVICE_HEALTH_URL}..."
 for attempt in {1..15}; do
-	if curl --fail --silent --show-error "$SERVICE_HEALTH_URL" | grep -q '"ok":true'; then
+	if curl "${SERVICE_HEALTH_CURL_ARGS[@]}" "$SERVICE_HEALTH_URL" | grep -q '"ok":true'; then
 		echo "✅ Backend health check passed"
 		break
 	fi
@@ -147,9 +157,6 @@ for attempt in {1..15}; do
 
 	sleep 2
 done
-
-echo "♻️  Reloading nginx to activate the updated site config..."
-sudo systemctl reload nginx
 
 echo "✅ Service restarted successfully"
 echo "📄 Logs: journalctl -u $SERVICE_NAME -f"

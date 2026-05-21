@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-21] update | Probe deployed domain during deploy
+- Updated `deploy.sh` and `finance-site.nginx.template` so deploys now reload Nginx, expose `/health` through the checked-in vhost template, and verify service health at `https://$PFB_DEPLOY_SITE_DOMAIN/health` from the server itself.
+- Refreshed the deploy/runtime wiki notes because the post-restart probe now validates the live domain-backed surface instead of curling the backend directly on `127.0.0.1:8085`.
+
 ## [2026-05-21] update | Add remote deploy helper
 - Added `npm run deploy:remote`, which reuses the local SSH credentials from `.env` plus `PFB_DEPLOY_APP_PATH` to run `bash ./deploy.sh` from the configured remote app directory.
 - Updated the deploy/runtime wiki notes and `.env.example` so the remote repository path is configured explicitly instead of being hard-coded into the helper.
