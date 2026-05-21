@@ -1,0 +1,79 @@
+# Extracted from /etc/nginx/nginx.conf on the deployed host.
+# Intended to be included from the remote http { ... } block.
+server {
+    listen 443 ssl;
+    server_name finance.gingergio.it;
+    ssl_certificate /etc/letsencrypt/live/finance.gingergio.it/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/finance.gingergio.it/privkey.pem; # managed by Certbot
+
+    root /var/www/finance.gingergio.it;
+    index index.html;
+
+    location = / {
+        return 302 /login/;
+    }
+
+    location = /auth/generate {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /auth/validate {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /portfolio {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /portfolio/history {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /portfolio/stream {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+    }
+
+    location = /assets/schema {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /assets/view-groups {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location ~* \.(?:css|js)$ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location ~* \.(?:jpg|jpeg|png|gif|svg|webp|avif|ico|woff2?|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        try_files $uri $uri/ /login/index.html;
+    }
+}

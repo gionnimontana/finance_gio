@@ -63,3 +63,19 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-21] update | Raise Node runtime baseline
 - Updated the repo runtime pins, contributor instructions, and CI workflow from Node 18.19.1 to Node 24.15.0 so local installs, deploys, and e2e automation share the same supported floor.
 - Refreshed the deploy/runtime wiki guidance because Puppeteer 25.x now depends on a newer Node baseline than the repo used previously.
+
+## [2026-05-21] update | Add deploy SSH helper
+- Added a local-only `npm run ssh:connect` helper that reads deployed-host connection settings from `.env` and keeps the real credential file out of version control.
+- Extended the deployment wiki notes so contributors know the tracked example file, strict host-key default, and optional inline-key handling used by the SSH helper.
+
+## [2026-05-21] update | Check in finance nginx extract
+- Added `finance.gingergio.it.nginx` by extracting the live `finance.gingergio.it` server block from the deployed host so future include-based Nginx refactors can start from the current production behavior.
+- Updated the deploy/runtime wiki notes so contributors know the checked-in file is a local reference until `/etc/nginx/nginx.conf` is changed to include it remotely.
+
+## [2026-05-21] update | Add password fallback to deploy SSH helper
+- Extended `npm run ssh:connect` so `.env` can carry `PFB_DEPLOY_SSH_PASSWORD`, letting the helper answer SSH password prompts through a short-lived askpass script when key-based auth is unavailable.
+- Updated the deploy helper example and runtime wiki notes so contributors know password auth stays local-only and is cleaned up after each SSH session.
+
+## [2026-05-21] update | Consolidate local env files
+- Renamed the SSH helper entrypoint from `npm run ssh:deploy` to `npm run ssh:connect` so the command name matches its purpose more closely.
+- Consolidated the documented local configuration around one shared `.env` file and replaced `.env.deploy.example` with `.env.example`.

@@ -6,6 +6,7 @@
   "scripts": {
     "browsers:install": "node server/scripts/ensureBrowserRuntimes.js",
     "build:frontend:release": "node server/scripts/buildFrontendRelease.js",
+    "ssh:connect": "node server/scripts/connectDeployServer.js",
     "start": "node server/index.js",
     "start:live": "node server/index.js",
     "e2e:reset": "node tests/e2e/setup/resetTestData.js",
