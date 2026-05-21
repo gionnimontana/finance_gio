@@ -12,3 +12,9 @@ This folder contains the backend application logic for authentication, user data
 - [auth/index.md](./auth/index.md): Password generation, user-folder lifecycle, and request authentication.
 - [scrapers/index.md](./scrapers/index.md): Shared scraping runtime and vendor adapters for live market data, ordered provider fallback, TTL-based cache reuse, and deterministic scraper regression coverage.
 - [scripts/index.md](./scripts/index.md): Higher-level backend business logic plus the deploy-time frontend release builder and the local e2e browser-runtime helper used to keep Playwright and Puppeteer assets available.
+
+## Related Docs
+
+- [../docs/data-model.md](../docs/data-model.md): Password-derived user identity, persisted schema/history files, and cache invalidation rules shared with the frontend.
+- [../docs/frontend-cache.md](../docs/frontend-cache.md): Production route ownership, static cache policy, and deploy/runtime verification behavior.
+- [../docs/scraper-runtime.md](../docs/scraper-runtime.md): Provider fallback, fetch-only runtime behavior, and low-memory scraper tuning.

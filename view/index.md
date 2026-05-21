@@ -9,3 +9,9 @@ This folder contains the frontend pages, shared browser utilities, and page-spec
 - [dashboard/index.md](./dashboard/index.md): Main portfolio overview page with refresh progress, grouped completion-state refresh summaries by view group, pie chart rendering, and shared currency-prefixed whole-number full-value labels that can switch to compact formatting from Settings while keeping dashboard subrows bare.
 - [history/index.md](./history/index.md): Historical portfolio summary page with stacked chart, a runtime ATH mood icon in the page title, and a scrollable monthly table that keeps its header visible, opens on the newest month, and reserves currency prefixes for summary and total values.
 - [login/index.md](./login/index.md): Login and account-generation page.
+
+## Related Docs
+
+- [../docs/data-model.md](../docs/data-model.md): Persisted schema/history files, view-group ordering, and browser-local cache behavior shared across pages.
+- [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): Dashboard ATH rules and the summary baselines reused across dashboard and history.
+- [../docs/frontend-cache.md](../docs/frontend-cache.md): Production-only generated frontend release behavior and cache-control expectations.

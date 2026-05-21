@@ -5,3 +5,8 @@ This folder contains the backend logic that converts asset schemas and live mark
 ## Files
 
 - [index.js](./index.js): Aggregates asset values, groups totals by view group, derives all-time-high metadata from saved history before the current month, normalizes refresh flags before invoking the scraper runtime, attaches the current schema cache key, and emits SSE progress and completion payloads for both manual refreshes and first-load streams.
+
+## Related Docs
+
+- [../../../docs/portfolio-metrics.md](../../../docs/portfolio-metrics.md): Dashboard ATH rules, history title-mood behavior, and saved-history summary baselines.
+- [../../../docs/data-model.md](../../../docs/data-model.md): Persisted schema fields, view-group ordering, and cache invalidation shared with the frontend.

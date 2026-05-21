@@ -55,3 +55,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-01] update | Switch justETF to quote API
 - Updated `docs/scraper-runtime.md` with the justETF quote API path now used in live refreshes, replacing the flaky rendered quote shell for ETF prices.
 - Refreshed the scraper structural docs so the shared fetch-only provider path and the justETF API-based ETF scraper are discoverable from the backend and docs entry points.
+
+## [2026-05-21] update | Cross-link metrics and state docs
+- Added `docs/portfolio-metrics.md` to define the dashboard ATH baseline, the history title-mood rule, and the persisted summary baselines derived from saved history.
+- Expanded `docs/data-model.md` and the structural entry points so state-model, deploy-runtime, scraper-runtime, and portfolio-metrics pages are easier to discover from the README and folder navigation docs.

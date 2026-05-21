@@ -5,7 +5,7 @@ A personal finance tracker that scrapes live asset prices, stores per-user portf
 ## What It Includes
 
 - Node.js + Express backend
-- Puppeteer-based price scraping
+- Browser- and API-backed price fetching
 - Vanilla HTML/CSS/JavaScript frontend
 - Per-user JSON storage under `data/users/`
 - Playwright end-to-end coverage for the full browser flow
@@ -43,7 +43,7 @@ Install both browser runtimes once after `npm install`, or let the e2e scripts d
 npm run browsers:install
 ```
 
-If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm run browsers:install`. Puppeteer 24 stores its Chrome binary separately from Playwright under `~/.cache/puppeteer`.
+If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm run browsers:install`. Puppeteer downloads and manages its browser separately from Playwright, and its cache location can change with configuration, so rerunning the install is the safest recovery step after runtime or browser-config changes.
 
 ## Commit And CI Automation
 
@@ -54,7 +54,7 @@ If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm
 
 1. Navigate to `http://localhost:8085/login/`
 2. Generate a new password or enter an existing one
-3. Add your assets in the Assets page
+3. Add your assets in the Settings page
 4. View your portfolio on the Dashboard
 
 ## Codebase Entry Points
@@ -63,6 +63,13 @@ If you ran `npm install` before switching this repo to Node 18.19.1+, rerun `npm
 - `view/index.md`: frontend navigation
 - `docs/index.md`: project wiki for architecture, workflows, conventions, troubleshooting, and durable decisions
 - Follow the nested `index.md` files inside those folders for more detailed module-level docs
+
+## Key Wiki Topics
+
+- [docs/data-model.md](./docs/data-model.md): user storage, view-group ordering, schema-cache invalidation, and cross-device behavior
+- [docs/portfolio-metrics.md](./docs/portfolio-metrics.md): ATH rules and summary baselines shared across dashboard and history
+- [docs/frontend-cache.md](./docs/frontend-cache.md): production cache-control, generated release artifacts, and deploy/runtime expectations
+- [docs/scraper-runtime.md](./docs/scraper-runtime.md): provider fallback, fetch-only scrapers, stale-cache recovery, and low-memory scraper tuning
 
 ## Working In This Repo
 
