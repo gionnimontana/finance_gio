@@ -119,3 +119,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-22] update | Generalize nginx template naming
 - Renamed the checked-in Nginx server-block template from `finance-site.nginx.template` to `site.nginx.template` so deploy assets are named generically and no longer finance-specific.
 - Updated `deploy.sh` and deploy/runtime wiki references so template rendering and contributor documentation stay aligned with the new generic template name.
+
+## [2026-05-22] update | Document account deletion lifecycle
+- Extended `docs/data-model.md` so the password-derived storage notes now cover full user-folder deletion from Settings and the accompanying local logout behavior.
+- Refreshed the docs index because the settings flow now includes irreversible account removal alongside the existing per-user JSON persistence model.

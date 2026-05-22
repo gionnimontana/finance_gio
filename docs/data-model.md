@@ -5,6 +5,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 ## Current State
 - A user is identified only by the password they enter on the login page. The backend hashes that password with SHA-256 and uses the hash as the user folder name under `data/users/` or `PFB_DATA_DIR/users/`.
 - Each user folder stores two JSON files: `assetsSchema.json` for editable assets and view groups, and `historicalData.json` for monthly portfolio snapshots grouped by view group.
+- The settings page can delete the current user by removing that hashed user folder entirely, so account removal wipes both persisted JSON files in one server-side operation.
 - `assetsSchema.json` currently persists `assets`, `viewGroups`, `prevMonthTotal`, and `initYearNetworth`, so asset definitions, display grouping, and summary baselines live together.
 - `viewGroups` is the canonical ordering shared by Settings, Dashboard, and History when those pages render group rows, cards, charts, and tables.
 - `historicalData.json` stores monthly entries with `date`, `label`, `total`, and one total bucket per view group.
@@ -19,6 +20,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - `prevMonthTotal` and `initYearNetworth` stay in `assetsSchema.json` because the backend live-refresh flow derives those summary baselines from saved history before returning current portfolio data.
 - Multiple devices only share changes when they are connected to the same running backend and therefore the same user-data directory. Two separate local `http://localhost:8085` instances do not share `data/users/` state.
 - Login state is browser-local. The frontend stores the raw password in `localStorage` as `userPassword` and sends it on each authenticated request through the `X-User-Password` header.
+- Account deletion clears the browser-local password as part of the logout redirect after the server folder has been removed, so the deleted password immediately stops authenticating on the same device.
 - Open pages are not real-time synchronized. Another session sees changes when it reloads the page, navigates back through a page that refetches, or manually refreshes the dashboard.
 
 ## Related

@@ -1,5 +1,5 @@
 /**
- * Manage editable asset rows, view groups, display preferences, and data export controls on the settings page.
+ * Manage editable asset rows, view groups, display preferences, and account export or deletion controls on the settings page.
  */
 
 // Require authentication
@@ -8,6 +8,8 @@ if (!requireAuth()) {
 }
 
 let assetsSchema = null;
+let deleteUserModalLastActiveElement = null;
+let isDeleteUserInProgress = false;
 
 const ASSET_CLASSES = [
     'Isin',
@@ -23,6 +25,15 @@ const DEFAULT_VIEW_GROUPS = [
     'Houses',
     'Equity'
 ];
+
+/**
+ * Check whether the delete-user confirmation modal is currently visible.
+ * @returns {boolean}
+ */
+const isDeleteUserModalOpen = () => {
+    const overlay = el('delete_user_modal_overlay');
+    return Boolean(overlay && !overlay.hidden);
+};
 
 /**
  * Build an HTML select element from a list of options.
@@ -394,6 +405,137 @@ const downloadJsonFile = (fileName, payload) => {
 };
 
 /**
+ * Show or clear the inline message rendered inside the delete-user modal.
+ * @param {'success'|'error'|''} tone - Visual tone for the message.
+ * @param {string} message - Text to display.
+ * @returns {void}
+ */
+const setDeleteUserModalMessage = (tone, message) => {
+    const banner = el('delete_user_modal_message');
+    if (!banner) return;
+
+    if (!message) {
+        banner.hidden = true;
+        banner.textContent = '';
+        banner.className = 'delete_user_modal_message';
+        return;
+    }
+
+    banner.hidden = false;
+    banner.textContent = message;
+    banner.className = `delete_user_modal_message ${tone}`;
+};
+
+/**
+ * Route modal-originated success and error states to the visible confirmation dialog.
+ * @param {'success'|'error'} tone - Message tone.
+ * @param {string} message - Text to display.
+ * @returns {void}
+ */
+const showDeleteUserFeedback = (tone, message) => {
+    if (isDeleteUserModalOpen()) {
+        setDeleteUserModalMessage(tone, message);
+        return;
+    }
+
+    if (tone === 'success') {
+        showSuccess(message);
+        return;
+    }
+
+    showError(message);
+};
+
+/**
+ * Show or hide the delete-user confirmation modal.
+ * @param {boolean} open - Whether the modal should be visible.
+ * @returns {void}
+ */
+const setDeleteUserModalOpen = (open) => {
+    const overlay = el('delete_user_modal_overlay');
+    const modal = el('delete_user_modal');
+    if (!overlay || !modal) return;
+
+    if (open) {
+        deleteUserModalLastActiveElement = document.activeElement && typeof document.activeElement.focus === 'function'
+            ? document.activeElement
+            : null;
+        overlay.hidden = false;
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal_open');
+        modal.focus();
+        return;
+    }
+
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal_open');
+    setDeleteUserModalMessage('', '');
+
+    if (deleteUserModalLastActiveElement && typeof deleteUserModalLastActiveElement.focus === 'function') {
+        deleteUserModalLastActiveElement.focus();
+    }
+
+    deleteUserModalLastActiveElement = null;
+};
+
+/**
+ * Enable or disable the destructive-action controls while deletion is running.
+ * @param {boolean} disabled - Whether modal controls should be disabled.
+ * @returns {void}
+ */
+const setDeleteUserModalButtonsDisabled = (disabled) => {
+    isDeleteUserInProgress = disabled;
+
+    ['delete_user_btn', 'delete_user_close_btn', 'delete_user_modal_export_btn', 'delete_user_cancel_btn', 'delete_user_confirm_btn'].forEach((id) => {
+        const button = el(id);
+        if (button) button.disabled = disabled;
+    });
+};
+
+/**
+ * Delete the current user's persisted backend record.
+ * @returns {Promise<void>}
+ */
+const deleteCurrentUserRecord = async () => {
+    const res = await authFetch(`${API_BASE}/auth/user`, { method: 'DELETE' });
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok) {
+        throw new Error((json && json.error) ? json.error : `Failed to remove user data (${res.status})`);
+    }
+};
+
+/**
+ * Close the delete-user modal when Escape is pressed.
+ * @param {KeyboardEvent} event - Browser keyboard event.
+ * @returns {void}
+ */
+const handleDeleteUserModalKeydown = (event) => {
+    if (event.key !== 'Escape' || !isDeleteUserModalOpen() || isDeleteUserInProgress) {
+        return;
+    }
+
+    event.preventDefault();
+    window.closeDeleteUserModal();
+};
+
+/**
+ * Initialize modal event wiring for the delete-user confirmation flow.
+ * @returns {void}
+ */
+const initDeleteUserModal = () => {
+    const overlay = el('delete_user_modal_overlay');
+    if (!overlay) return;
+
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    setDeleteUserModalButtonsDisabled(false);
+    setDeleteUserModalMessage('', '');
+    window.addEventListener('keydown', handleDeleteUserModalKeydown);
+};
+
+/**
  * Populate the password export controls from the stored password.
  * @returns {void}
  */
@@ -508,8 +650,9 @@ window.copyPassword = async () => {
 window.exportUserData = async () => {
     clearError();
     clearSuccess();
+    setDeleteUserModalMessage('', '');
 
-    const exportBtn = el('export_data_btn');
+    const exportBtn = el('delete_user_modal_export_btn');
     if (exportBtn) exportBtn.disabled = true;
 
     try {
@@ -523,11 +666,64 @@ window.exportUserData = async () => {
             assetsSchema: persistedAssetsSchema,
             historicalData,
         });
-        showSuccess('User data exported');
+        showDeleteUserFeedback('success', 'User data exported');
     } catch (e) {
-        showError(e.message || 'Failed to export user data');
+        showDeleteUserFeedback('error', e.message || 'Failed to export user data');
     } finally {
-        if (exportBtn) exportBtn.disabled = false;
+        if (exportBtn && !isDeleteUserInProgress) exportBtn.disabled = false;
+    }
+};
+
+/**
+ * Open the delete-user confirmation modal.
+ * @returns {void}
+ */
+window.openDeleteUserModal = () => {
+    clearError();
+    clearSuccess();
+    setDeleteUserModalMessage('', '');
+    setDeleteUserModalOpen(true);
+};
+
+/**
+ * Close the delete-user confirmation modal.
+ * @returns {void}
+ */
+window.closeDeleteUserModal = () => {
+    if (isDeleteUserInProgress) return;
+    setDeleteUserModalOpen(false);
+};
+
+/**
+ * Close the delete-user confirmation modal when the overlay itself is clicked.
+ * @param {MouseEvent} event - Click event from the modal overlay.
+ * @returns {void}
+ */
+window.handleDeleteUserModalBackdropClick = (event) => {
+    if (event.target === el('delete_user_modal_overlay')) {
+        window.closeDeleteUserModal();
+    }
+};
+
+/**
+ * Permanently remove the current user's server-side data and clear local auth state.
+ * @returns {Promise<void>}
+ */
+window.confirmDeleteUser = async () => {
+    clearError();
+    clearSuccess();
+    setDeleteUserModalMessage('', '');
+
+    if (isDeleteUserInProgress) return;
+
+    setDeleteUserModalButtonsDisabled(true);
+    try {
+        await deleteCurrentUserRecord();
+        logout();
+    } catch (e) {
+        showDeleteUserFeedback('error', e.message || 'Failed to remove user data');
+    } finally {
+        setDeleteUserModalButtonsDisabled(false);
     }
 };
 
@@ -719,4 +915,5 @@ window.addEventListener('load', () => {
     initAbsoluteVisibilityPreference();
     initCompactValuesPreference();
     initExportPassword();
+    initDeleteUserModal();
 });

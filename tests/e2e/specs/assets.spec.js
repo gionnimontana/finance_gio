@@ -2,10 +2,10 @@ const fs = require('node:fs/promises')
 
 const { test, expect } = require('@playwright/test')
 
-const { ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
+const { EMPTY_USER_PASSWORD, ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
 const { openAuthenticatedPage, readAssetIds } = require('../helpers/app')
 
-test('manages assets, view groups, password export, and logout @smoke', async ({ page }) => {
+test('manages assets, view groups, password export, delete modal export, and logout @smoke', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -66,8 +66,12 @@ test('manages assets, view groups, password export, and logout @smoke', async ({
   await page.locator('#toggle_password_btn').click()
   await expect(page.locator('#export_password')).toHaveAttribute('type', 'text')
 
+  await page.locator('#delete_user_btn').click()
+  await expect(page.locator('#delete_user_modal')).toBeVisible()
+  await expect(page.locator('#delete_user_modal')).toContainText('This action cannot be reverted')
+
   const downloadPromise = page.waitForEvent('download')
-  await page.locator('#export_data_btn').click()
+  await page.locator('#delete_user_modal_export_btn').click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe('personal-finance-data-export.json')
   const downloadPath = await download.path()
@@ -80,13 +84,33 @@ test('manages assets, view groups, password export, and logout @smoke', async ({
     historicalData: expect.any(Array),
   }))
   expect(exportedData.assetsSchema).not.toHaveProperty('schemaCacheKey')
-  await expect(page.locator('#success_banner')).toContainText('User data exported')
+  await expect(page.locator('#delete_user_modal_message')).toContainText('User data exported')
+
+  await page.locator('#delete_user_cancel_btn').click()
+  await expect(page.locator('#delete_user_modal_overlay')).toBeHidden()
 
   await page.locator('#export_password_btn').click()
   await expect(page.locator('#success_banner')).toContainText('Password copied to clipboard')
 
   await page.getByRole('button', { name: '🚪 Logout' }).click()
   await expect(page).toHaveURL(/\/login\/$/)
+})
+
+test('removes the current user after confirmation', async ({ page }) => {
+  await openAuthenticatedPage(page, '/assets/', EMPTY_USER_PASSWORD)
+
+  await page.locator('#delete_user_btn').click()
+  await expect(page.locator('#delete_user_modal')).toBeVisible()
+  await expect(page.locator('#delete_user_modal')).toContainText('Download your data before proceeding')
+
+  await page.locator('#delete_user_confirm_btn').click()
+
+  await expect(page).toHaveURL(/\/login\/$/)
+  expect(await page.evaluate(() => window.localStorage.getItem('userPassword'))).toBeNull()
+
+  await page.locator('#password_input').fill(EMPTY_USER_PASSWORD)
+  await page.locator('#login_btn').click()
+  await expect(page.locator('#error_banner')).toContainText('Invalid password')
 })
 
 test('enables compact absolute values from settings', async ({ page }) => {

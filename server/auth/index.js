@@ -178,6 +178,22 @@ const createUser = (passwordHash) => {
 };
 
 /**
+ * Remove a user's persisted data directory.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {boolean} - Whether the user directory was removed.
+ */
+const deleteUser = (passwordHash) => {
+    const userDir = getUserDataDir(passwordHash);
+
+    if (!fs.existsSync(userDir)) {
+        return false;
+    }
+
+    fs.rmSync(userDir, { recursive: true, force: true });
+    return true;
+};
+
+/**
  * Express route handler: Generate new user
  * POST /auth/generate
  * Returns: { password: "word1-word2-word3-word4-word5" }
@@ -275,6 +291,7 @@ module.exports = {
     getUserDataDir,
     userExists,
     createUser,
+    deleteUser,
     handleGenerate,
     handleValidate,
     authMiddleware,

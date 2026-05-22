@@ -1,4 +1,4 @@
-/* Style the settings page tables, action controls, and password export section. */
+/* Style the settings page tables, action controls, password export section, and delete-confirmation modal. */
 
 .preference_toggle {
     display: flex;
@@ -75,4 +75,121 @@ td.actions {
     justify-content: center;
     padding: 0 12px;
     line-height: 1;
+}
+
+body.modal_open {
+    overflow: hidden;
+}
+
+.delete_user_modal_overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(17, 17, 17, 0.58);
+    z-index: 10010;
+}
+
+.delete_user_modal_overlay[hidden] {
+    display: none;
+}
+
+.delete_user_modal {
+    position: relative;
+    width: min(100%, 520px);
+    padding: 24px;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+}
+
+.delete_user_modal h2 {
+    margin: 0 32px 12px 0;
+    color: #111;
+}
+
+.delete_user_modal_copy,
+.delete_user_modal_warning {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.delete_user_modal_warning {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #f3d2d2;
+    border-radius: 12px;
+    background: #fff5f5;
+    color: #8a1f1f;
+}
+
+.delete_user_modal_message {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.delete_user_modal_message.success {
+    background: #edf8ee;
+    border: 1px solid #c7e9cc;
+    color: #216b2f;
+}
+
+.delete_user_modal_message.error {
+    background: #fff1f1;
+    border: 1px solid #f0c6c6;
+    color: #8a1f1f;
+}
+
+.delete_user_modal_secondary_actions,
+.delete_user_modal_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.delete_user_modal_secondary_actions {
+    margin-top: 18px;
+}
+
+.delete_user_modal_actions {
+    margin-top: 24px;
+    justify-content: flex-end;
+}
+
+.delete_user_modal_close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: 0;
+    background: transparent;
+    color: #555;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.delete_user_modal_close:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+@media (max-width: 768px) {
+    .delete_user_modal {
+        padding: 22px 18px 18px;
+    }
+
+    .delete_user_modal_secondary_actions,
+    .delete_user_modal_actions {
+        flex-direction: column;
+    }
+
+    .delete_user_modal_secondary_actions .btn,
+    .delete_user_modal_actions .btn {
+        width: 100%;
+    }
 }

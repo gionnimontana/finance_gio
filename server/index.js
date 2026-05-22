@@ -19,6 +19,7 @@ const {
   authMiddleware,
   hashPassword,
   userExists,
+  deleteUser,
 } = require('./auth')
 
 const app = express()
@@ -42,6 +43,15 @@ app.use('/financegio', (req, res) => {
 // Auth routes (no authentication required)
 app.post('/auth/generate', handleGenerate)
 app.post('/auth/validate', handleValidate)
+app.delete('/auth/user', authMiddleware, (req, res) => {
+  const deleted = deleteUser(req.userPasswordHash)
+
+  if (!deleted) {
+    return res.status(404).json({ ok: false, error: 'User data not found' })
+  }
+
+  res.json({ ok: true })
+})
 
 // Redirect old URLs to new folder structure
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard/'))
