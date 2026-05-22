@@ -3,15 +3,23 @@
 body {
     background: #1e1e1e;
     padding: 0.5em;
+    --login-shell-width: 480px;
 }
 
 .login_container {
-    max-width: 400px;
+    width: min(100%, var(--login-shell-width));
     margin: 100px auto;
     padding: 40px;
+    box-sizing: border-box;
     background: #1e1e1e;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.site_footer {
+    width: min(100%, var(--login-shell-width));
+    margin: 30px auto 20px;
+    box-sizing: border-box;
 }
 
 .login_container h1 {
