@@ -1,5 +1,5 @@
 /**
- * Manage editable asset rows, view groups, display preferences, and password export controls on the settings page.
+ * Manage editable asset rows, view groups, display preferences, and data export controls on the settings page.
  */
 
 // Require authentication
@@ -364,6 +364,36 @@ const putViewGroups = async (payload) => {
 };
 
 /**
+ * Fetch the persisted historical portfolio data from the backend.
+ * @returns {Promise<object[]>}
+ */
+const fetchHistoricalData = async () => {
+    const res = await authFetch(`${API_BASE}/portfolio/history`);
+    if (!res.ok) throw new Error(`Failed to load history (${res.status})`);
+    return await res.json();
+};
+
+/**
+ * Trigger a browser download for the provided JSON payload.
+ * @param {string} fileName - Downloaded file name.
+ * @param {unknown} payload - Serializable export payload.
+ * @returns {void}
+ */
+const downloadJsonFile = (fileName, payload) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+    }, 0);
+};
+
+/**
  * Populate the password export controls from the stored password.
  * @returns {void}
  */
@@ -468,6 +498,36 @@ window.copyPassword = async () => {
         showSuccess('Password copied to clipboard');
     } catch (e) {
         showError('Failed to copy password');
+    }
+};
+
+/**
+ * Download the persisted user schema and history data as a single JSON export.
+ * @returns {Promise<void>}
+ */
+window.exportUserData = async () => {
+    clearError();
+    clearSuccess();
+
+    const exportBtn = el('export_data_btn');
+    if (exportBtn) exportBtn.disabled = true;
+
+    try {
+        const [schema, historicalData] = await Promise.all([
+            fetchSchema(),
+            fetchHistoricalData(),
+        ]);
+        const { schemaCacheKey, ...persistedAssetsSchema } = schema || {};
+
+        downloadJsonFile('personal-finance-data-export.json', {
+            assetsSchema: persistedAssetsSchema,
+            historicalData,
+        });
+        showSuccess('User data exported');
+    } catch (e) {
+        showError(e.message || 'Failed to export user data');
+    } finally {
+        if (exportBtn) exportBtn.disabled = false;
     }
 };
 

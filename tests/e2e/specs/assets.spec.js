@@ -1,3 +1,5 @@
+const fs = require('node:fs/promises')
+
 const { test, expect } = require('@playwright/test')
 
 const { ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
@@ -63,6 +65,23 @@ test('manages assets, view groups, password export, and logout @smoke', async ({
 
   await page.locator('#toggle_password_btn').click()
   await expect(page.locator('#export_password')).toHaveAttribute('type', 'text')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.locator('#export_data_btn').click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('personal-finance-data-export.json')
+  const downloadPath = await download.path()
+  const exportedData = JSON.parse(await fs.readFile(downloadPath, 'utf8'))
+  expect(exportedData).toEqual(expect.objectContaining({
+    assetsSchema: expect.objectContaining({
+      assets: expect.any(Array),
+      viewGroups: expect.any(Array),
+    }),
+    historicalData: expect.any(Array),
+  }))
+  expect(exportedData.assetsSchema).not.toHaveProperty('schemaCacheKey')
+  await expect(page.locator('#success_banner')).toContainText('User data exported')
+
   await page.locator('#export_password_btn').click()
   await expect(page.locator('#success_banner')).toContainText('Password copied to clipboard')
 
