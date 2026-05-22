@@ -1,4 +1,4 @@
-# Checked-in finance site server-block template.
+# Checked-in site server-block template.
 # Deploy renders this into /var/www/__PFB_DEPLOY_SITE_DOMAIN__/__PFB_DEPLOY_SITE_DOMAIN__.nginx and includes it from the remote http { ... } block.
 server {
     listen 443 ssl;

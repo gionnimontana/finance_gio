@@ -14,7 +14,7 @@ SERVICE_NAME="finance-bot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 DEPLOY_ROOT="$SCRIPT_DIR/.deploy"
 FRONTEND_DEPLOY_DIR="${DEPLOY_ROOT}/view"
-NGINX_CONFIG_TEMPLATE="$SCRIPT_DIR/finance-site.nginx.template"
+NGINX_CONFIG_TEMPLATE="$SCRIPT_DIR/site.nginx.template"
 
 if [[ -f "$ENV_FILE" ]]; then
 	set -a

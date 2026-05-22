@@ -115,3 +115,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-21] update | Deploy nginx include file
 - Updated `deploy.sh` so deploys now install `finance.gingergio.it.nginx` into `/var/www/finance.gingergio.it/finance.gingergio.it.nginx` on the server, keeping the live include file aligned with the checked-in config.
 - Refreshed the finance Nginx reference and deployment wiki notes so contributors know `/etc/nginx/nginx.conf` should include the deployed file instead of embedding the finance server block inline.
+
+## [2026-05-22] update | Generalize nginx template naming
+- Renamed the checked-in Nginx server-block template from `finance-site.nginx.template` to `site.nginx.template` so deploy assets are named generically and no longer finance-specific.
+- Updated `deploy.sh` and deploy/runtime wiki references so template rendering and contributor documentation stay aligned with the new generic template name.
