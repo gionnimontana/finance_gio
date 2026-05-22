@@ -27,10 +27,18 @@ test('creates a new account and reaches the dashboard @smoke', async ({ page }) 
 
 test('redirects away from login when a valid password is already stored', async ({ page }) => {
   await storePassword(page, DASHBOARD_USER_PASSWORD)
+  await page.route(/\/auth\/validate$/, async route => {
+    await new Promise(resolve => setTimeout(resolve, 180))
+    const response = await route.fetch()
+    await route.fulfill({ response })
+  })
+
   await page.goto('/login/')
 
+  await expect(page.locator('#page_loading')).toBeVisible()
   await expect(page).toHaveURL(/\/dashboard\/$/)
   await expect(page.locator('#total_value')).toContainText('23,500')
+  await expect(page.locator('#page_loading')).toBeHidden()
 })
 
 test('redirects unknown routes to login when unauthenticated', async ({ page }) => {

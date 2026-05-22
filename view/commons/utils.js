@@ -23,6 +23,8 @@ const API_BASE = (() => {
 // Password storage key
 const PASSWORD_KEY = 'userPassword';
 
+const PAGE_LOADING_HIDE_DELAY_MS = 220;
+
 // Absolute values visibility key
 const ABS_VISIBILITY_KEY = 'hideAbsoluteValues';
 
@@ -50,6 +52,47 @@ const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
  * @returns {void}
  */
 const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
+
+/**
+ * Resolve the shared full-screen loading overlay when the current page uses it.
+ * @returns {HTMLElement|null}
+ */
+const getPageLoadingOverlay = () => document.getElementById('page_loading');
+
+/**
+ * Fade out the shared full-screen loading overlay after the current UI has painted.
+ * @returns {void}
+ */
+const hidePageLoading = () => {
+    const overlay = getPageLoadingOverlay();
+    if (!overlay || overlay.hidden || overlay.dataset.state === 'closing') return;
+
+    const closeOverlay = () => {
+        const activeOverlay = getPageLoadingOverlay();
+        if (!activeOverlay || activeOverlay.hidden || activeOverlay.dataset.state === 'closing') return;
+
+        activeOverlay.dataset.state = 'closing';
+        activeOverlay.classList.add('is_hidden');
+
+        window.setTimeout(() => {
+            const latestOverlay = getPageLoadingOverlay();
+            if (!latestOverlay || latestOverlay.dataset.state !== 'closing') return;
+
+            latestOverlay.hidden = true;
+            latestOverlay.classList.remove('is_hidden');
+            delete latestOverlay.dataset.state;
+        }, PAGE_LOADING_HIDE_DELAY_MS);
+    };
+
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(closeOverlay);
+        });
+        return;
+    }
+
+    closeOverlay();
+};
 
 // Absolute values visibility helpers
 /**

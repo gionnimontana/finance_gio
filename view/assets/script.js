@@ -910,10 +910,15 @@ window.saveGroups = async () => {
 };
 
 // initial load
-window.addEventListener('load', () => {
-    loadSchema();
+window.addEventListener('load', async () => {
     initAbsoluteVisibilityPreference();
     initCompactValuesPreference();
     initExportPassword();
     initDeleteUserModal();
+
+    try {
+        await loadSchema();
+    } finally {
+        hidePageLoading();
+    }
 });

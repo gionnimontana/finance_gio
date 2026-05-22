@@ -34,6 +34,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
 
   await page.goto('/dashboard/')
 
+  await expect(page.locator('#page_loading')).toBeVisible()
   await expect(page.locator('#progress_banner')).toHaveClass(/visible/)
   await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
   await expect(page.locator('#progress_counter')).toHaveText('3/3')
@@ -42,6 +43,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
   await expect(page.locator('#table_view')).toContainText('20,000')
   await expect(page.locator('#total_value')).toContainText('€23,500')
+  await expect(page.locator('#page_loading')).toBeHidden()
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.mainrow .abs_value')).toContainText('€20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).toContainText('20,000')
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.subrow_value .abs_value')).not.toContainText('€')

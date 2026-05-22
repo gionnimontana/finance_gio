@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-22] update | Mask cold auth handoffs with shared loading overlay
+- Added a shared dark loading overlay to the frontend page shells and documented that it now stays visible until login validation or the first protected-page render completes.
+- Extended the frontend cache/runtime wiki notes because no-cache navigations still revalidate HTML first, so the cold-boot auth handoff behavior is now an intentional part of the source frontend.
+
 ## [2026-05-21] update | Probe deployed domain during deploy
 - Updated `deploy.sh` and `finance-site.nginx.template` so deploys now reload Nginx, expose `/health` through the checked-in vhost template, and verify service health at `https://$PFB_DEPLOY_SITE_DOMAIN/health` from the server itself.
 - Refreshed the deploy/runtime wiki notes because the post-restart probe now validates the live domain-backed surface instead of curling the backend directly on `127.0.0.1:8085`.

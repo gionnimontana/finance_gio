@@ -826,12 +826,17 @@ const renderPortfolio = async (refresh) => {
     let portfolio = JSON.parse(localStorage.getItem('portfolio') || null);
     if (portfolio) {
         renderPortfolioData(portfolio);
+        hidePageLoading();
     }
 
-    // Fetch new data if needed
-    portfolio = await getPortfolio(refresh);
-    portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
-    renderPortfolioData(portfolio);
+    try {
+        // Fetch new data if needed
+        portfolio = await getPortfolio(refresh);
+        portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
+        renderPortfolioData(portfolio);
+    } finally {
+        hidePageLoading();
+    }
 }
 
 /**

@@ -229,6 +229,8 @@ const init = async () => {
             handleLogin();
         }
     });
+
+    hidePageLoading();
 };
 
 init();

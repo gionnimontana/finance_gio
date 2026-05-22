@@ -134,24 +134,28 @@ const scrollHistoryTableToBottom = () => {
  * @returns {Promise<void>}
  */
 const renderHistory = async () => {
-    const historyData = await fetchHistoricalData();
-    const schema = await fetchAssetsSchema().catch(() => null);
-    const viewGroups = Array.isArray(schema?.viewGroups) ? schema.viewGroups : null;
+    try {
+        const historyData = await fetchHistoricalData();
+        const schema = await fetchAssetsSchema().catch(() => null);
+        const viewGroups = Array.isArray(schema?.viewGroups) ? schema.viewGroups : null;
 
-    cachedHistoryData = historyData;
-    cachedHistoryViewGroups = viewGroups;
+        cachedHistoryData = historyData;
+        cachedHistoryViewGroups = viewGroups;
 
-    renderHistoryTitle(historyData);
-    
-    // Render summary cards
-    renderSummaryCards(historyData);
-    
-    // Render the column chart
-    HistoryChartModule.renderColumnChart('history_chart', historyData, viewGroups);
-    
-    // Render the detailed table
-    HistoryChartModule.renderHistoryTable('history_table', historyData, viewGroups);
-    scrollHistoryTableToBottom();
+        renderHistoryTitle(historyData);
+        
+        // Render summary cards
+        renderSummaryCards(historyData);
+        
+        // Render the column chart
+        HistoryChartModule.renderColumnChart('history_chart', historyData, viewGroups);
+        
+        // Render the detailed table
+        HistoryChartModule.renderHistoryTable('history_table', historyData, viewGroups);
+        scrollHistoryTableToBottom();
+    } finally {
+        hidePageLoading();
+    }
 };
 
 window.addEventListener('absolute-visibility-change', () => {
