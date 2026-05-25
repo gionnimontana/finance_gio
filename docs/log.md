@@ -12,6 +12,14 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-25] update | Record ISIN risk cache plan
+- Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
+- Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.
+
+## [2026-05-24] update | Add KID-based ISIN risk scraping
+- Extended the justETF scraper so ISIN assets can resolve a Synthetic Risk Indicator by discovering the linked fundinfo KID PDF and parsing its standard PRIIPs risk wording.
+- Refreshed the server and scraper docs because the backend now exposes a dedicated authenticated ISIN risk endpoint alongside the existing quote and portfolio flows.
+
 ## [2026-05-22] update | Mask cold auth handoffs with shared loading overlay
 - Added a shared dark loading overlay to the frontend page shells and documented that it now stays visible until login validation or the first protected-page render completes.
 - Extended the frontend cache/runtime wiki notes because no-cache navigations still revalidate HTML first, so the cold-boot auth handoff behavior is now an intentional part of the source frontend.

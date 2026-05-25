@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 const express = require('express')
 const cors = require('cors')
 const portfolioScripts = require('./scripts/portfolio')
+const scrapers = require('./scrapers')
 const {
   buildAssetsSchemaCacheKey,
   getHistoricalData,
@@ -24,10 +25,60 @@ const {
 
 const app = express()
 const port = Number(process.env.PORT || 8085)
+const ISIN_RISK_SCRAPER_MAX_RETRIES = 1
 
 const redirectToHome = (req, res) => res.redirect('/login/')
 
 const isAppRouteRequest = (req) => req.method === 'GET' && path.extname(req.path) === ''
+
+/**
+ * Parse a refresh query parameter into a boolean flag.
+ * @param {unknown} refresh - Query-string value.
+ * @param {boolean} defaultValue - Value to use when the parameter is omitted.
+ * @returns {boolean}
+ */
+const parseRefreshFlag = (refresh, defaultValue) => {
+  if (refresh === undefined) {
+    return defaultValue
+  }
+
+  return String(refresh).toLowerCase() === 'true'
+}
+
+/**
+ * Resolve the summary risk indicator for every ISIN asset in the current schema.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {boolean} refresh - Whether to bypass fresh scraper cache entries.
+ * @returns {Promise<{ values: Record<string, number>, failures: string[] }>}
+ */
+const getIsinRiskIndicators = async (passwordHash, refresh) => {
+  const assetsSchema = await getAssetsSchema(passwordHash)
+  const isinAssets = assetsSchema.assets.filter(asset => Array.isArray(asset) && asset[0] === 'Isin' && typeof asset[1] === 'string' && asset[1].trim())
+
+  if (!isinAssets.length) {
+    return { values: {}, failures: [] }
+  }
+
+  const cacheKeyToIsin = isinAssets.reduce((acc, asset) => {
+    const isin = asset[1]
+    acc[scrapers.etfScraper.buildIsinRiskCacheKey(isin)] = isin
+    return acc
+  }, {})
+  const scraperOptions = isinAssets.map(asset => scrapers.etfScraper.isinRiskOptionCreator(asset[1]))
+  const scraperResult = await scrapers.multipleScraper(scraperOptions, ISIN_RISK_SCRAPER_MAX_RETRIES, refresh)
+  const values = Object.entries(scraperResult.values).reduce((acc, [cacheKey, value]) => {
+    const isin = cacheKeyToIsin[cacheKey]
+    if (isin) {
+      acc[isin] = value
+    }
+    return acc
+  }, {})
+
+  return {
+    values,
+    failures: scraperResult.failures.map(cacheKey => cacheKeyToIsin[cacheKey] || cacheKey),
+  }
+}
 
 app.use(cors())
 app.use(express.json())
@@ -91,9 +142,7 @@ app.get('/portfolio/stream', async (req, res) => {
     return res.status(401).json({ error: 'Invalid password' })
   }
 
-  const refresh = req.query.refresh === undefined
-    ? true
-    : String(req.query.refresh).toLowerCase() === 'true'
+  const refresh = parseRefreshFlag(req.query.refresh, true)
 
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream')
@@ -121,9 +170,7 @@ app.get('/portfolio/stream', async (req, res) => {
 // add support for refresh url param
 app.get('/portfolio', authMiddleware, async (req, res) => {
   const params = req.query
-  const refresh = params.refresh === undefined
-    ? false
-    : String(params.refresh).toLowerCase() === 'true'
+  const refresh = parseRefreshFlag(params.refresh, false)
   const passwordHash = req.userPasswordHash
   const portfolio = await portfolioScripts.getPortfolio(passwordHash, refresh)
 
@@ -149,6 +196,13 @@ app.get('/assets/schema', authMiddleware, async (req, res) => {
     ...schema,
     schemaCacheKey: buildAssetsSchemaCacheKey(schema),
   })
+})
+
+app.get('/assets/isin-risk', authMiddleware, async (req, res) => {
+  const refresh = parseRefreshFlag(req.query.refresh, false)
+  const passwordHash = req.userPasswordHash
+  const isinRiskIndicators = await getIsinRiskIndicators(passwordHash, refresh)
+  res.send(isinRiskIndicators)
 })
 
 app.put('/assets/schema', authMiddleware, async (req, res) => {

@@ -4,7 +4,7 @@ This folder contains the backend application logic for authentication, user data
 
 ## Direct Files
 
-- [index.js](./index.js): Express bootstrap that loads environment variables, serves the frontend, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, and portfolio APIs, and provides the health endpoint used by local automation.
+- [index.js](./index.js): Express bootstrap that loads environment variables, serves the frontend, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, assets-schema, ISIN risk-indicator, and portfolio APIs, and provides the health endpoint used by local automation.
 
 ## Folders
 

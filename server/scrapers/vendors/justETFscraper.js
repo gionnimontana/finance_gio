@@ -1,21 +1,21 @@
 /**
- * Scrape ETF quote data from justETF using the shared browser helpers.
+ * Scrape justETF quote data and KID-derived ISIN risk indicators through the shared fetch-first runtime.
  */
+const { PDFParse } = require('pdf-parse')
+
 const core = require('../core')
 
-/**
- * Parse the justETF quote payload into a numeric quote.
- * @param {unknown} payload - JSON payload returned by the justETF quote API.
- * @returns {number}
- */
-const parseJustEtfQuotePayload = (payload) => {
-    const numericValue = Number(payload?.latestQuote?.raw)
-    if (Number.isFinite(numericValue) && numericValue > 0) {
-        return numericValue
-    }
+const JUST_ETF_BASE_URL = 'https://www.justetf.com'
+const JUST_ETF_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
+const ISIN_RISK_CACHE_KEY_PREFIX = 'isin-risk:'
+const ISIN_RISK_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
-    throw new Error('Value not found')
-}
+/**
+ * Normalize a candidate ISIN into the shared uppercase representation.
+ * @param {string} isin - Candidate ISIN.
+ * @returns {string}
+ */
+const normalizeIsin = (isin) => String(isin || '').trim().toUpperCase()
 
 /**
  * Create an abort signal when the current runtime supports timeout-based signals.
@@ -23,111 +23,319 @@ const parseJustEtfQuotePayload = (payload) => {
  * @returns {AbortSignal|undefined}
  */
 const createTimeoutSignal = (timeoutMs) => {
-    if (typeof AbortSignal === 'undefined' || typeof AbortSignal.timeout !== 'function') {
-        return undefined
-    }
+	if (typeof AbortSignal === 'undefined' || typeof AbortSignal.timeout !== 'function') {
+		return undefined
+	}
 
-    return AbortSignal.timeout(timeoutMs)
+	return AbortSignal.timeout(timeoutMs)
+}
+
+/**
+ * Return the common HTTP headers used for justETF and fundinfo fetches.
+ * @returns {{ Accept: string, 'Accept-Language': string, 'User-Agent': string }}
+ */
+const createRequestHeaders = () => ({
+	Accept: 'application/json, text/html, application/pdf;q=0.9, */*;q=0.8',
+	'Accept-Language': 'en-US,en;q=0.9',
+	'User-Agent': JUST_ETF_USER_AGENT,
+})
+
+/**
+ * Fetch a remote resource and throw when the response is not successful.
+ * @param {string} url - The URL to fetch.
+ * @param {number} timeoutMs - Timeout in milliseconds.
+ * @param {string} accept - Preferred Accept header value.
+ * @returns {Promise<Response>}
+ */
+const fetchWithTimeout = async (url, timeoutMs, accept) => {
+	if (typeof fetch !== 'function') {
+		throw new Error('Global fetch is unavailable. Use Node 24.15.0 or newer.')
+	}
+
+	const response = await fetch(url, {
+		headers: {
+			...createRequestHeaders(),
+			Accept: accept,
+		},
+		signal: createTimeoutSignal(timeoutMs),
+	})
+
+	if (!response.ok) {
+		throw new Error(`Request failed with status ${response.status}`)
+	}
+
+	return response
+}
+
+/**
+ * Parse the justETF quote payload into a numeric quote.
+ * @param {unknown} payload - JSON payload returned by the justETF quote API.
+ * @returns {number}
+ */
+const parseJustEtfQuotePayload = (payload) => {
+	const numericValue = Number(payload?.latestQuote?.raw)
+	if (Number.isFinite(numericValue) && numericValue > 0) {
+		return numericValue
+	}
+
+	throw new Error('Value not found')
+}
+
+/**
+ * Extract the KID PDF URL for the requested ISIN from a justETF ETF page.
+ * @param {string} html - HTML returned by justETF.
+ * @param {string} isin - Requested ISIN.
+ * @returns {string}
+ */
+const extractKidDocumentUrl = (html, isin) => {
+	const normalizedIsin = normalizeIsin(isin)
+	const hrefPattern = /href\s*=\s*["']([^"']+)["']/gi
+	let match = hrefPattern.exec(html)
+
+	while (match) {
+		const href = match[1]
+		const normalizedHref = href.toUpperCase()
+		const isKidPdf = /\/PRP_[^"']+\.PDF(?:\?[^"']*)?$/i.test(href)
+		const isMatchingIsin = normalizedHref.includes(normalizedIsin)
+
+		if (isKidPdf && isMatchingIsin) {
+			return href.startsWith('http') ? href : new URL(href, JUST_ETF_BASE_URL).toString()
+		}
+
+		match = hrefPattern.exec(html)
+	}
+
+	throw new Error(`KID document not found for ${normalizedIsin}`)
+}
+
+/**
+ * Extract the synthetic risk indicator from KID text.
+ * @param {string} text - Extracted PDF text.
+ * @returns {number}
+ */
+const extractSyntheticRiskIndicator = (text) => {
+	const normalizedText = String(text || '').replace(/\s+/g, ' ').trim()
+	const explicitPattern = /classified\s+this\s+product\s+as\s+(\d)\s+out\s+of\s+7/i
+	const explicitMatch = normalizedText.match(explicitPattern)
+	if (explicitMatch) {
+		const numericValue = Number(explicitMatch[1])
+		if (Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 7) {
+			return numericValue
+		}
+	}
+
+	const fallbackPattern = /summary\s+risk\s+indicator[^\d]{0,80}(\d)\s+out\s+of\s+7/i
+	const fallbackMatch = normalizedText.match(fallbackPattern)
+	if (fallbackMatch) {
+		const numericValue = Number(fallbackMatch[1])
+		if (Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 7) {
+			return numericValue
+		}
+	}
+
+	throw new Error('Synthetic risk indicator not found')
+}
+
+/**
+ * Parse a downloaded PDF buffer into text.
+ * @param {Buffer} pdfBuffer - Downloaded PDF payload.
+ * @returns {Promise<string>}
+ */
+const extractPdfText = async (pdfBuffer) => {
+	const parser = new PDFParse({ data: pdfBuffer })
+
+	try {
+		const result = await parser.getText()
+		return result?.text || ''
+	} finally {
+		if (typeof parser.destroy === 'function') {
+			await parser.destroy().catch(() => {})
+		}
+	}
+}
+
+/**
+ * Fetch the justETF ETF details page for the requested ISIN.
+ * @param {string} isin - Requested ISIN.
+ * @param {number} timeoutMs - Timeout in milliseconds.
+ * @returns {Promise<string>}
+ */
+const fetchJustEtfDetailsPage = async (isin, timeoutMs) => {
+	const normalizedIsin = normalizeIsin(isin)
+	const url = `${JUST_ETF_BASE_URL}/en/etf-profile.html?isin=${encodeURIComponent(normalizedIsin)}`
+	const response = await fetchWithTimeout(url, timeoutMs, 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+	return response.text()
+}
+
+/**
+ * Fetch and parse the KID PDF text for the requested ISIN.
+ * @param {string} isin - Requested ISIN.
+ * @param {number} timeoutMs - Timeout in milliseconds.
+ * @returns {Promise<string>}
+ */
+const fetchKidPdfText = async (isin, timeoutMs) => {
+	const detailsHtml = await fetchJustEtfDetailsPage(isin, timeoutMs)
+	const kidUrl = extractKidDocumentUrl(detailsHtml, isin)
+	const response = await fetchWithTimeout(kidUrl, timeoutMs, 'application/pdf,*/*;q=0.8')
+	const pdfBuffer = Buffer.from(await response.arrayBuffer())
+	return extractPdfText(pdfBuffer)
 }
 
 /**
  * Build a justETF provider config for an ETF quote.
  * @param {string} isin - The ISIN to scrape.
- * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, waitForSelector: boolean, blockResources: boolean }}
+ * @returns {{ name: string, url: string, selectors: string[], fetchValue: Function, parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, waitForSelector: boolean, blockResources: boolean }}
  */
 const createJustEtfProvider = (isin) => {
-    const url = `https://www.justetf.com/api/etfs/${isin}/quote?locale=en&currency=EUR&isin=${isin}`
-    const navigationTimeoutMs = Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000)
-    /**
-     * Log scraping progress for the current ETF lookup.
-     * @param {string} msg - Message to print.
-     * @returns {void}
-     */
-    const logger = (msg) => console.log(`isinValueScraper - ${msg}`)
-    const selectors = ['body']
-    /**
-     * Parse the justETF quote API response into a numeric value.
-     * @param {string[]} _selectorCandidates - Unused selector list kept for shared-provider compatibility.
-     * @returns {number}
-     */
-    const parseValue = (_selectorCandidates) => {
-        const payloadText = document.body?.innerText || ''
-        const payload = JSON.parse(payloadText)
-        const numericValue = Number(payload?.latestQuote?.raw)
-        if (Number.isFinite(numericValue) && numericValue > 0) {
-            return numericValue
-        }
+	const normalizedIsin = normalizeIsin(isin)
+	const url = `${JUST_ETF_BASE_URL}/api/etfs/${normalizedIsin}/quote?locale=en&currency=EUR&isin=${normalizedIsin}`
+	const navigationTimeoutMs = Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000)
+	/**
+	 * Log scraping progress for the current ETF lookup.
+	 * @param {string} msg - Message to print.
+	 * @returns {void}
+	 */
+	const logger = (msg) => console.log(`isinValueScraper - ${msg}`)
+	const selectors = ['body']
+	/**
+	 * Parse the justETF quote API response into a numeric value.
+	 * @param {string[]} _selectorCandidates - Unused selector list kept for shared-provider compatibility.
+	 * @returns {number}
+	 */
+	const parseValue = (_selectorCandidates) => {
+		const payloadText = document.body?.innerText || ''
+		const payload = JSON.parse(payloadText)
+		return parseJustEtfQuotePayload(payload)
+	}
+	/**
+	 * Fetch the justETF quote API directly instead of waiting on the rendered quote shell.
+	 * @returns {Promise<number>}
+	 */
+	const fetchValue = async () => {
+		const response = await fetchWithTimeout(url, navigationTimeoutMs, 'application/json')
+		const payload = await response.json()
+		return parseJustEtfQuotePayload(payload)
+	}
 
-        throw new Error('Value not found')
-    }
-    /**
-     * Fetch the justETF quote API directly instead of waiting on the rendered quote shell.
-     * @returns {Promise<number>}
-     */
-    const fetchValue = async () => {
-        if (typeof fetch !== 'function') {
-            throw new Error('Global fetch is unavailable. Use Node 24.15.0 or newer.')
-        }
+	return {
+		name: 'justetf',
+		url,
+		selectors,
+		fetchValue,
+		parseValue,
+		logger,
+		waitUntil: 'domcontentloaded',
+		navigationTimeoutMs,
+		selectorTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS || 9000),
+		waitForSelector: false,
+		blockResources: false,
+	}
+}
 
-        const response = await fetch(url, {
-            headers: {
-                Accept: 'application/json',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-            },
-            signal: createTimeoutSignal(navigationTimeoutMs),
-        })
+/**
+ * Build the isolated cache key used for the persistent ISIN risk path.
+ * @param {string} isin - Requested ISIN.
+ * @returns {string}
+ */
+const buildIsinRiskCacheKey = (isin) => `${ISIN_RISK_CACHE_KEY_PREFIX}${normalizeIsin(isin)}`
 
-        if (!response.ok) {
-            throw new Error(`Request failed with status ${response.status}`)
-        }
+/**
+ * Build a fetch-only provider config for an ISIN KID risk indicator.
+ * @param {string} isin - Requested ISIN.
+ * @returns {{ name: string, url: string, selectors: string[], fetchValue: Function, parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, waitForSelector: boolean, blockResources: boolean }}
+ */
+const createIsinRiskProvider = (isin) => {
+	const normalizedIsin = normalizeIsin(isin)
+	const navigationTimeoutMs = Number(process.env.PFB_SCRAPER_ETF_TIMEOUT_MS || 14000)
+	const url = `${JUST_ETF_BASE_URL}/en/etf-profile.html?isin=${encodeURIComponent(normalizedIsin)}`
+	/**
+	 * Log scraping progress for the current ISIN risk lookup.
+	 * @param {string} msg - Message to print.
+	 * @returns {void}
+	 */
+	const logger = (msg) => console.log(`isinRiskScraper - ${msg}`)
+	/**
+	 * Keep a parser function on the provider contract even though the live path fetches directly.
+	 * @returns {number}
+	 */
+	const parseValue = () => {
+		throw new Error('Value not found')
+	}
+	/**
+	 * Fetch the ETF page plus its linked KID PDF and parse the PRIIPs risk class.
+	 * @returns {Promise<number>}
+	 */
+	const fetchValue = async () => {
+		const pdfText = await fetchKidPdfText(normalizedIsin, navigationTimeoutMs)
+		return extractSyntheticRiskIndicator(pdfText)
+	}
 
-        const payload = await response.json()
-        return parseJustEtfQuotePayload(payload)
-    }
-
-    return {
-        name: 'justetf',
-        url,
-        selectors,
-        fetchValue,
-        parseValue,
-        logger,
-        waitUntil: 'domcontentloaded',
-        navigationTimeoutMs,
-        selectorTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS || 9000),
-        waitForSelector: false,
-        blockResources: false,
-    }
+	return {
+		name: 'justetf-kid',
+		url,
+		selectors: ['body'],
+		fetchValue,
+		parseValue,
+		logger,
+		waitUntil: 'domcontentloaded',
+		navigationTimeoutMs,
+		selectorTimeoutMs: Number(process.env.PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS || 9000),
+		waitForSelector: false,
+		blockResources: false,
+	}
 }
 
 /**
  * Create the scraping config needed to resolve an ETF quote by ISIN.
- * @param {string} isin - The isin to scrape
- * @returns {Object<string, { url: string, selector: string, selectorFunction: Function, logger: Function }>} - Scraper options keyed by ISIN.
- * @throws {Error} - If the value is not found or not a number or 0
-*/
+ * @param {string} isin - The ISIN to scrape.
+ * @returns {Object<string, { providers: object[] }>}
+ */
 const isinOptionCreator = (isin) => {
-    return {
-        [isin]: {
-            providers: [createJustEtfProvider(isin)],
-        }
-    }
+	const normalizedIsin = normalizeIsin(isin)
+
+	return {
+		[normalizedIsin]: {
+			providers: [createJustEtfProvider(normalizedIsin)],
+		},
+	}
+}
+
+/**
+ * Create the scraping config needed to resolve an ISIN synthetic risk indicator.
+ * @param {string} isin - The ISIN to resolve.
+ * @returns {Object<string, { cacheTtlMs: number, providers: object[] }>}
+ */
+const isinRiskOptionCreator = (isin) => {
+	const normalizedIsin = normalizeIsin(isin)
+	const cacheKey = buildIsinRiskCacheKey(normalizedIsin)
+
+	return {
+		[cacheKey]: {
+			cacheTtlMs: ISIN_RISK_CACHE_TTL_MS,
+			providers: [createIsinRiskProvider(normalizedIsin)],
+		},
+	}
 }
 
 /**
  * Scrape the quote value for an ETF identified by ISIN.
- * @param {string} isin - The ISIN to scrape
- * @returns {Promise<number>} - The current ETF quote
- * @throws {Error} - If the value is not found or not a number or 0
-*/
+ * @param {string} isin - The ISIN to scrape.
+ * @returns {Promise<number>}
+ */
 const isinValueScraper = async (isin) => {
-    const params = isinOptionCreator(isin)
-    return core.optionValueScraper(isin, params[isin], 1)
+	const normalizedIsin = normalizeIsin(isin)
+	const params = isinOptionCreator(normalizedIsin)
+	return core.optionValueScraper(normalizedIsin, params[normalizedIsin], 1)
 }
 
 module.exports = {
-    isinValue: isinValueScraper,
-    isinOptionCreator,
-    createJustEtfProvider,
+	isinValue: isinValueScraper,
+	isinOptionCreator,
+	isinRiskOptionCreator,
+	buildIsinRiskCacheKey,
+	createJustEtfProvider,
+	createIsinRiskProvider,
+	extractKidDocumentUrl,
+	extractSyntheticRiskIndicator,
+	parseJustEtfQuotePayload,
 }
