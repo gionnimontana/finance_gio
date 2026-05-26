@@ -8,18 +8,35 @@ const YAHOO_FINANCE_CHART_BASE_URL = 'https://query1.finance.yahoo.com/v8/financ
 const YAHOO_FINANCE_API_TIMEOUT_MS = Number(process.env.PFB_SCRAPER_CRYPTO_API_TIMEOUT_MS || 2500)
 
 /**
+ * Normalize a candidate crypto ticker into the shared uppercase representation.
+ * @param {string} crypto - Candidate crypto symbol.
+ * @returns {string}
+ */
+const normalizeCryptoSymbol = (crypto) => String(crypto || '').trim().toUpperCase()
+
+/**
  * Build the Yahoo Finance quote page URL for a crypto asset.
  * @param {string} crypto - Crypto symbol.
  * @returns {string}
  */
-const getYahooFinancePageUrl = (crypto) => `${YAHOO_FINANCE_PAGE_BASE_URL}/${crypto}-EUR/`
+const getYahooFinancePageUrl = (crypto) => `${YAHOO_FINANCE_PAGE_BASE_URL}/${normalizeCryptoSymbol(crypto)}-EUR/`
 
 /**
  * Build the Yahoo Finance chart API URL for a crypto asset.
  * @param {string} crypto - Crypto symbol.
+ * @param {{ interval?: string, range?: string }} [options={}] - Query options for the chart API.
  * @returns {string}
  */
-const getYahooFinanceChartUrl = (crypto) => `${YAHOO_FINANCE_CHART_BASE_URL}/${crypto}-EUR?interval=1d&range=1d`
+const getYahooFinanceChartUrl = (crypto, options = {}) => {
+    const normalizedCrypto = normalizeCryptoSymbol(crypto)
+    const {
+        interval = '1d',
+        range = '1d',
+        quoteSuffix = '-EUR',
+    } = options
+
+    return `${YAHOO_FINANCE_CHART_BASE_URL}/${normalizedCrypto}${quoteSuffix}?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}`
+}
 
 /**
  * Parse the quoted EUR price from the Yahoo Finance page.
@@ -83,13 +100,36 @@ const extractYahooFinanceChartPrice = (payload) => {
 }
 
 /**
- * Fetch the latest Yahoo Finance crypto quote through the chart API.
- * @param {string} crypto - Crypto symbol.
- * @param {typeof fetch} [fetchImpl=fetch] - Fetch implementation for tests.
- * @returns {Promise<number>}
+ * Extract positive close prices from the Yahoo Finance chart API payload.
+ * @param {unknown} payload - Parsed JSON response.
+ * @returns {number[]}
  */
-const fetchYahooFinanceChartPrice = async (crypto, fetchImpl = fetch) => {
-    const response = await fetchImpl(getYahooFinanceChartUrl(crypto), {
+const extractYahooFinanceChartCloses = (payload) => {
+    const closes = payload?.chart?.result?.[0]?.indicators?.quote?.[0]?.close
+    if (!Array.isArray(closes)) {
+        throw new Error('Close history not found')
+    }
+
+    const numericCloses = closes
+        .map(value => Number(value))
+        .filter(value => Number.isFinite(value) && value > 0)
+
+    if (numericCloses.length < 2) {
+        throw new Error('Close history not found')
+    }
+
+    return numericCloses
+}
+
+/**
+ * Fetch a Yahoo Finance chart payload for the requested crypto range.
+ * @param {string} crypto - Crypto symbol.
+ * @param {{ interval?: string, range?: string }} [options={}] - Query options for the chart API.
+ * @param {typeof fetch} [fetchImpl=fetch] - Fetch implementation for tests.
+ * @returns {Promise<object>}
+ */
+const fetchYahooFinanceChartPayload = async (crypto, options = {}, fetchImpl = fetch) => {
+    const response = await fetchImpl(getYahooFinanceChartUrl(crypto, options), {
         headers: {
             Accept: 'application/json',
         },
@@ -100,7 +140,17 @@ const fetchYahooFinanceChartPrice = async (crypto, fetchImpl = fetch) => {
         throw new Error(`Yahoo Finance API request failed with status ${response.status}`)
     }
 
-    const payload = await response.json()
+    return response.json()
+}
+
+/**
+ * Fetch the latest Yahoo Finance crypto quote through the chart API.
+ * @param {string} crypto - Crypto symbol.
+ * @param {typeof fetch} [fetchImpl=fetch] - Fetch implementation for tests.
+ * @returns {Promise<number>}
+ */
+const fetchYahooFinanceChartPrice = async (crypto, fetchImpl = fetch) => {
+    const payload = await fetchYahooFinanceChartPayload(crypto, { interval: '1d', range: '1d' }, fetchImpl)
     return extractYahooFinanceChartPrice(payload)
 }
 
@@ -110,7 +160,8 @@ const fetchYahooFinanceChartPrice = async (crypto, fetchImpl = fetch) => {
  * @returns {{ name: string, url: string, selectors: string[], fetchValue: Function, parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number, blockResources: boolean, waitForSelector: boolean }}
  */
 const createYahooFinanceProvider = (crypto) => {
-    const url = getYahooFinanceChartUrl(crypto)
+    const normalizedCrypto = normalizeCryptoSymbol(crypto)
+    const url = getYahooFinanceChartUrl(normalizedCrypto, { interval: '1d', range: '1d' })
     /**
      * Log scraping progress for the current Yahoo Finance lookup.
      * @param {string} msg - Message to print.
@@ -122,7 +173,7 @@ const createYahooFinanceProvider = (crypto) => {
         name: 'yahoo-finance-api',
         url,
         selectors: ['body'],
-        fetchValue: () => fetchYahooFinanceChartPrice(crypto),
+        fetchValue: () => fetchYahooFinanceChartPrice(normalizedCrypto),
         parseValue: () => {
             throw new Error('Value not found')
         },
@@ -141,7 +192,8 @@ const createYahooFinanceProvider = (crypto) => {
  * @returns {{ name: string, url: string, selectors: string[], parseValue: Function, logger: Function, waitUntil: string, navigationTimeoutMs: number, selectorTimeoutMs: number }}
  */
 const createYahooFinancePageProvider = (crypto) => {
-    const url = getYahooFinancePageUrl(crypto)
+    const normalizedCrypto = normalizeCryptoSymbol(crypto)
+    const url = getYahooFinancePageUrl(normalizedCrypto)
     const logger = (msg) => console.log(`yahooFinanceScraper - ${msg}`)
     const selectors = [
         '[data-testid="qsp-price"]',
@@ -167,11 +219,12 @@ const createYahooFinancePageProvider = (crypto) => {
  * @throws {Error} - If the value is not found or not a number or 0
 */
 const cryptoOptionsCreator = (crypto) => {
+    const normalizedCrypto = normalizeCryptoSymbol(crypto)
     return {
-        [crypto]: {
+        [normalizedCrypto]: {
             providers: [
-                createYahooFinanceProvider(crypto),
-                createYahooFinancePageProvider(crypto),
+                createYahooFinanceProvider(normalizedCrypto),
+                createYahooFinancePageProvider(normalizedCrypto),
             ],
         }
     }
@@ -184,8 +237,9 @@ const cryptoOptionsCreator = (crypto) => {
  * @throws {Error} - If the value is not found or not a number or 0
 */
 const cryptoValue = async (crypto) => {
-    const params = cryptoOptionsCreator(crypto)
-    return core.optionValueScraper(crypto, params[crypto], 1)
+    const normalizedCrypto = normalizeCryptoSymbol(crypto)
+    const params = cryptoOptionsCreator(normalizedCrypto)
+    return core.optionValueScraper(normalizedCrypto, params[normalizedCrypto], 1)
 }
 
 module.exports = {
@@ -193,6 +247,10 @@ module.exports = {
     cryptoOptionsCreator,
     createYahooFinanceProvider,
     createYahooFinancePageProvider,
+    extractYahooFinanceChartCloses,
     extractYahooFinanceChartPrice,
+    fetchYahooFinanceChartPayload,
     fetchYahooFinanceChartPrice,
+    getYahooFinanceChartUrl,
+    normalizeCryptoSymbol,
 }

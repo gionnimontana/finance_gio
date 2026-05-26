@@ -12,6 +12,38 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-26] update | Add crypto risk indicators
+- Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
+
+## [2026-05-26] update | Add Other risk defaults and per-user overrides
+- Extended the shared asset-risk flow so `Other` assets now always publish a default `Risk 1/7`, while allowing per-user integer `1-7` overrides persisted in `assetsSchema.riskOverrides` and saved through the new authenticated `/assets/risk-overrides` endpoint.
+- Refreshed backend/frontend structural docs and the data-model wiki so contributors can find the `Other`-only override rules, settings-table controls, and dashboard weighted-risk behavior updates.
+
+## [2026-05-26] update | Add gold risk indicators
+- Extended the generic asset-risk flow so physical gold assets now get fetch-first 1-7 `Risk` badges backed by Yahoo Finance gold-futures history plus a shared `goldRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the gold risk cache module, gold risk scraper, and the dashboard’s mixed ISIN, crypto, and gold badge behavior.
+
+## [2026-05-26] update | Bypass blocked WisdomTree KID page
+- Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
+- Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.
+
+## [2026-05-26] update | Persist shared ISIN risk cache
+- Updated the data-model and scraper-runtime wiki pages to document the new shared `data/isinRiskCache.json` file, which is loaded on server startup and reused across all users on the same backend.
+- Refreshed the docs index and the existing ISIN risk cache topic so contributors can find the implemented startup-hydration and atomic write-through behavior from the main wiki entry points.
+
+## [2026-05-25] update | Record ISIN risk cache plan
+- Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
+- Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.
+
+## [2026-05-25] update | Add issuer fallback for ISIN KIDs
+- Updated `docs/scraper-runtime.md` with the issuer-hosted PRIIP fallback now used when a justETF profile does not expose a fundinfo-style KID URL, plus the localized wording needed to parse issuer PDFs.
+- Refreshed the docs and scraper structural entry points so contributors can find the new ETN fallback path from the wiki index and vendor navigation docs.
+
+## [2026-05-24] update | Add KID-based ISIN risk scraping
+- Extended the justETF scraper so ISIN assets can resolve a Synthetic Risk Indicator by discovering the linked fundinfo KID PDF and parsing its standard PRIIPs risk wording.
+- Refreshed the server and scraper docs because the backend now exposes a dedicated authenticated ISIN risk endpoint alongside the existing quote and portfolio flows.
+
 ## [2026-05-22] update | Mask cold auth handoffs with shared loading overlay
 - Added a shared dark loading overlay to the frontend page shells and documented that it now stays visible until login validation or the first protected-page render completes.
 - Extended the frontend cache/runtime wiki notes because no-cache navigations still revalidate HTML first, so the cold-boot auth handoff behavior is now an intentional part of the source frontend.

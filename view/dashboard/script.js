@@ -16,6 +16,8 @@ let progressAssetItems = []; // Streamed assets shown in the progress banner
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
+let currentAssetRiskState = { values: {}, failures: [], errorMessage: '' };
+let currentAssetRiskRequest = 0;
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -311,6 +313,208 @@ const getProgressAssetTestId = (assetId) => `progress-asset-${toProgressBannerSl
  * @returns {string}
  */
 const getProgressGroupTestId = (groupName) => `progress-group-${toProgressBannerSlug(groupName)}`;
+
+/**
+ * Build the dashboard risk badge test id from an asset id.
+ * @param {string} assetId - Asset identifier.
+ * @returns {string}
+ */
+const getDashboardAssetRiskTestId = (assetId) => `dashboard-asset-risk-${toProgressBannerSlug(assetId)}`;
+
+/**
+ * Build the dashboard risk badge test id from a view-group name.
+ * @param {string} groupName - View-group label.
+ * @returns {string}
+ */
+const getDashboardGroupRiskTestId = (groupName) => `dashboard-group-risk-${toProgressBannerSlug(groupName)}`;
+
+/**
+ * Normalize a numeric risk score for UI output.
+ * @param {number} value - Raw risk score.
+ * @returns {string}
+ */
+const formatRiskScore = (value) => {
+    const rounded = Number(value.toFixed(1));
+    return String(rounded);
+};
+
+/**
+ * Render a risk summary badge for group and portfolio-level indicators.
+ * @param {number|null} riskValue - Weighted risk value.
+ * @param {{ className?: string, testId?: string }} [options={}] - Rendering overrides.
+ * @returns {string}
+ */
+const renderRiskSummaryBadge = (riskValue, options = {}) => {
+    const {
+        className = 'risk_badge',
+        testId = ''
+    } = options;
+
+    if (typeof riskValue !== 'number' || !Number.isFinite(riskValue)) return '';
+
+    const testIdAttr = testId ? ` data-testid="${escapeHtml(testId)}"` : '';
+    return `<span class="${className}"${testIdAttr}>Risk ${escapeHtml(formatRiskScore(riskValue))}/7</span>`;
+};
+
+/**
+ * Compute a weighted average risk score for one details object.
+ * @param {Record<string, { total?: number }>|null|undefined} details - Category details map.
+ * @returns {number|null}
+ */
+const getWeightedRiskFromDetails = (details) => {
+    if (!details || typeof details !== 'object') return null;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const [assetId, detail] of Object.entries(details)) {
+        const assetSize = Number(detail?.total);
+        if (!Number.isFinite(assetSize) || assetSize <= 0) continue;
+
+        const indicator = currentAssetRiskState.values?.[assetId];
+        const riskValue = Number(indicator?.value);
+        if (!Number.isFinite(riskValue)) continue;
+
+        weightedSum += riskValue * assetSize;
+        totalWeight += assetSize;
+    }
+
+    if (totalWeight <= 0) return null;
+    return weightedSum / totalWeight;
+};
+
+/**
+ * Compute a weighted average risk score across all dashboard assets with risk values.
+ * @param {object|null} portfolio - Portfolio payload.
+ * @returns {number|null}
+ */
+const getWeightedPortfolioRisk = (portfolio) => {
+    if (!portfolio || typeof portfolio !== 'object') return null;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const groupName of getPortfolioViewGroups(portfolio)) {
+        const details = portfolio?.[groupName]?.details;
+        if (!details || typeof details !== 'object') continue;
+
+        for (const [assetId, detail] of Object.entries(details)) {
+            const assetSize = Number(detail?.total);
+            if (!Number.isFinite(assetSize) || assetSize <= 0) continue;
+
+            const indicator = currentAssetRiskState.values?.[assetId];
+            const riskValue = Number(indicator?.value);
+            if (!Number.isFinite(riskValue)) continue;
+
+            weightedSum += riskValue * assetSize;
+            totalWeight += assetSize;
+        }
+    }
+
+    if (totalWeight <= 0) return null;
+    return weightedSum / totalWeight;
+};
+
+/**
+ * Normalize the asset risk payload returned by the backend service.
+ * @param {{ values?: Record<string, { value?: number, label?: string }|number>, failures?: string[] }|null|undefined} payload - Raw backend response.
+ * @returns {{ values: Record<string, { value: number, label: string }>, failures: string[], errorMessage: string }}
+ */
+const normalizeAssetRiskState = (payload) => {
+    const nextValues = {};
+    const rawValues = payload?.values;
+    if (rawValues && typeof rawValues === 'object') {
+        for (const [assetId, indicator] of Object.entries(rawValues)) {
+            const numericValue = Number(typeof indicator === 'object' ? indicator?.value : indicator);
+            if (Number.isFinite(numericValue)) {
+                nextValues[assetId] = {
+                    value: numericValue,
+                    label: typeof indicator === 'object' && typeof indicator?.label === 'string' && indicator.label.trim()
+                        ? indicator.label.trim()
+                        : 'Risk'
+                };
+            }
+        }
+    }
+
+    return {
+        values: nextValues,
+        failures: Array.isArray(payload?.failures)
+            ? payload.failures.filter(value => typeof value === 'string' && value.trim())
+            : [],
+        errorMessage: ''
+    };
+};
+
+/**
+ * Resolve all dashboard error messages, including asset risk fetch failures.
+ * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
+ * @returns {string[]}
+ */
+const getDashboardErrorMessages = (portfolio) => {
+    const portfolioFailures = Array.isArray(portfolio?.failures) ? portfolio.failures : [];
+    const riskFailures = currentAssetRiskState.failures.map(assetId => `Risk indicator unavailable for ${assetId}`);
+    const backgroundFailures = currentAssetRiskState.errorMessage ? [currentAssetRiskState.errorMessage] : [];
+    return [...portfolioFailures, ...riskFailures, ...backgroundFailures];
+};
+
+/**
+ * Render the shared dashboard error banner from portfolio and asset risk error state.
+ * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
+ * @returns {void}
+ */
+const renderDashboardErrors = (portfolio) => {
+    const errorBanner = document.getElementById('error_banner');
+    const errorList = document.getElementById('error_list');
+    const errorMessages = getDashboardErrorMessages(portfolio);
+
+    if (errorMessages.length > 0) {
+        errorList.textContent = `${errorMessages.join(', ')} (using cached values if available)`;
+        errorBanner.classList.add('visible');
+        return;
+    }
+
+    errorList.textContent = '';
+    errorBanner.classList.remove('visible');
+};
+
+/**
+ * Render the risk badge for one dashboard asset row when a value is available.
+ * @param {string} assetId - Portfolio asset identifier.
+ * @returns {string}
+ */
+const renderAssetRiskBadge = (assetId) => {
+    const indicator = currentAssetRiskState.values?.[assetId];
+    const numericValue = Number(indicator?.value);
+    if (!Number.isFinite(numericValue)) return '';
+
+    const label = typeof indicator?.label === 'string' && indicator.label.trim()
+        ? indicator.label.trim()
+        : 'Risk';
+
+    return `<span class="subrow_sri" data-testid="${getDashboardAssetRiskTestId(assetId)}">${escapeHtml(label)} ${escapeHtml(String(numericValue))}/7</span>`;
+};
+
+/**
+ * Render the overview portfolio weighted-risk indicator.
+ * @param {object|null} portfolio - Current portfolio payload.
+ * @returns {void}
+ */
+const renderPortfolioRiskIndicator = (portfolio) => {
+    const el = document.getElementById('portfolio_risk_value');
+    if (!el) return;
+
+    const weightedRisk = getWeightedPortfolioRisk(portfolio);
+    if (typeof weightedRisk !== 'number' || !Number.isFinite(weightedRisk)) {
+        el.textContent = '—';
+        return;
+    }
+
+    el.innerHTML = renderRiskSummaryBadge(weightedRisk, {
+        className: 'risk_badge overview_risk_badge',
+        testId: 'overview-portfolio-risk'
+    });
+};
 
 /**
  * Calculate absolute and percentage delta metadata for progress rows.
@@ -620,6 +824,35 @@ const getCategoryCardStyle = (categoryKey) => {
 };
 
 /**
+ * Fetch asset risk values in the background and re-render the dashboard rows when they arrive.
+ * @param {object} portfolio - Portfolio currently shown in the dashboard.
+ * @param {boolean} refresh - Whether this request is part of a manual refresh.
+ * @returns {Promise<void>}
+ */
+const refreshDashboardAssetRisk = async (portfolio, refresh) => {
+    const requestId = ++currentAssetRiskRequest;
+
+    try {
+        const nextState = normalizeAssetRiskState(await fetchAssetRiskIndicators(refresh));
+        if (requestId !== currentAssetRiskRequest) return;
+
+        currentAssetRiskState = nextState;
+    } catch (error) {
+        console.error('Failed to load dashboard risk values:', error);
+        if (requestId !== currentAssetRiskRequest) return;
+
+        currentAssetRiskState = {
+            ...currentAssetRiskState,
+            errorMessage: 'Failed to load risk indicators'
+        };
+    }
+
+    renderDashboardErrors(portfolio);
+    renderPortfolioRiskIndicator(portfolio);
+    renderTableView(portfolio);
+};
+
+/**
  * Render one dashboard category card with its nested asset rows.
  * @param {string} categoryKey - View-group name.
  * @param {{ total: number, details?: Record<string, { total: number, displayName?: string }> }} categoryData - Category totals.
@@ -630,6 +863,11 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
+    const weightedRisk = getWeightedRiskFromDetails(categoryData.details);
+    const groupRiskBadge = renderRiskSummaryBadge(weightedRisk, {
+        className: 'risk_badge group_risk_badge',
+        testId: getDashboardGroupRiskTestId(categoryKey)
+    });
     let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
     const formatDetailValue = (value) => formatCompactValue(value, 1, { includeCurrency: false });
 
@@ -637,11 +875,15 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     let subrowsHtml = '';
     if (categoryData.details) {
         for (const [key, detail] of Object.entries(categoryData.details)) {
-            const label = detail.displayName || key;
+            const label = escapeHtml(detail.displayName || key);
             const assetPct = pct(detail.total, portfolioTotal);
+            const sriBadge = renderAssetRiskBadge(key);
             subrowsHtml += `
                 <div class="subrow">
-                    <div class="subrow_title">${label}:</div>
+                    <div class="subrow_meta">
+                        <div class="subrow_title">${label}:</div>
+                        ${sriBadge}
+                    </div>
                     <div class="subrow_value"><span class="abs_value">${formatDetailValue(detail.total)}</span>${renderPercentageValue(`${assetPct}%`)}</div>
                 </div>
             `;
@@ -651,7 +893,10 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     return `
         <div class="row group_row" style="${getCategoryCardStyle(categoryKey)}">
             <div class="mainrow">
-                <div class="row_title">${categoryKey}:</div>
+                <div class="row_meta">
+                    <div class="row_title">${escapeHtml(categoryKey)}:</div>
+                    ${groupRiskBadge}
+                </div>
                 <div class="row_value">${mainRowValueHtml}</div>
             </div>
             ${subrowsHtml}
@@ -834,6 +1079,7 @@ const renderPortfolio = async (refresh) => {
         portfolio = await getPortfolio(refresh);
         portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
         renderPortfolioData(portfolio);
+        void refreshDashboardAssetRisk(portfolio, Boolean(refresh));
     } finally {
         hidePageLoading();
     }
@@ -870,18 +1116,12 @@ const renderPortfolioData = (portfolio) => {
         ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
         ${prevMonthdeltaPercentageLabel}
     `;
+    renderPortfolioRiskIndicator(portfolio);
     renderAthDistance(portfolio);
     renderLastUpdate();
 
     // Show/hide error banner based on failures
-    const errorBanner = document.getElementById('error_banner');
-    const errorList = document.getElementById('error_list');
-    if (portfolio.failures && portfolio.failures.length > 0) {
-        errorList.innerHTML = portfolio.failures.join(', ') + ' (using cached values if available)';
-        errorBanner.classList.add('visible');
-    } else {
-        errorBanner.classList.remove('visible');
-    }
+    renderDashboardErrors(portfolio);
 
     // Render the table view dynamically
     renderTableView(portfolio);

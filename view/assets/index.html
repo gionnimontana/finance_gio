@@ -30,7 +30,7 @@
             <button id="add_btn" class="btn success" onclick="addNewRow()">Add asset</button>
             <button id="save_btn" class="btn primary" onclick="saveAll()">Save all</button>
         </div>
-        <div class="hint">ISIN, GOLD, and CRYPTO classes calculate real-time data at each refresh, while OTHER reports the value as entered (in €).</div>
+        <div class="hint">ISIN, GOLD, and CRYPTO classes calculate risk automatically. OTHER defaults to Risk 1/7 and can be overridden per asset below.</div>
         <div style="margin-top: 15px; overflow-x: auto;">
             <table>
                 <thead>
@@ -40,6 +40,7 @@
                         <th style="min-width: 120px;">Quantity</th>
                         <th style="min-width: 220px;">Display name</th>
                         <th style="min-width: 140px;">View group</th>
+                        <th style="min-width: 140px;">Risk override</th>
                         <th style="min-width: 200px; text-align:right;">Actions</th>
                     </tr>
                 </thead>

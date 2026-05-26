@@ -9,6 +9,7 @@ const { getUserDataDir } = require('../auth');
 const DEFAULT_ASSETS_SCHEMA = {
     assets: [],
     viewGroups: ['Liquidity', 'Crypto', 'Gold', 'Equity'],
+    riskOverrides: {},
     prevMonthTotal: null,
     initYearNetworth: null
 };
@@ -146,6 +147,64 @@ const normalizeAssetRow = (asset) => {
 }
 
 /**
+ * Keep only per-asset overrides that target current "Other" assets and are valid integer scores.
+ * @param {unknown} riskOverrides - Candidate override map.
+ * @param {unknown[]} assets - Normalized asset rows.
+ * @returns {Record<string, number>}
+ */
+const sanitizeRiskOverrides = (riskOverrides, assets) => {
+    const allowedOtherAssetIds = new Set(
+        (Array.isArray(assets) ? assets : [])
+            .filter((asset) => Array.isArray(asset) && asset.length === 5 && asset[0] === 'Other')
+            .map((asset) => String(asset[1]))
+    );
+
+    if (!riskOverrides || typeof riskOverrides !== 'object' || Array.isArray(riskOverrides)) {
+        return {};
+    }
+
+    return Object.entries(riskOverrides).reduce((acc, [assetId, value]) => {
+        if (!allowedOtherAssetIds.has(assetId)) return acc;
+        const numericValue = Number(value);
+        if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 7) return acc;
+        acc[assetId] = numericValue;
+        return acc;
+    }, {});
+}
+
+/**
+ * Validate and normalize a risk-overrides payload.
+ * @param {unknown} riskOverrides - Candidate override map.
+ * @param {unknown[]} assets - Normalized asset rows.
+ * @returns {{ ok: boolean, error?: string, riskOverrides?: Record<string, number> }}
+ */
+const validateRiskOverridesPayload = (riskOverrides, assets) => {
+    if (!riskOverrides || typeof riskOverrides !== 'object' || Array.isArray(riskOverrides)) {
+        return { ok: false, error: 'Invalid payload: riskOverrides must be an object map' };
+    }
+
+    const allowedOtherAssetIds = new Set(
+        (Array.isArray(assets) ? assets : [])
+            .filter((asset) => Array.isArray(asset) && asset.length === 5 && asset[0] === 'Other')
+            .map((asset) => String(asset[1]))
+    );
+    const normalized = {};
+
+    for (const [assetId, value] of Object.entries(riskOverrides)) {
+        if (!allowedOtherAssetIds.has(assetId)) {
+            return { ok: false, error: `Invalid risk override assetId '${assetId}': only Other assets can be overridden` };
+        }
+        const numericValue = Number(value);
+        if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 7) {
+            return { ok: false, error: `Invalid risk override for '${assetId}': expected integer 1-7` };
+        }
+        normalized[assetId] = numericValue;
+    }
+
+    return { ok: true, riskOverrides: normalized };
+}
+
+/**
  * Validate that an asset row matches the expected schema shape and field types.
  * @param {unknown} asset - Asset row to validate.
  * @returns {boolean}
@@ -172,6 +231,7 @@ const normalizeAssetsSchema = (schema) => {
     const base = {
         assets: [],
         viewGroups: DEFAULT_VIEW_GROUPS,
+        riskOverrides: {},
         prevMonthTotal: null,
         initYearNetworth: null
     };
@@ -180,6 +240,7 @@ const normalizeAssetsSchema = (schema) => {
     return {
         assets: Array.isArray(schema.assets) ? schema.assets : [],
         viewGroups: Array.isArray(schema.viewGroups) ? schema.viewGroups : DEFAULT_VIEW_GROUPS,
+        riskOverrides: sanitizeRiskOverrides(schema.riskOverrides, Array.isArray(schema.assets) ? schema.assets : []),
         prevMonthTotal: schema.prevMonthTotal ?? null,
         initYearNetworth: schema.initYearNetworth ?? null,
     };
@@ -263,7 +324,8 @@ const updateAssetsSchema = async (passwordHash, { assets }) => {
         viewGroups: uniqStrings([
             ...(Array.isArray(existing.viewGroups) ? existing.viewGroups : DEFAULT_VIEW_GROUPS).map(normalizeViewGroupName).filter(Boolean),
             ...computeViewGroupsFromAssets(normalizedAssets)
-        ])
+        ]),
+        riskOverrides: sanitizeRiskOverrides(existing.riskOverrides, normalizedAssets)
     };
     const wrote = await writeAssetsSchema(passwordHash, next);
     if (!wrote) return { ok: false, error: 'Failed to persist assets schema' };
@@ -353,6 +415,35 @@ const updateViewGroups = async (passwordHash, { viewGroups }) => {
 
     const wroteHistory = await writeHistoricalData(passwordHash, historicalData);
     if (!wroteHistory) return { ok: false, error: 'Failed to persist historical data' };
+
+    return {
+        ok: true,
+        assetsSchema: {
+            ...next,
+            schemaCacheKey: buildAssetsSchemaCacheKey(next)
+        }
+    };
+}
+
+// Replace riskOverrides map (only Other asset IDs are accepted)
+/**
+ * Replace the stored risk-override map for Other assets.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @param {{ riskOverrides: unknown }} payload - Candidate override map.
+ * @returns {Promise<{ ok: boolean, error?: string, assetsSchema?: { assets: unknown[], viewGroups: string[], riskOverrides: Record<string, number>, prevMonthTotal: number|null, initYearNetworth: number|null } }>}
+ */
+const updateRiskOverrides = async (passwordHash, { riskOverrides }) => {
+    const existing = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
+    const validation = validateRiskOverridesPayload(riskOverrides, existing.assets);
+    if (!validation.ok) return { ok: false, error: validation.error };
+
+    const next = {
+        ...existing,
+        riskOverrides: validation.riskOverrides
+    };
+
+    const wroteSchema = await writeAssetsSchema(passwordHash, next);
+    if (!wroteSchema) return { ok: false, error: 'Failed to persist assets schema' };
 
     return {
         ok: true,
@@ -522,6 +613,7 @@ module.exports = {
     getAssetsSchema,
     updateAssetsSchema,
     updateViewGroups,
+    updateRiskOverrides,
     getHistoricalData,
     updateHistoricalData,
     updatePrevMonthTotal,

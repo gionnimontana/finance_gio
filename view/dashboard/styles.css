@@ -135,8 +135,17 @@
 .mainrow {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+}
+
+.row_meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
 .row_title {
@@ -151,19 +160,65 @@
 .subrow {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 10px;
     border-bottom: 1px solid #f0f0f0;
     margin-left: 20px;
     font-size: 15px;
+    gap: 12px;
+}
+
+.subrow_meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .subrow_title {
     font-weight: bold;
+    min-width: 0;
+}
+
+.subrow_sri {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: rgba(17, 17, 17, 0.08);
+    color: #333;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.risk_badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: rgba(17, 17, 17, 0.08);
+    color: #333;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.group_risk_badge {
+    margin-left: 2px;
+}
+
+.overview_risk_badge {
+    margin-left: auto;
 }
 
 .subrow_value {
     text-align: right;
     font-weight: bold;
+    margin-left: auto;
 }
 
 /* Progress Banner */
@@ -254,6 +309,22 @@
         flex: 0 1 auto;
         margin-left: auto;
         text-align: right;
+    }
+
+    .subrow {
+        flex-wrap: wrap;
+    }
+
+    .subrow_meta {
+        flex-wrap: wrap;
+    }
+
+    .subrow_value {
+        width: 100%;
+    }
+
+    .row_meta {
+        flex-wrap: wrap;
     }
 }
 

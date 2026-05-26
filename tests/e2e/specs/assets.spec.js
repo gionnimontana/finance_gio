@@ -3,7 +3,11 @@ const fs = require('node:fs/promises')
 const { test, expect } = require('@playwright/test')
 
 const { EMPTY_USER_PASSWORD, ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
-const { openAuthenticatedPage, readAssetIds } = require('../helpers/app')
+const { mockIsinRiskIndicators, openAuthenticatedPage, readAssetIds } = require('../helpers/app')
+
+test.beforeEach(async ({ page }) => {
+  await mockIsinRiskIndicators(page)
+})
 
 test('manages assets, view groups, password export, delete modal export, and logout @smoke', async ({ page }) => {
   await page.addInitScript(() => {
@@ -147,4 +151,20 @@ test('enables hidden absolute values from settings', async ({ page }) => {
 
   await page.goto('/assets/')
   await expect(page.locator('#hide_absolute_toggle')).toBeChecked()
+})
+
+test('saves and reloads Other asset risk overrides from settings', async ({ page }) => {
+  await openAuthenticatedPage(page, '/assets/', ASSETS_USER_PASSWORD)
+
+  const cashRiskInput = page.getByTestId('asset-row-cash-wallet').locator('td').nth(5).locator('input')
+  await cashRiskInput.fill('3')
+  await cashRiskInput.press('Tab')
+
+  await page.locator('#save_btn').click()
+  await expect(page.locator('#success_banner')).toContainText('Saved')
+
+  await page.reload()
+
+  await expect(page.getByTestId('asset-row-cash-wallet').locator('td').nth(5).locator('input')).toHaveValue('3')
+  await expect(page.getByTestId('asset-row-BTC').locator('td').nth(5)).toHaveText('-')
 })

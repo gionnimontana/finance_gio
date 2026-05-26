@@ -116,6 +116,74 @@ const getViewGroups = () => {
 const uniq = (arr) => Array.from(new Set(arr.map(v => String(v))));
 
 /**
+ * Build a sanitized risk-override map from the local schema state.
+ * @param {{ assets?: unknown[], riskOverrides?: Record<string, unknown> }|null|undefined} schema - Local schema state.
+ * @returns {Record<string, number>}
+ */
+const getSanitizedRiskOverrides = (schema) => {
+    const assets = Array.isArray(schema?.assets) ? schema.assets : [];
+    const allowedOtherAssetIds = new Set(
+        assets
+            .filter(a => Array.isArray(a) && a.length === 5 && a[0] === 'Other')
+            .map(a => String(a[1]))
+    );
+    const overrides = schema?.riskOverrides;
+
+    if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
+        return {};
+    }
+
+    return Object.entries(overrides).reduce((acc, [assetId, value]) => {
+        if (!allowedOtherAssetIds.has(assetId)) return acc;
+        const numericValue = Number(value);
+        if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 7) return acc;
+        acc[assetId] = numericValue;
+        return acc;
+    }, {});
+};
+
+/**
+ * Normalize risk overrides in-place with the current local assets.
+ * @param {object} schema - Mutable schema state clone.
+ * @returns {void}
+ */
+const syncRiskOverridesWithAssets = (schema) => {
+    if (!schema || typeof schema !== 'object') return;
+    schema.riskOverrides = getSanitizedRiskOverrides(schema);
+};
+
+/**
+ * Validate the local risk-overrides map before saving.
+ * @param {{ assets?: unknown[], riskOverrides?: Record<string, unknown> }|null|undefined} schema - Local schema state.
+ * @returns {string|null}
+ */
+const validateRiskOverrides = (schema) => {
+    const assets = Array.isArray(schema?.assets) ? schema.assets : [];
+    const allowedOtherAssetIds = new Set(
+        assets
+            .filter(a => Array.isArray(a) && a.length === 5 && a[0] === 'Other')
+            .map(a => String(a[1]))
+    );
+    const overrides = schema?.riskOverrides;
+
+    if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
+        return null;
+    }
+
+    for (const [assetId, value] of Object.entries(overrides)) {
+        if (!allowedOtherAssetIds.has(assetId)) {
+            return `Risk override '${assetId}' is only supported for Other assets`;
+        }
+        const numericValue = Number(value);
+        if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 7) {
+            return `Risk override for '${assetId}' must be an integer between 1 and 7`;
+        }
+    }
+
+    return null;
+};
+
+/**
  * Count how many assets currently reference each view group.
  * @returns {Record<string, number>}
  */
@@ -166,6 +234,15 @@ const renderTable = () => {
         const vgOptions = uniq([...(viewGroups || []), String(viewGroup || '').trim()].filter(Boolean));
         tdGroup.innerHTML = renderSelect(vgOptions, viewGroup, `onAssetChange(${idx}, 4, this.value)`);
 
+        const tdRiskOverride = document.createElement('td');
+        if (assetClass === 'Other') {
+            const overrideValue = getSanitizedRiskOverrides(assetsSchema)[assetId];
+            const valueAttr = Number.isInteger(overrideValue) ? ` value="${escapeHtml(String(overrideValue))}"` : '';
+            tdRiskOverride.innerHTML = `<input class="mono" min="1" max="7" step="1" type="number" placeholder="1-7"${valueAttr} onchange="onRiskOverrideChange(${idx}, this.value)" />`;
+        } else {
+            tdRiskOverride.textContent = '-';
+        }
+
         const tdActions = document.createElement('td');
         tdActions.className = 'actions';
         tdActions.innerHTML = `
@@ -181,6 +258,7 @@ const renderTable = () => {
         tr.appendChild(tdQty);
         tr.appendChild(tdName);
         tr.appendChild(tdGroup);
+        tr.appendChild(tdRiskOverride);
         tr.appendChild(tdActions);
 
         tbody.appendChild(tr);
@@ -238,7 +316,73 @@ window.onAssetChange = (rowIndex, fieldIndex, value) => {
 
     // clone for safer updates
     const next = JSON.parse(JSON.stringify(assetsSchema));
+    const previousAsset = Array.isArray(next.assets[rowIndex]) ? next.assets[rowIndex].slice() : null;
     next.assets[rowIndex][fieldIndex] = value;
+
+    if (fieldIndex === 1 && Array.isArray(previousAsset) && previousAsset[0] === 'Other') {
+        const oldAssetId = String(previousAsset[1] ?? '');
+        const newAssetId = String(value ?? '');
+        const existingOverrides = getSanitizedRiskOverrides(next);
+        if (Object.prototype.hasOwnProperty.call(existingOverrides, oldAssetId)) {
+            const overrideValue = existingOverrides[oldAssetId];
+            delete existingOverrides[oldAssetId];
+            if (newAssetId.trim()) {
+                existingOverrides[newAssetId] = overrideValue;
+            }
+            next.riskOverrides = existingOverrides;
+        }
+    }
+
+    syncRiskOverridesWithAssets(next);
+    assetsSchema = next;
+    renderTable();
+    renderGroupsTable();
+};
+
+/**
+ * Update the optional risk override for one Other asset row.
+ * @param {number} rowIndex - Asset row index.
+ * @param {string} rawValue - Raw input value.
+ * @returns {void}
+ */
+window.onRiskOverrideChange = (rowIndex, rawValue) => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const asset = assetsSchema.assets?.[rowIndex];
+    if (!Array.isArray(asset) || asset.length !== 5 || asset[0] !== 'Other') {
+        showError('Risk overrides are only supported for Other assets');
+        return;
+    }
+
+    const assetId = String(asset[1] ?? '').trim();
+    if (!assetId) {
+        showError('Asset ID is required before setting a risk override');
+        return;
+    }
+
+    const value = String(rawValue ?? '').trim();
+    const next = JSON.parse(JSON.stringify(assetsSchema));
+    const overrides = getSanitizedRiskOverrides(next);
+
+    if (!value) {
+        delete overrides[assetId];
+        next.riskOverrides = overrides;
+        assetsSchema = next;
+        renderTable();
+        renderGroupsTable();
+        return;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > 7) {
+        showError('Risk override must be an integer between 1 and 7');
+        return;
+    }
+
+    overrides[assetId] = numericValue;
+    next.riskOverrides = overrides;
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -263,6 +407,7 @@ window.onAssetQuantityChange = (rowIndex, rawValue) => {
 
     const next = JSON.parse(JSON.stringify(assetsSchema));
     next.assets[rowIndex][2] = n;
+    syncRiskOverridesWithAssets(next);
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -280,6 +425,7 @@ window.deleteRow = (rowIndex) => {
 
     const next = JSON.parse(JSON.stringify(assetsSchema));
     next.assets.splice(rowIndex, 1);
+    syncRiskOverridesWithAssets(next);
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -303,6 +449,7 @@ window.moveRow = (rowIndex, delta) => {
     const tmp = next.assets[rowIndex];
     next.assets[rowIndex] = next.assets[nextIndex];
     next.assets[nextIndex] = tmp;
+    syncRiskOverridesWithAssets(next);
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -321,6 +468,7 @@ window.addNewRow = () => {
     const groups = getViewGroups();
     const defaultGroup = groups.includes('Liquidity') ? 'Liquidity' : (groups[0] || 'Liquidity');
     next.assets.push(['Other', `new-asset-${Date.now()}`, 0, 'New Asset', defaultGroup]);
+    syncRiskOverridesWithAssets(next);
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -369,6 +517,25 @@ const putViewGroups = async (payload) => {
     const json = await res.json().catch(() => null);
     if (!res.ok) {
         const msg = (json && json.error) ? json.error : `Failed to save view groups (${res.status})`;
+        throw new Error(msg);
+    }
+    return json;
+};
+
+/**
+ * Persist Other-asset risk overrides to the backend.
+ * @param {{ riskOverrides: Record<string, number> }} payload - Risk overrides to save.
+ * @returns {Promise<object>}
+ */
+const putRiskOverrides = async (payload) => {
+    const res = await authFetch(`${API_BASE}/assets/risk-overrides`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+        const msg = (json && json.error) ? json.error : `Failed to save risk overrides (${res.status})`;
         throw new Error(msg);
     }
     return json;
@@ -752,6 +919,7 @@ window.loadSchema = async () => {
 
     try {
         assetsSchema = await fetchSchema();
+        syncRiskOverridesWithAssets(assetsSchema);
         renderTable();
         renderGroupsTable();
     } catch (e) {
@@ -777,10 +945,22 @@ window.saveAll = async () => {
         return;
     }
 
+    const overridesValidationError = validateRiskOverrides(assetsSchema);
+    if (overridesValidationError) {
+        showError(overridesValidationError);
+        return;
+    }
+
     setButtonsDisabled(true);
     try {
-        const result = await putSchema({ assets });
-        assetsSchema = result.assetsSchema;
+        const schemaResult = await putSchema({ assets });
+        const overridesPayload = getSanitizedRiskOverrides(assetsSchema);
+        const overridesResult = await putRiskOverrides({ riskOverrides: overridesPayload });
+        assetsSchema = {
+            ...(schemaResult.assetsSchema || {}),
+            ...(overridesResult.assetsSchema || {}),
+        };
+        syncRiskOverridesWithAssets(assetsSchema);
         renderTable();
         renderGroupsTable();
         showSuccess('Saved');

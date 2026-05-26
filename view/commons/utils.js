@@ -383,6 +383,17 @@ const fetchAssetsSchema = async () => {
     return await res.json();
 };
 
+/**
+ * Fetch the authenticated user's asset risk indicators.
+ * @param {boolean} [refresh=false] - Whether to bypass fresh backend cache entries.
+ * @returns {Promise<{ values?: Record<string, { value?: number, label?: string }>, failures?: string[] }>}
+ */
+const fetchAssetRiskIndicators = async (refresh = false) => {
+    const res = await authFetch(`${API_BASE}/assets/risk-indicators?refresh=${refresh ? 'true' : 'false'}`);
+    if (!res.ok) throw new Error(`Failed to load asset risk indicators (${res.status})`);
+    return await res.json();
+};
+
 // Show error banner
 /**
  * Show an error banner with the provided message.
