@@ -25,6 +25,12 @@ server {
         proxy_pass http://localhost:8085;
     }
 
+    location = /auth/user {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
     location = /health {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -58,7 +64,25 @@ server {
         proxy_pass http://localhost:8085;
     }
 
+    location = /assets/isin-risk {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /assets/risk-indicators {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
     location = /assets/view-groups {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /assets/risk-overrides {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_pass http://localhost:8085;

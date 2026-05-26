@@ -15,7 +15,7 @@ This page documents how production frontend releases force browsers to fetch fre
 - The shared frontend now renders a dark full-screen loading overlay immediately in each page shell and only dismisses it after the page-specific auth or data bootstrap has rendered, so no-cache navigations do not flash the login shell or half-initialized protected pages during route handoffs.
 - Unknown non-asset GET paths now redirect to `/login/` instead of serving the login HTML from the wrong URL, letting the login page normalize authenticated users onward to `/dashboard/`.
 - Nginx serves versioned CSS and JS files with long-lived immutable caching because the query string changes on each deploy.
-- The deployed Nginx config is expected to proxy only exact backend endpoints to Express: `/health`, `/auth/generate`, `/auth/validate`, `/portfolio`, `/portfolio/history`, `/portfolio/stream`, `/assets/schema`, and `/assets/view-groups`.
+- The deployed Nginx config is expected to proxy only exact backend endpoints to Express: `/health`, `/auth/generate`, `/auth/validate`, `/auth/user`, `/portfolio`, `/portfolio/history`, `/portfolio/stream`, `/assets/schema`, `/assets/isin-risk`, `/assets/risk-indicators`, `/assets/view-groups`, and `/assets/risk-overrides`.
 - The checked-in site template lives in `../site.nginx.template` so deploys can render a domain-specific Nginx include file from one source template instead of keeping the production hostname hard-coded in the repo.
 
 ## Notes

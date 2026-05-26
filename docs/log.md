@@ -20,6 +20,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Documented and implemented best-effort shared risk-cache persistence so disk-write failures are logged without failing risk-indicator API responses.
 - Updated backend API docs and scraper-runtime wiki notes so deploy-time permission and filesystem edge cases are discoverable during troubleshooting.
 
+## [2026-05-26] update | Proxy new asset-risk routes in Nginx
+- Updated the checked-in site template so production now proxies the generic asset-risk, legacy ISIN-risk, risk-override, and account-deletion endpoints to Express instead of redirecting them into the static app shell.
+- Refreshed the frontend deploy/runtime wiki notes because the exact backend route allowlist was lagging behind the server routes and caused remote-only failures after deploy.
+
 ## [2026-05-26] update | Add Other risk defaults and per-user overrides
 - Extended the shared asset-risk flow so `Other` assets now always publish a default `Risk 1/7`, while allowing per-user integer `1-7` overrides persisted in `assetsSchema.riskOverrides` and saved through the new authenticated `/assets/risk-overrides` endpoint.
 - Refreshed backend/frontend structural docs and the data-model wiki so contributors can find the `Other`-only override rules, settings-table controls, and dashboard weighted-risk behavior updates.
