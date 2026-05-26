@@ -322,6 +322,100 @@ const getProgressGroupTestId = (groupName) => `progress-group-${toProgressBanner
 const getDashboardAssetRiskTestId = (assetId) => `dashboard-asset-risk-${toProgressBannerSlug(assetId)}`;
 
 /**
+ * Build the dashboard risk badge test id from a view-group name.
+ * @param {string} groupName - View-group label.
+ * @returns {string}
+ */
+const getDashboardGroupRiskTestId = (groupName) => `dashboard-group-risk-${toProgressBannerSlug(groupName)}`;
+
+/**
+ * Normalize a numeric risk score for UI output.
+ * @param {number} value - Raw risk score.
+ * @returns {string}
+ */
+const formatRiskScore = (value) => {
+    const rounded = Number(value.toFixed(1));
+    return String(rounded);
+};
+
+/**
+ * Render a risk summary badge for group and portfolio-level indicators.
+ * @param {number|null} riskValue - Weighted risk value.
+ * @param {{ className?: string, testId?: string }} [options={}] - Rendering overrides.
+ * @returns {string}
+ */
+const renderRiskSummaryBadge = (riskValue, options = {}) => {
+    const {
+        className = 'risk_badge',
+        testId = ''
+    } = options;
+
+    if (typeof riskValue !== 'number' || !Number.isFinite(riskValue)) return '';
+
+    const testIdAttr = testId ? ` data-testid="${escapeHtml(testId)}"` : '';
+    return `<span class="${className}"${testIdAttr}>Risk ${escapeHtml(formatRiskScore(riskValue))}/7</span>`;
+};
+
+/**
+ * Compute a weighted average risk score for one details object.
+ * @param {Record<string, { total?: number }>|null|undefined} details - Category details map.
+ * @returns {number|null}
+ */
+const getWeightedRiskFromDetails = (details) => {
+    if (!details || typeof details !== 'object') return null;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const [assetId, detail] of Object.entries(details)) {
+        const assetSize = Number(detail?.total);
+        if (!Number.isFinite(assetSize) || assetSize <= 0) continue;
+
+        const indicator = currentAssetRiskState.values?.[assetId];
+        const riskValue = Number(indicator?.value);
+        if (!Number.isFinite(riskValue)) continue;
+
+        weightedSum += riskValue * assetSize;
+        totalWeight += assetSize;
+    }
+
+    if (totalWeight <= 0) return null;
+    return weightedSum / totalWeight;
+};
+
+/**
+ * Compute a weighted average risk score across all dashboard assets with risk values.
+ * @param {object|null} portfolio - Portfolio payload.
+ * @returns {number|null}
+ */
+const getWeightedPortfolioRisk = (portfolio) => {
+    if (!portfolio || typeof portfolio !== 'object') return null;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const groupName of getPortfolioViewGroups(portfolio)) {
+        const details = portfolio?.[groupName]?.details;
+        if (!details || typeof details !== 'object') continue;
+
+        for (const [assetId, detail] of Object.entries(details)) {
+            const assetSize = Number(detail?.total);
+            if (!Number.isFinite(assetSize) || assetSize <= 0) continue;
+
+            const indicator = currentAssetRiskState.values?.[assetId];
+            const riskValue = Number(indicator?.value);
+            if (!Number.isFinite(riskValue)) continue;
+
+            weightedSum += riskValue * assetSize;
+            totalWeight += assetSize;
+        }
+    }
+
+    if (totalWeight <= 0) return null;
+    return weightedSum / totalWeight;
+};
+
+/**
  * Normalize the asset risk payload returned by the backend service.
  * @param {{ values?: Record<string, { value?: number, label?: string }|number>, failures?: string[] }|null|undefined} payload - Raw backend response.
  * @returns {{ values: Record<string, { value: number, label: string }>, failures: string[], errorMessage: string }}
@@ -399,6 +493,27 @@ const renderAssetRiskBadge = (assetId) => {
         : 'Risk';
 
     return `<span class="subrow_sri" data-testid="${getDashboardAssetRiskTestId(assetId)}">${escapeHtml(label)} ${escapeHtml(String(numericValue))}/7</span>`;
+};
+
+/**
+ * Render the overview portfolio weighted-risk indicator.
+ * @param {object|null} portfolio - Current portfolio payload.
+ * @returns {void}
+ */
+const renderPortfolioRiskIndicator = (portfolio) => {
+    const el = document.getElementById('portfolio_risk_value');
+    if (!el) return;
+
+    const weightedRisk = getWeightedPortfolioRisk(portfolio);
+    if (typeof weightedRisk !== 'number' || !Number.isFinite(weightedRisk)) {
+        el.textContent = '—';
+        return;
+    }
+
+    el.innerHTML = renderRiskSummaryBadge(weightedRisk, {
+        className: 'risk_badge overview_risk_badge',
+        testId: 'overview-portfolio-risk'
+    });
 };
 
 /**
@@ -733,6 +848,7 @@ const refreshDashboardAssetRisk = async (portfolio, refresh) => {
     }
 
     renderDashboardErrors(portfolio);
+    renderPortfolioRiskIndicator(portfolio);
     renderTableView(portfolio);
 };
 
@@ -747,6 +863,11 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     if (!categoryData) return '';
 
     const categoryPct = pct(categoryData.total, portfolioTotal);
+    const weightedRisk = getWeightedRiskFromDetails(categoryData.details);
+    const groupRiskBadge = renderRiskSummaryBadge(weightedRisk, {
+        className: 'risk_badge group_risk_badge',
+        testId: getDashboardGroupRiskTestId(categoryKey)
+    });
     let mainRowValueHtml = `<span class="abs_value">${formatCompactValue(categoryData.total)}</span>${renderPercentageValue(`${categoryPct}%`)}`;
     const formatDetailValue = (value) => formatCompactValue(value, 1, { includeCurrency: false });
 
@@ -772,7 +893,10 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     return `
         <div class="row group_row" style="${getCategoryCardStyle(categoryKey)}">
             <div class="mainrow">
-                <div class="row_title">${escapeHtml(categoryKey)}:</div>
+                <div class="row_meta">
+                    <div class="row_title">${escapeHtml(categoryKey)}:</div>
+                    ${groupRiskBadge}
+                </div>
                 <div class="row_value">${mainRowValueHtml}</div>
             </div>
             ${subrowsHtml}
@@ -992,6 +1116,7 @@ const renderPortfolioData = (portfolio) => {
         ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
         ${prevMonthdeltaPercentageLabel}
     `;
+    renderPortfolioRiskIndicator(portfolio);
     renderAthDistance(portfolio);
     renderLastUpdate();
 

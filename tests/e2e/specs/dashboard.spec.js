@@ -49,6 +49,10 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('dashboard-asset-risk-BTC')).toHaveText('Risk 6/7')
   await expect(page.getByTestId('dashboard-asset-risk-physical-gold')).toHaveText('Risk 2/7')
   await expect(page.getByTestId('dashboard-asset-risk-IE00B4L5Y983')).toHaveText('SRI 4/7')
+  await expect(page.getByTestId('dashboard-group-risk-Crypto')).toHaveText('Risk 6/7')
+  await expect(page.getByTestId('dashboard-group-risk-Gold')).toHaveText('Risk 2/7')
+  await expect(page.getByTestId('dashboard-group-risk-Equity')).toHaveText('Risk 4/7')
+  await expect(page.getByTestId('overview-portfolio-risk')).toHaveText('Risk 5.7/7')
   await expect(page.locator('#total_value')).toContainText('€23,500')
   await expect(page.locator('#page_loading')).toBeHidden()
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.mainrow .abs_value')).toContainText('€20,000')
@@ -70,6 +74,10 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.getByTestId('dashboard-asset-risk-BTC')).toHaveText('Risk 6/7')
   await expect(page.getByTestId('dashboard-asset-risk-physical-gold')).toHaveText('Risk 2/7')
   await expect(page.getByTestId('dashboard-asset-risk-IE00B4L5Y983')).toHaveText('SRI 4/7')
+  await expect(page.getByTestId('dashboard-group-risk-Crypto')).toHaveText('Risk 6/7')
+  await expect(page.getByTestId('dashboard-group-risk-Gold')).toHaveText('Risk 2/7')
+  await expect(page.getByTestId('dashboard-group-risk-Equity')).toHaveText('Risk 4/7')
+  await expect(page.getByTestId('overview-portfolio-risk')).toHaveText('Risk 5.7/7')
 
   await page.locator('#refresh_button').click()
 
