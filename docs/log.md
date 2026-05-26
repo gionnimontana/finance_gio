@@ -16,6 +16,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
 - Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.
 
+## [2026-05-26] update | Persist shared ISIN risk cache
+- Updated the data-model and scraper-runtime wiki pages to document the new shared `data/isinRiskCache.json` file, which is loaded on server startup and reused across all users on the same backend.
+- Refreshed the docs index and the existing ISIN risk cache topic so contributors can find the implemented startup-hydration and atomic write-through behavior from the main wiki entry points.
+
 ## [2026-05-25] update | Record ISIN risk cache plan
 - Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
 - Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.

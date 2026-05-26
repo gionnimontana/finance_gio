@@ -113,6 +113,7 @@ const writeUser = ({ password, assetsSchema, historicalData }) => {
 
 fs.rmSync(runtimeDir, { recursive: true, force: true })
 fs.mkdirSync(usersDir, { recursive: true })
+writeJson(path.join(dataDir, 'isinRiskCache.json'), {})
 
 writeUser({
   password: EMPTY_USER_PASSWORD,

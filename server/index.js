@@ -22,6 +22,10 @@ const {
   userExists,
   deleteUser,
 } = require('./auth')
+const {
+  loadPersistedIsinRiskCacheIntoRuntime,
+  persistIsinRiskEntries,
+} = require('./api/isinRiskCache')
 
 const app = express()
 const port = Number(process.env.PORT || 8085)
@@ -64,8 +68,10 @@ const getIsinRiskIndicators = async (passwordHash, refresh) => {
     acc[scrapers.etfScraper.buildIsinRiskCacheKey(isin)] = isin
     return acc
   }, {})
+  const requestedIsins = isinAssets.map(asset => asset[1])
   const scraperOptions = isinAssets.map(asset => scrapers.etfScraper.isinRiskOptionCreator(asset[1]))
   const scraperResult = await scrapers.multipleScraper(scraperOptions, ISIN_RISK_SCRAPER_MAX_RETRIES, refresh)
+  persistIsinRiskEntries(requestedIsins)
   const values = Object.entries(scraperResult.values).reduce((acc, [cacheKey, value]) => {
     const isin = cacheKeyToIsin[cacheKey]
     if (isin) {
@@ -116,6 +122,9 @@ app.get('/', redirectToHome)
 app.get('/health', (req, res) => {
   res.json({ ok: true })
 })
+
+const hydratedIsinRiskEntries = loadPersistedIsinRiskCacheIntoRuntime()
+console.log(`Loaded ${hydratedIsinRiskEntries} shared ISIN risk cache entries`)
 
 app.listen(port, () => {
   console.log(`Personal finance bot listening on port ${port}`)

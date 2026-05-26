@@ -4,8 +4,8 @@ This folder contains the LLM-maintained project wiki for cross-cutting knowledge
 
 ## Files
 
-- [data-model.md](./data-model.md): Cross-cutting notes about password-derived user storage, persisted JSON files, account deletion, view-group ordering, schema-cache invalidation, browser-local caches, and cross-device synchronization behavior.
-- [isin-risk-cache-plan.md](./isin-risk-cache-plan.md): Planned shared on-disk cache design for KID-derived ISIN risk indicators, including storage location, TTL, and dependency tradeoffs.
+- [data-model.md](./data-model.md): Cross-cutting notes about password-derived user storage, the shared `isinRiskCache.json` file, account deletion, view-group ordering, schema-cache invalidation, browser-local caches, and cross-device synchronization behavior.
+- [isin-risk-cache-plan.md](./isin-risk-cache-plan.md): Shared on-disk cache notes for KID-derived ISIN risk indicators, including the data-root file location, startup hydration flow, and atomic rewrite behavior.
 - [portfolio-metrics.md](./portfolio-metrics.md): Durable notes about dashboard ATH behavior, history title mood rules, and the persisted summary baselines derived from saved history.
 - [frontend-cache.md](./frontend-cache.md): Production frontend cache-control and deploy-runtime notes covering Nginx ownership of static pages, unknown-route redirect ownership, the shared cold-boot loading overlay that masks auth handoffs on uncached page loads, live activation through Nginx reloads, the env-backed site server-block template, deploy-time asset versioning, domain-based backend health verification, the local SSH helpers, and the exact backend routes that still proxy to Express.
 - [scraper-runtime.md](./scraper-runtime.md): Fallback-provider runtime notes covering fetch-only API providers, KID-derived ETF risk scraping with issuer-page fallbacks, lazy page startup, browser-profile hardening for automation-sensitive sites, cache TTLs, stale-value reuse, and deterministic scraper regression tests.

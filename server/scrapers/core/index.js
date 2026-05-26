@@ -266,6 +266,51 @@ const getCachedValuesSnapshot = (assetNames) => assetNames.reduce((acc, assetNam
 }, {})
 
 /**
+ * Build a plain object of raw cache entries for the requested asset names.
+ * @param {string[]} assetNames - Requested asset ids.
+ * @returns {Record<string, { value: number, updatedAt: number, provider: string|null, sourceUrl: string|null }>}
+ */
+const getCacheEntriesSnapshot = (assetNames) => assetNames.reduce((acc, assetName) => {
+    const entry = cacheEntries.get(assetName)
+    if (entry && Number.isFinite(entry.value) && Number.isFinite(entry.updatedAt)) {
+        acc[assetName] = { ...entry }
+    }
+    return acc
+}, {})
+
+/**
+ * Seed the shared in-memory cache with preloaded entries.
+ * @param {Record<string, { value: number, updatedAt: number, provider?: string|null, sourceUrl?: string|null }>} entries - Cache entries keyed by scraper cache key.
+ * @returns {number}
+ */
+const hydrateCacheEntries = (entries) => {
+    if (!entries || typeof entries !== 'object') {
+        return 0
+    }
+
+    let hydratedCount = 0
+
+    for (const [name, entry] of Object.entries(entries)) {
+        const numericValue = Number(entry?.value)
+        const updatedAt = Number(entry?.updatedAt)
+
+        if (!name || !Number.isFinite(numericValue) || numericValue <= 0 || !Number.isFinite(updatedAt) || updatedAt <= 0) {
+            continue
+        }
+
+        cacheEntries.set(name, {
+            value: numericValue,
+            updatedAt,
+            provider: typeof entry?.provider === 'string' ? entry.provider : null,
+            sourceUrl: typeof entry?.sourceUrl === 'string' ? entry.sourceUrl : null,
+        })
+        hydratedCount += 1
+    }
+
+    return hydratedCount
+}
+
+/**
  * Turn a low-level scrape error into a runtime classification.
  * @param {Error} error - Scrape failure.
  * @returns {{ reason: 'navigation'|'selector'|'parse'|'runtime', retryable: boolean, message: string }}
@@ -975,6 +1020,8 @@ module.exports = {
     urlSelectorScraper,
     optionValueScraper,
     multipleUrlSelectorScraper,
+    getCacheEntriesSnapshot,
     getScraperDiagnostics,
+    hydrateCacheEntries,
     resetScraperState,
 }

@@ -1,24 +1,22 @@
 # ISIN Risk Cache Plan
 
-This page records the planned shape for persisting shared ISIN risk indicators so static KID-derived values do not need to be rediscovered after every process restart.
+This page records the implemented shared cache shape for persisting ISIN risk indicators so static KID-derived values do not need to be rediscovered after every process restart.
 
 ## Current State
 - User data lives under `data/users/` or `PFB_DATA_DIR/users/`, with one folder per password hash and JSON files for `assetsSchema.json` and `historicalData.json`.
-- The `/assets/isin-risk` route reuses the shared scraper runtime and its process-local cache map, so fresh ISIN risk values can be reused during one server lifetime but are lost on restart.
-- The justETF ISIN risk path already uses its own cache key namespace and a 24-hour fresh-cache TTL, but that cache currently lives only in memory.
-- The backend already uses plain JSON files plus built-in Node.js filesystem APIs for persisted state, and the dependency surface stays intentionally small.
+- The backend data root now also stores `data/isinRiskCache.json` or `PFB_DATA_DIR/isinRiskCache.json`, outside any user folder, so SRI values are shared across all accounts on the same backend.
+- `server/index.js` loads that file once on startup and hydrates the shared scraper runtime before the HTTP server starts listening.
+- The `/assets/isin-risk` route still reuses the shared scraper runtime and the existing justETF KID flow, but now writes newly discovered or refreshed runtime entries back to disk with an atomic temp-file rewrite.
 
 ## Notes
-- Recommended storage location: a shared JSON file under the backend data root, outside any user folder, such as `PFB_DATA_DIR/shared/isinRiskCache.json`.
-- Keep the cache outside `users/` so values are shared across accounts on the same backend and are not removed by account deletion.
-- Prefer a small dedicated storage helper near the existing persistence code, for example `server/api/isinRiskCache.js`, so it can reuse the same data-root conventions without teaching the generic scraper core to persist every asset class.
-- Minimal file shape: one object keyed by normalized uppercase ISIN, with `value`, `updatedAt`, `provider`, and optional `sourceUrl` or `kidUrl` metadata for troubleshooting.
-- Runtime flow: load the shared cache lazily, serve fresh persisted entries first, scrape only missing or expired ISINs, then update the in-memory copy and atomically rewrite the JSON file.
-- `refresh=true` should bypass fresh persisted entries but still allow stale persisted values as a fallback when the live justETF or KID fetch fails.
-- A longer persistent TTL makes sense because PRIIPs risk classes are comparatively static. A 30-day default is a reasonable starting point, while keeping an env override available for shorter refresh windows.
-- No new dependency is required for the first implementation. Built-in `fs`, atomic temp-file writes plus rename, and the existing Node 24 runtime are enough for a single-process server.
+- The cache stays outside `users/` so values are shared across accounts on the same backend and are not removed by account deletion.
+- The dedicated helper lives in `server/api/isinRiskCache.js`, which reuses the backend data-root convention already implied by `PFB_DATA_DIR`.
+- File shape: one object keyed by normalized uppercase ISIN, with `value`, `updatedAt`, `provider`, and optional `sourceUrl` metadata for troubleshooting while staying small enough to inspect manually.
+- Runtime flow: the shared cache file is created if missing, loaded on startup, copied into the in-memory scraper cache, and only rewritten when the runtime has a changed value for one of the requested ISINs.
+- `refresh=true` still bypasses fresh cache entries because the persisted values are hydrated into the same shared runtime map used by the existing scraper logic.
+- No new dependency is required. Built-in `fs`, atomic temp-file writes plus rename, and the existing Node 24 runtime are enough for the current single-process server.
 - Revisit SQLite or explicit file locking only if the app later runs multiple backend processes against the same shared data directory.
-- Narrow tests should cover persistence across module reload, shared-cache survival after `deleteUser`, selective scraping of only missing ISINs, and temp `PFB_DATA_DIR` isolation in server tests.
+- Server tests now cover startup file creation, runtime hydration from disk, and write-through persistence into the shared JSON file under a temporary `PFB_DATA_DIR`.
 
 ## Related
 - [Backend entry point](../server/index.md)
