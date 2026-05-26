@@ -110,10 +110,8 @@ const createSharedRiskCache = ({
     if (persistedCache) {
       return persistedCache;
     }
-
-    ensureCacheFile();
-
     try {
+      ensureCacheFile();
       const raw = fs.readFileSync(cachePath, 'utf8');
       persistedCache = normalizePersistedCache(JSON.parse(raw));
     } catch (error) {
@@ -133,7 +131,17 @@ const createSharedRiskCache = ({
     const nextCache = sortPersistedCache(loadPersistedCache());
     const tempPath = `${cachePath}.${process.pid}.${Date.now()}.tmp`;
     fs.writeFileSync(tempPath, `${JSON.stringify(nextCache, null, 2)}\n`, 'utf8');
-    fs.renameSync(tempPath, cachePath);
+
+    try {
+      fs.renameSync(tempPath, cachePath);
+    } catch (error) {
+      try {
+        fs.rmSync(tempPath, { force: true });
+      } catch (cleanupError) {
+        // Ignore best-effort temp-file cleanup failures.
+      }
+      throw error;
+    }
   };
 
   /**
@@ -204,7 +212,12 @@ const createSharedRiskCache = ({
     }
 
     if (didChange) {
-      writePersistedCache();
+      try {
+        writePersistedCache();
+      } catch (error) {
+        console.error(`Failed to persist shared risk cache ${cacheFileName}: ${error.message}`);
+        return false;
+      }
     }
 
     return didChange;

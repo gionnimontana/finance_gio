@@ -16,6 +16,10 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
 - Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
 
+## [2026-05-26] update | Harden shared risk-cache persistence failures
+- Documented and implemented best-effort shared risk-cache persistence so disk-write failures are logged without failing risk-indicator API responses.
+- Updated backend API docs and scraper-runtime wiki notes so deploy-time permission and filesystem edge cases are discoverable during troubleshooting.
+
 ## [2026-05-26] update | Add Other risk defaults and per-user overrides
 - Extended the shared asset-risk flow so `Other` assets now always publish a default `Risk 1/7`, while allowing per-user integer `1-7` overrides persisted in `assetsSchema.riskOverrides` and saved through the new authenticated `/assets/risk-overrides` endpoint.
 - Refreshed backend/frontend structural docs and the data-model wiki so contributors can find the `Other`-only override rules, settings-table controls, and dashboard weighted-risk behavior updates.

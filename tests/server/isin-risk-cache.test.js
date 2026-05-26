@@ -137,3 +137,31 @@ test('persistIsinRiskEntries merges new runtime values into the shared cache fil
     })
   })
 })
+
+test('persistIsinRiskEntries returns false when the cache file cannot be rewritten', { concurrency: false }, () => {
+  withTempDataDir(({ tempDir, scraperCore, etfScraper, isinRiskCache }) => {
+    const cachePath = path.join(tempDir, 'isinRiskCache.json')
+    fs.writeFileSync(cachePath, '{}\n', 'utf8')
+
+    isinRiskCache.loadPersistedIsinRiskCacheIntoRuntime()
+    scraperCore.hydrateCacheEntries({
+      [etfScraper.buildIsinRiskCacheKey('IE00B4L5Y983')]: {
+        value: 4,
+        updatedAt: 1716742000000,
+        provider: 'justetf-kid',
+        sourceUrl: 'https://example.com/isin.pdf',
+      },
+    })
+
+    const originalRenameSync = fs.renameSync
+    fs.renameSync = () => {
+      throw new Error('read-only file system')
+    }
+
+    try {
+      assert.equal(isinRiskCache.persistIsinRiskEntries(['IE00B4L5Y983']), false)
+    } finally {
+      fs.renameSync = originalRenameSync
+    }
+  })
+})
