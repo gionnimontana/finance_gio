@@ -22,6 +22,46 @@ test('extractKidDocumentUrl returns the matching KID PDF for the requested ISIN'
   )
 })
 
+test('extractIssuerProfileUrl returns the external issuer page linked from justETF', () => {
+  const html = `
+    <div class="issuer-link">
+      <a href="https://www.wisdomtree.eu/products/ucits-etfs-unleveraged-etps/cryptocurrency/wisdomtree-physical-bitcoin">
+        ETF Profile
+      </a>
+    </div>
+  `
+
+  assert.equal(
+    justEtfScraper.extractIssuerProfileUrl(html),
+    'https://www.wisdomtree.eu/products/ucits-etfs-unleveraged-etps/cryptocurrency/wisdomtree-physical-bitcoin'
+  )
+})
+
+test('buildKnownDirectIssuerKidUrl returns the direct WisdomTree KID when the issuer page is blocked', () => {
+  assert.equal(
+    justEtfScraper.buildKnownDirectIssuerKidUrl(
+      'GB00BJYDH287',
+      'https://www.wisdomtree.eu/products/ucits-etfs-unleveraged-etps/cryptocurrency/wisdomtree-physical-bitcoin'
+    ),
+    'https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/WIXL/GB/EN-GB/GB00BJYDH287/'
+  )
+})
+
+test('extractKidDocumentUrl accepts issuer-hosted PRIIP KID links that match the ISIN', () => {
+  const html = `
+    <div id="product-documents">
+      <a href="https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/WIXL/IT/IT-IT/GB00BJYDH287/">
+        KID
+      </a>
+    </div>
+  `
+
+  assert.equal(
+    justEtfScraper.extractKidDocumentUrl(html, 'GB00BJYDH287'),
+    'https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/WIXL/IT/IT-IT/GB00BJYDH287/'
+  )
+})
+
 test('extractSyntheticRiskIndicator parses the standard PRIIPs wording', () => {
   const text = `
     Risk Indicator Lower risk Higher risk.
@@ -30,6 +70,16 @@ test('extractSyntheticRiskIndicator parses the standard PRIIPs wording', () => {
   `
 
   assert.equal(justEtfScraper.extractSyntheticRiskIndicator(text), 4)
+})
+
+test('extractSyntheticRiskIndicator parses localized PRIIP wording from issuer-hosted KIDs', () => {
+  const text = `
+    Quali sono i rischi e qual è il potenziale rendimento?
+    L'indicatore sintetico di rischio è un'indicazione orientativa del livello di rischio di questo prodotto rispetto ad altri prodotti.
+    Abbiamo classificato questo prodotto al livello 6 su 7, che corrisponde alla seconda più alta classe di rischio.
+  `
+
+  assert.equal(justEtfScraper.extractSyntheticRiskIndicator(text), 6)
 })
 
 test('isinRiskOptionCreator uses an isolated cache key for SRI values', () => {

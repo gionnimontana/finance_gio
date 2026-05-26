@@ -12,9 +12,17 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-26] update | Bypass blocked WisdomTree KID page
+- Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
+- Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.
+
 ## [2026-05-25] update | Record ISIN risk cache plan
 - Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
 - Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.
+
+## [2026-05-25] update | Add issuer fallback for ISIN KIDs
+- Updated `docs/scraper-runtime.md` with the issuer-hosted PRIIP fallback now used when a justETF profile does not expose a fundinfo-style KID URL, plus the localized wording needed to parse issuer PDFs.
+- Refreshed the docs and scraper structural entry points so contributors can find the new ETN fallback path from the wiki index and vendor navigation docs.
 
 ## [2026-05-24] update | Add KID-based ISIN risk scraping
 - Extended the justETF scraper so ISIN assets can resolve a Synthetic Risk Indicator by discovering the linked fundinfo KID PDF and parsing its standard PRIIPs risk wording.

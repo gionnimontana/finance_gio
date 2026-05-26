@@ -3,7 +3,11 @@ const fs = require('node:fs/promises')
 const { test, expect } = require('@playwright/test')
 
 const { EMPTY_USER_PASSWORD, ASSETS_USER_PASSWORD, DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
-const { openAuthenticatedPage, readAssetIds } = require('../helpers/app')
+const { mockIsinRiskIndicators, openAuthenticatedPage, readAssetIds } = require('../helpers/app')
+
+test.beforeEach(async ({ page }) => {
+  await mockIsinRiskIndicators(page)
+})
 
 test('manages assets, view groups, password export, delete modal export, and logout @smoke', async ({ page }) => {
   await page.addInitScript(() => {

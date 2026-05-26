@@ -33,9 +33,20 @@ const canvasHasPaint = async (page, selector) => {
   })
 }
 
+const mockIsinRiskIndicators = async (page, payload = { values: { IE00B4L5Y983: 4 }, failures: [] }) => {
+  await page.route(/\/assets\/isin-risk\?refresh=(true|false)$/, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(payload),
+    })
+  })
+}
+
 module.exports = {
   canvasHasPaint,
   loginThroughUi,
+  mockIsinRiskIndicators,
   openAuthenticatedPage,
   readAssetIds,
   storePassword,

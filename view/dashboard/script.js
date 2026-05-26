@@ -16,6 +16,8 @@ let progressAssetItems = []; // Streamed assets shown in the progress banner
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
+let currentIsinRiskState = { values: {}, failures: [], errorMessage: '' };
+let currentIsinRiskRequest = 0;
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -311,6 +313,83 @@ const getProgressAssetTestId = (assetId) => `progress-asset-${toProgressBannerSl
  * @returns {string}
  */
 const getProgressGroupTestId = (groupName) => `progress-group-${toProgressBannerSlug(groupName)}`;
+
+/**
+ * Build the dashboard SRI badge test id from an asset id.
+ * @param {string} assetId - Asset identifier.
+ * @returns {string}
+ */
+const getDashboardAssetSriTestId = (assetId) => `dashboard-asset-sri-${toProgressBannerSlug(assetId)}`;
+
+/**
+ * Normalize the ISIN risk payload returned by the backend service.
+ * @param {{ values?: Record<string, number>, failures?: string[] }|null|undefined} payload - Raw backend response.
+ * @returns {{ values: Record<string, number>, failures: string[], errorMessage: string }}
+ */
+const normalizeIsinRiskState = (payload) => {
+    const nextValues = {};
+    const rawValues = payload?.values;
+    if (rawValues && typeof rawValues === 'object') {
+        for (const [assetId, value] of Object.entries(rawValues)) {
+            const numericValue = Number(value);
+            if (Number.isFinite(numericValue)) {
+                nextValues[assetId] = numericValue;
+            }
+        }
+    }
+
+    return {
+        values: nextValues,
+        failures: Array.isArray(payload?.failures)
+            ? payload.failures.filter(value => typeof value === 'string' && value.trim())
+            : [],
+        errorMessage: ''
+    };
+};
+
+/**
+ * Resolve all dashboard error messages, including SRI fetch failures.
+ * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
+ * @returns {string[]}
+ */
+const getDashboardErrorMessages = (portfolio) => {
+    const portfolioFailures = Array.isArray(portfolio?.failures) ? portfolio.failures : [];
+    const isinFailures = currentIsinRiskState.failures.map(isin => `SRI unavailable for ${isin}`);
+    const backgroundFailures = currentIsinRiskState.errorMessage ? [currentIsinRiskState.errorMessage] : [];
+    return [...portfolioFailures, ...isinFailures, ...backgroundFailures];
+};
+
+/**
+ * Render the shared dashboard error banner from portfolio and SRI error state.
+ * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
+ * @returns {void}
+ */
+const renderDashboardErrors = (portfolio) => {
+    const errorBanner = document.getElementById('error_banner');
+    const errorList = document.getElementById('error_list');
+    const errorMessages = getDashboardErrorMessages(portfolio);
+
+    if (errorMessages.length > 0) {
+        errorList.textContent = `${errorMessages.join(', ')} (using cached values if available)`;
+        errorBanner.classList.add('visible');
+        return;
+    }
+
+    errorList.textContent = '';
+    errorBanner.classList.remove('visible');
+};
+
+/**
+ * Render the SRI badge for one dashboard asset row when a value is available.
+ * @param {string} assetId - Portfolio asset identifier.
+ * @returns {string}
+ */
+const renderAssetSriBadge = (assetId) => {
+    const numericValue = Number(currentIsinRiskState.values?.[assetId]);
+    if (!Number.isFinite(numericValue)) return '';
+
+    return `<span class="subrow_sri" data-testid="${getDashboardAssetSriTestId(assetId)}">SRI ${escapeHtml(String(numericValue))}/7</span>`;
+};
 
 /**
  * Calculate absolute and percentage delta metadata for progress rows.
@@ -620,6 +699,34 @@ const getCategoryCardStyle = (categoryKey) => {
 };
 
 /**
+ * Fetch SRI values in the background and re-render the dashboard rows when they arrive.
+ * @param {object} portfolio - Portfolio currently shown in the dashboard.
+ * @param {boolean} refresh - Whether this request is part of a manual refresh.
+ * @returns {Promise<void>}
+ */
+const refreshDashboardIsinRisk = async (portfolio, refresh) => {
+    const requestId = ++currentIsinRiskRequest;
+
+    try {
+        const nextState = normalizeIsinRiskState(await fetchIsinRiskIndicators(refresh));
+        if (requestId !== currentIsinRiskRequest) return;
+
+        currentIsinRiskState = nextState;
+    } catch (error) {
+        console.error('Failed to load dashboard SRI values:', error);
+        if (requestId !== currentIsinRiskRequest) return;
+
+        currentIsinRiskState = {
+            ...currentIsinRiskState,
+            errorMessage: 'Failed to load SRI values'
+        };
+    }
+
+    renderDashboardErrors(portfolio);
+    renderTableView(portfolio);
+};
+
+/**
  * Render one dashboard category card with its nested asset rows.
  * @param {string} categoryKey - View-group name.
  * @param {{ total: number, details?: Record<string, { total: number, displayName?: string }> }} categoryData - Category totals.
@@ -637,11 +744,15 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     let subrowsHtml = '';
     if (categoryData.details) {
         for (const [key, detail] of Object.entries(categoryData.details)) {
-            const label = detail.displayName || key;
+            const label = escapeHtml(detail.displayName || key);
             const assetPct = pct(detail.total, portfolioTotal);
+            const sriBadge = renderAssetSriBadge(key);
             subrowsHtml += `
                 <div class="subrow">
-                    <div class="subrow_title">${label}:</div>
+                    <div class="subrow_meta">
+                        <div class="subrow_title">${label}:</div>
+                        ${sriBadge}
+                    </div>
                     <div class="subrow_value"><span class="abs_value">${formatDetailValue(detail.total)}</span>${renderPercentageValue(`${assetPct}%`)}</div>
                 </div>
             `;
@@ -651,7 +762,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
     return `
         <div class="row group_row" style="${getCategoryCardStyle(categoryKey)}">
             <div class="mainrow">
-                <div class="row_title">${categoryKey}:</div>
+                <div class="row_title">${escapeHtml(categoryKey)}:</div>
                 <div class="row_value">${mainRowValueHtml}</div>
             </div>
             ${subrowsHtml}
@@ -834,6 +945,7 @@ const renderPortfolio = async (refresh) => {
         portfolio = await getPortfolio(refresh);
         portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
         renderPortfolioData(portfolio);
+        void refreshDashboardIsinRisk(portfolio, Boolean(refresh));
     } finally {
         hidePageLoading();
     }
@@ -874,14 +986,7 @@ const renderPortfolioData = (portfolio) => {
     renderLastUpdate();
 
     // Show/hide error banner based on failures
-    const errorBanner = document.getElementById('error_banner');
-    const errorList = document.getElementById('error_list');
-    if (portfolio.failures && portfolio.failures.length > 0) {
-        errorList.innerHTML = portfolio.failures.join(', ') + ' (using cached values if available)';
-        errorBanner.classList.add('visible');
-    } else {
-        errorBanner.classList.remove('visible');
-    }
+    renderDashboardErrors(portfolio);
 
     // Render the table view dynamically
     renderTableView(portfolio);

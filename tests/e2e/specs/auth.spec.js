@@ -1,7 +1,11 @@
 const { test, expect } = require('@playwright/test')
 
 const { DASHBOARD_USER_PASSWORD } = require('../fixtures/users')
-const { storePassword } = require('../helpers/app')
+const { mockIsinRiskIndicators, storePassword } = require('../helpers/app')
+
+test.beforeEach(async ({ page }) => {
+  await mockIsinRiskIndicators(page)
+})
 
 test('shows an error for invalid credentials @smoke', async ({ page }) => {
   await page.goto('/login/')
