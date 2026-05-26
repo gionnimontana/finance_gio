@@ -35,6 +35,7 @@ const canvasHasPaint = async (page, selector) => {
 
 const mockRiskIndicators = async (page, payload = {
   values: {
+    'cash-wallet': { value: 1, label: 'Risk' },
     BTC: { value: 6, label: 'Risk' },
     'physical-gold': { value: 2, label: 'Risk' },
     IE00B4L5Y983: { value: 4, label: 'SRI' },

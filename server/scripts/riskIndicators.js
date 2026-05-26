@@ -8,6 +8,7 @@ const { persistCryptoRiskEntries } = require('../api/cryptoRiskCache');
 const { persistGoldRiskEntries } = require('../api/goldRiskCache');
 
 const RISK_SCRAPER_MAX_RETRIES = 1;
+const OTHER_ASSET_DEFAULT_RISK = 1;
 
 /**
  * Convert a numeric indicator map into the shared labeled response shape.
@@ -168,6 +169,41 @@ const getGoldRiskIndicators = async (passwordHash, refresh) => {
 };
 
 /**
+ * Resolve default and manual risk values for "Other" assets in the current schema.
+ * @param {string} passwordHash - The hashed password identifying the user.
+ * @returns {Promise<{ values: Record<string, { value: number, label: string }>, failures: string[] }>}
+ */
+const getOtherRiskIndicators = async (passwordHash) => {
+  const assetsSchema = await api.getAssetsSchema(passwordHash);
+  const otherAssets = Array.isArray(assetsSchema.assets)
+    ? assetsSchema.assets.filter((asset) => Array.isArray(asset) && asset[0] === 'Other' && typeof asset[1] === 'string' && asset[1].trim())
+    : [];
+
+  if (!otherAssets.length) {
+    return { values: {}, failures: [] };
+  }
+
+  const defaultValues = otherAssets.reduce((acc, asset) => {
+    acc[asset[1]] = OTHER_ASSET_DEFAULT_RISK;
+    return acc;
+  }, {});
+  const allowedOtherAssetIds = new Set(Object.keys(defaultValues));
+  const overrideValues = Object.entries(assetsSchema.riskOverrides || {}).reduce((acc, [assetId, value]) => {
+    if (!allowedOtherAssetIds.has(assetId)) return acc;
+    const numericValue = Number(value);
+    if (Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 7) {
+      acc[assetId] = numericValue;
+    }
+    return acc;
+  }, {});
+
+  return {
+    values: labelRiskValues({ ...defaultValues, ...overrideValues }, 'Risk'),
+    failures: [],
+  };
+};
+
+/**
  * Resolve all fetchable asset risk indicators for the current schema.
  * @param {string} passwordHash - The hashed password identifying the user.
  * @param {boolean} refresh - Whether to bypass fresh scraper cache entries.
@@ -176,7 +212,8 @@ const getGoldRiskIndicators = async (passwordHash, refresh) => {
 const getAssetRiskIndicators = async (passwordHash, refresh) => buildRiskIndicatorPayload(
   await getIsinRiskIndicators(passwordHash, refresh),
   await getCryptoRiskIndicators(passwordHash, refresh),
-  await getGoldRiskIndicators(passwordHash, refresh)
+  await getGoldRiskIndicators(passwordHash, refresh),
+  await getOtherRiskIndicators(passwordHash)
 );
 
 module.exports = {
@@ -185,5 +222,6 @@ module.exports = {
   getCryptoRiskIndicators,
   getGoldRiskIndicators,
   getIsinRiskIndicators,
+  getOtherRiskIndicators,
   toLegacyRiskValues,
 };

@@ -8,7 +8,7 @@ This folder holds higher-level backend business logic plus release-build and dep
 - [connectDeployServer.js](./connectDeployServer.js): Opens an SSH session or runs a one-off remote command against the deployed host by reading local settings from `.env`, supporting both key-based auth and env-backed password auth while keeping strict host-key checking enabled by default.
 - [runRemoteDeploy.js](./runRemoteDeploy.js): Reuses the SSH helper settings from `.env`, reads `PFB_DEPLOY_APP_PATH`, and runs `bash ./deploy.sh` inside the configured remote app directory on the deployed host.
 - [ensureBrowserRuntimes.js](./ensureBrowserRuntimes.js): Verifies the local Playwright and Puppeteer browser caches needed by the e2e suite, installing the missing runtime only when its executable is absent.
-- [riskIndicators.js](./riskIndicators.js): Resolves the shared asset-risk API payload by merging KID-derived ISIN SRI values with fetch-first crypto and physical-gold risk scores while keeping the legacy ISIN-only route compatible.
+- [riskIndicators.js](./riskIndicators.js): Resolves the shared asset-risk API payload by merging KID-derived ISIN SRI values with fetch-first crypto and physical-gold risk scores, adds default `Risk 1/7` values for `Other` assets, applies per-user `riskOverrides` for those `Other` assets, and keeps the legacy ISIN-only route compatible.
 
 ## Subfolders
 

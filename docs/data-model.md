@@ -7,7 +7,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - Each user folder stores two JSON files: `assetsSchema.json` for editable assets and view groups, and `historicalData.json` for monthly portfolio snapshots grouped by view group.
 - The backend data root also stores shared `isinRiskCache.json`, `cryptoRiskCache.json`, and `goldRiskCache.json` files outside `users/`, so KID-derived ISIN risk values plus computed crypto and gold risk scores are reused across all accounts on the same server.
 - The settings page can delete the current user by removing that hashed user folder entirely, so account removal wipes both persisted JSON files in one server-side operation.
-- `assetsSchema.json` currently persists `assets`, `viewGroups`, `prevMonthTotal`, and `initYearNetworth`, so asset definitions, display grouping, and summary baselines live together.
+- `assetsSchema.json` currently persists `assets`, `viewGroups`, `riskOverrides`, `prevMonthTotal`, and `initYearNetworth`, so asset definitions, display grouping, `Other`-asset manual risk overrides, and summary baselines live together.
 - `viewGroups` is the canonical ordering shared by Settings, Dashboard, and History when those pages render group rows, cards, charts, and tables.
 - `historicalData.json` stores monthly entries with `date`, `label`, `total`, and one total bucket per view group.
 - The settings page always reads the latest schema from `/assets/schema`, writes asset updates back through `/assets/schema`, and writes explicit group-order changes through `/assets/view-groups`.
@@ -20,7 +20,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - The dashboard also merges the latest schema view-group order into cached portfolio data before rendering, while the history page fetches the schema for the same stable ordering and falls back to inferred group keys only when schema loading fails.
 - `prevMonthTotal` and `initYearNetworth` stay in `assetsSchema.json` because the backend live-refresh flow derives those summary baselines from saved history before returning current portfolio data.
 - The shared `isinRiskCache.json`, `cryptoRiskCache.json`, and `goldRiskCache.json` files are not tied to one user, so deleting an account does not remove previously discovered risk indicators for other accounts on the same backend.
-- The dashboard fetches generic asset risk indicators from `/assets/risk-indicators`, which currently returns regulatory `SRI` labels for ISIN assets and computed `Risk` labels for crypto and gold assets keyed by asset id.
+- The dashboard fetches generic asset risk indicators from `/assets/risk-indicators`, which currently returns regulatory `SRI` labels for ISIN assets, computed `Risk` labels for crypto and gold assets, and `Risk` labels for `Other` assets with a default `1/7` that can be overridden per user via `assetsSchema.riskOverrides`.
 - Multiple devices only share changes when they are connected to the same running backend and therefore the same backend data directory. Two separate local `http://localhost:8085` instances do not share `data/users/` state or the shared risk-cache files.
 - Login state is browser-local. The frontend stores the raw password in `localStorage` as `userPassword` and sends it on each authenticated request through the `X-User-Password` header.
 - Account deletion clears the browser-local password as part of the logout redirect after the server folder has been removed, so the deleted password immediately stops authenticating on the same device.

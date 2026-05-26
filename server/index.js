@@ -13,6 +13,7 @@ const {
   getAssetsSchema,
   updateAssetsSchema,
   updateViewGroups,
+  updateRiskOverrides,
 } = require('./api')
 const {
   handleGenerate,
@@ -208,6 +209,16 @@ app.put('/assets/schema', authMiddleware, async (req, res) => {
 app.put('/assets/view-groups', authMiddleware, async (req, res) => {
   const passwordHash = req.userPasswordHash
   const result = await updateViewGroups(passwordHash, req.body || {})
+  if (!result.ok) {
+    res.status(400).send({ ok: false, error: result.error })
+    return
+  }
+  res.send({ ok: true, assetsSchema: result.assetsSchema })
+})
+
+app.put('/assets/risk-overrides', authMiddleware, async (req, res) => {
+  const passwordHash = req.userPasswordHash
+  const result = await updateRiskOverrides(passwordHash, req.body || {})
   if (!result.ok) {
     res.status(400).send({ ok: false, error: result.error })
     return

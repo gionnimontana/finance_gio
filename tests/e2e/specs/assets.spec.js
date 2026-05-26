@@ -152,3 +152,19 @@ test('enables hidden absolute values from settings', async ({ page }) => {
   await page.goto('/assets/')
   await expect(page.locator('#hide_absolute_toggle')).toBeChecked()
 })
+
+test('saves and reloads Other asset risk overrides from settings', async ({ page }) => {
+  await openAuthenticatedPage(page, '/assets/', ASSETS_USER_PASSWORD)
+
+  const cashRiskInput = page.getByTestId('asset-row-cash-wallet').locator('td').nth(5).locator('input')
+  await cashRiskInput.fill('3')
+  await cashRiskInput.press('Tab')
+
+  await page.locator('#save_btn').click()
+  await expect(page.locator('#success_banner')).toContainText('Saved')
+
+  await page.reload()
+
+  await expect(page.getByTestId('asset-row-cash-wallet').locator('td').nth(5).locator('input')).toHaveValue('3')
+  await expect(page.getByTestId('asset-row-BTC').locator('td').nth(5)).toHaveText('-')
+})
