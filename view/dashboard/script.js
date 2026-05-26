@@ -16,8 +16,8 @@ let progressAssetItems = []; // Streamed assets shown in the progress banner
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
-let currentIsinRiskState = { values: {}, failures: [], errorMessage: '' };
-let currentIsinRiskRequest = 0;
+let currentAssetRiskState = { values: {}, failures: [], errorMessage: '' };
+let currentAssetRiskRequest = 0;
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -315,25 +315,30 @@ const getProgressAssetTestId = (assetId) => `progress-asset-${toProgressBannerSl
 const getProgressGroupTestId = (groupName) => `progress-group-${toProgressBannerSlug(groupName)}`;
 
 /**
- * Build the dashboard SRI badge test id from an asset id.
+ * Build the dashboard risk badge test id from an asset id.
  * @param {string} assetId - Asset identifier.
  * @returns {string}
  */
-const getDashboardAssetSriTestId = (assetId) => `dashboard-asset-sri-${toProgressBannerSlug(assetId)}`;
+const getDashboardAssetRiskTestId = (assetId) => `dashboard-asset-risk-${toProgressBannerSlug(assetId)}`;
 
 /**
- * Normalize the ISIN risk payload returned by the backend service.
- * @param {{ values?: Record<string, number>, failures?: string[] }|null|undefined} payload - Raw backend response.
- * @returns {{ values: Record<string, number>, failures: string[], errorMessage: string }}
+ * Normalize the asset risk payload returned by the backend service.
+ * @param {{ values?: Record<string, { value?: number, label?: string }|number>, failures?: string[] }|null|undefined} payload - Raw backend response.
+ * @returns {{ values: Record<string, { value: number, label: string }>, failures: string[], errorMessage: string }}
  */
-const normalizeIsinRiskState = (payload) => {
+const normalizeAssetRiskState = (payload) => {
     const nextValues = {};
     const rawValues = payload?.values;
     if (rawValues && typeof rawValues === 'object') {
-        for (const [assetId, value] of Object.entries(rawValues)) {
-            const numericValue = Number(value);
+        for (const [assetId, indicator] of Object.entries(rawValues)) {
+            const numericValue = Number(typeof indicator === 'object' ? indicator?.value : indicator);
             if (Number.isFinite(numericValue)) {
-                nextValues[assetId] = numericValue;
+                nextValues[assetId] = {
+                    value: numericValue,
+                    label: typeof indicator === 'object' && typeof indicator?.label === 'string' && indicator.label.trim()
+                        ? indicator.label.trim()
+                        : 'Risk'
+                };
             }
         }
     }
@@ -348,19 +353,19 @@ const normalizeIsinRiskState = (payload) => {
 };
 
 /**
- * Resolve all dashboard error messages, including SRI fetch failures.
+ * Resolve all dashboard error messages, including asset risk fetch failures.
  * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
  * @returns {string[]}
  */
 const getDashboardErrorMessages = (portfolio) => {
     const portfolioFailures = Array.isArray(portfolio?.failures) ? portfolio.failures : [];
-    const isinFailures = currentIsinRiskState.failures.map(isin => `SRI unavailable for ${isin}`);
-    const backgroundFailures = currentIsinRiskState.errorMessage ? [currentIsinRiskState.errorMessage] : [];
-    return [...portfolioFailures, ...isinFailures, ...backgroundFailures];
+    const riskFailures = currentAssetRiskState.failures.map(assetId => `Risk indicator unavailable for ${assetId}`);
+    const backgroundFailures = currentAssetRiskState.errorMessage ? [currentAssetRiskState.errorMessage] : [];
+    return [...portfolioFailures, ...riskFailures, ...backgroundFailures];
 };
 
 /**
- * Render the shared dashboard error banner from portfolio and SRI error state.
+ * Render the shared dashboard error banner from portfolio and asset risk error state.
  * @param {{ failures?: string[] }|null} portfolio - Current portfolio payload.
  * @returns {void}
  */
@@ -380,15 +385,20 @@ const renderDashboardErrors = (portfolio) => {
 };
 
 /**
- * Render the SRI badge for one dashboard asset row when a value is available.
+ * Render the risk badge for one dashboard asset row when a value is available.
  * @param {string} assetId - Portfolio asset identifier.
  * @returns {string}
  */
-const renderAssetSriBadge = (assetId) => {
-    const numericValue = Number(currentIsinRiskState.values?.[assetId]);
+const renderAssetRiskBadge = (assetId) => {
+    const indicator = currentAssetRiskState.values?.[assetId];
+    const numericValue = Number(indicator?.value);
     if (!Number.isFinite(numericValue)) return '';
 
-    return `<span class="subrow_sri" data-testid="${getDashboardAssetSriTestId(assetId)}">SRI ${escapeHtml(String(numericValue))}/7</span>`;
+    const label = typeof indicator?.label === 'string' && indicator.label.trim()
+        ? indicator.label.trim()
+        : 'Risk';
+
+    return `<span class="subrow_sri" data-testid="${getDashboardAssetRiskTestId(assetId)}">${escapeHtml(label)} ${escapeHtml(String(numericValue))}/7</span>`;
 };
 
 /**
@@ -699,26 +709,26 @@ const getCategoryCardStyle = (categoryKey) => {
 };
 
 /**
- * Fetch SRI values in the background and re-render the dashboard rows when they arrive.
+ * Fetch asset risk values in the background and re-render the dashboard rows when they arrive.
  * @param {object} portfolio - Portfolio currently shown in the dashboard.
  * @param {boolean} refresh - Whether this request is part of a manual refresh.
  * @returns {Promise<void>}
  */
-const refreshDashboardIsinRisk = async (portfolio, refresh) => {
-    const requestId = ++currentIsinRiskRequest;
+const refreshDashboardAssetRisk = async (portfolio, refresh) => {
+    const requestId = ++currentAssetRiskRequest;
 
     try {
-        const nextState = normalizeIsinRiskState(await fetchIsinRiskIndicators(refresh));
-        if (requestId !== currentIsinRiskRequest) return;
+        const nextState = normalizeAssetRiskState(await fetchAssetRiskIndicators(refresh));
+        if (requestId !== currentAssetRiskRequest) return;
 
-        currentIsinRiskState = nextState;
+        currentAssetRiskState = nextState;
     } catch (error) {
-        console.error('Failed to load dashboard SRI values:', error);
-        if (requestId !== currentIsinRiskRequest) return;
+        console.error('Failed to load dashboard risk values:', error);
+        if (requestId !== currentAssetRiskRequest) return;
 
-        currentIsinRiskState = {
-            ...currentIsinRiskState,
-            errorMessage: 'Failed to load SRI values'
+        currentAssetRiskState = {
+            ...currentAssetRiskState,
+            errorMessage: 'Failed to load risk indicators'
         };
     }
 
@@ -746,7 +756,7 @@ const renderCategoryRow = (categoryKey, categoryData, portfolioTotal) => {
         for (const [key, detail] of Object.entries(categoryData.details)) {
             const label = escapeHtml(detail.displayName || key);
             const assetPct = pct(detail.total, portfolioTotal);
-            const sriBadge = renderAssetSriBadge(key);
+            const sriBadge = renderAssetRiskBadge(key);
             subrowsHtml += `
                 <div class="subrow">
                     <div class="subrow_meta">
@@ -945,7 +955,7 @@ const renderPortfolio = async (refresh) => {
         portfolio = await getPortfolio(refresh);
         portfolio = await mergeViewGroupsIntoPortfolio(portfolio);
         renderPortfolioData(portfolio);
-        void refreshDashboardIsinRisk(portfolio, Boolean(refresh));
+        void refreshDashboardAssetRisk(portfolio, Boolean(refresh));
     } finally {
         hidePageLoading();
     }

@@ -33,8 +33,15 @@ const canvasHasPaint = async (page, selector) => {
   })
 }
 
-const mockIsinRiskIndicators = async (page, payload = { values: { IE00B4L5Y983: 4 }, failures: [] }) => {
-  await page.route(/\/assets\/isin-risk\?refresh=(true|false)$/, async route => {
+const mockRiskIndicators = async (page, payload = {
+  values: {
+    BTC: { value: 6, label: 'Risk' },
+    'physical-gold': { value: 2, label: 'Risk' },
+    IE00B4L5Y983: { value: 4, label: 'SRI' },
+  },
+  failures: [],
+}) => {
+  await page.route(/\/assets\/risk-indicators\?refresh=(true|false)$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -43,10 +50,13 @@ const mockIsinRiskIndicators = async (page, payload = { values: { IE00B4L5Y983: 
   })
 }
 
+const mockIsinRiskIndicators = mockRiskIndicators
+
 module.exports = {
   canvasHasPaint,
   loginThroughUi,
   mockIsinRiskIndicators,
+  mockRiskIndicators,
   openAuthenticatedPage,
   readAssetIds,
   storePassword,

@@ -384,13 +384,13 @@ const fetchAssetsSchema = async () => {
 };
 
 /**
- * Fetch the authenticated user's ISIN synthetic risk indicators.
+ * Fetch the authenticated user's asset risk indicators.
  * @param {boolean} [refresh=false] - Whether to bypass fresh backend cache entries.
- * @returns {Promise<{ values?: Record<string, number>, failures?: string[] }>}
+ * @returns {Promise<{ values?: Record<string, { value?: number, label?: string }>, failures?: string[] }>}
  */
-const fetchIsinRiskIndicators = async (refresh = false) => {
-    const res = await authFetch(`${API_BASE}/assets/isin-risk?refresh=${refresh ? 'true' : 'false'}`);
-    if (!res.ok) throw new Error(`Failed to load ISIN risk indicators (${res.status})`);
+const fetchAssetRiskIndicators = async (refresh = false) => {
+    const res = await authFetch(`${API_BASE}/assets/risk-indicators?refresh=${refresh ? 'true' : 'false'}`);
+    if (!res.ok) throw new Error(`Failed to load asset risk indicators (${res.status})`);
     return await res.json();
 };
 

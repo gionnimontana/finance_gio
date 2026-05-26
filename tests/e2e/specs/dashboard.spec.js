@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test')
 
 const { DASHBOARD_USER_PASSWORD, HISTORY_USER_PASSWORD } = require('../fixtures/users')
-const { canvasHasPaint, mockIsinRiskIndicators, openAuthenticatedPage, storePassword } = require('../helpers/app')
+const { canvasHasPaint, mockRiskIndicators, openAuthenticatedPage, storePassword } = require('../helpers/app')
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const previousMonthLabel = () => {
@@ -28,7 +28,7 @@ const defaultSchemaCacheKey = JSON.stringify({
 })
 
 test.beforeEach(async ({ page }) => {
-  await mockIsinRiskIndicators(page)
+  await mockRiskIndicators(page)
 })
 
 test('streams per-asset progress on the first dashboard load without cache', async ({ page }) => {
@@ -46,7 +46,9 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
   await expect(page.getByTestId('progress-asset-physical-gold')).toBeVisible()
   await expect(page.locator('#table_view')).toContainText('20,000')
-  await expect(page.getByTestId('dashboard-asset-sri-IE00B4L5Y983')).toHaveText('SRI 4/7')
+  await expect(page.getByTestId('dashboard-asset-risk-BTC')).toHaveText('Risk 6/7')
+  await expect(page.getByTestId('dashboard-asset-risk-physical-gold')).toHaveText('Risk 2/7')
+  await expect(page.getByTestId('dashboard-asset-risk-IE00B4L5Y983')).toHaveText('SRI 4/7')
   await expect(page.locator('#total_value')).toContainText('€23,500')
   await expect(page.locator('#page_loading')).toBeHidden()
   await expect(page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' }).locator('.mainrow .abs_value')).toContainText('€20,000')
@@ -65,7 +67,9 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
 
   await expect(page.locator('#table_view .row')).toHaveCount(4)
   await expect(page.locator('#total_value')).toContainText('€23,500')
-  await expect(page.getByTestId('dashboard-asset-sri-IE00B4L5Y983')).toHaveText('SRI 4/7')
+  await expect(page.getByTestId('dashboard-asset-risk-BTC')).toHaveText('Risk 6/7')
+  await expect(page.getByTestId('dashboard-asset-risk-physical-gold')).toHaveText('Risk 2/7')
+  await expect(page.getByTestId('dashboard-asset-risk-IE00B4L5Y983')).toHaveText('SRI 4/7')
 
   await page.locator('#refresh_button').click()
 
@@ -92,6 +96,22 @@ test('refreshes the dashboard through SSE and updates the summary @smoke', async
   await expect(page.locator('#delta_value')).not.toContainText('(')
   await expect(page.locator('#ath_distance_value .abs_value')).toHaveCount(2)
   expect(await page.locator('#ath_distance_value .abs_value').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).display === 'none'))).toBeTruthy()
+})
+
+test('shows risk-indicator failures in the shared dashboard error banner', async ({ page }) => {
+  await page.unroute(/\/assets\/risk-indicators\?refresh=(true|false)$/)
+  await mockRiskIndicators(page, {
+    values: {
+      BTC: { value: 6, label: 'Risk' },
+    },
+    failures: ['IE00B4L5Y983'],
+  })
+
+  await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
+
+  await expect(page.getByTestId('dashboard-asset-risk-BTC')).toHaveText('Risk 6/7')
+  await expect(page.locator('#error_banner')).toHaveClass(/visible/)
+  await expect(page.locator('#error_list')).toContainText('Risk indicator unavailable for IE00B4L5Y983')
 })
 
 test('groups completed refresh progress by view group and shows grouped diffs', async ({ page }) => {

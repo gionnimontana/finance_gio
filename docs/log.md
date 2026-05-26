@@ -12,6 +12,14 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-05-26] update | Add crypto risk indicators
+- Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
+
+## [2026-05-26] update | Add gold risk indicators
+- Extended the generic asset-risk flow so physical gold assets now get fetch-first 1-7 `Risk` badges backed by Yahoo Finance gold-futures history plus a shared `goldRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the gold risk cache module, gold risk scraper, and the dashboard’s mixed ISIN, crypto, and gold badge behavior.
+
 ## [2026-05-26] update | Bypass blocked WisdomTree KID page
 - Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
 - Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.

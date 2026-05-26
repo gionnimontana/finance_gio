@@ -5,7 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 const express = require('express')
 const cors = require('cors')
 const portfolioScripts = require('./scripts/portfolio')
-const scrapers = require('./scrapers')
+const riskIndicatorScripts = require('./scripts/riskIndicators')
 const {
   buildAssetsSchemaCacheKey,
   getHistoricalData,
@@ -24,13 +24,16 @@ const {
 } = require('./auth')
 const {
   loadPersistedIsinRiskCacheIntoRuntime,
-  persistIsinRiskEntries,
 } = require('./api/isinRiskCache')
+const {
+  loadPersistedCryptoRiskCacheIntoRuntime,
+} = require('./api/cryptoRiskCache')
+const {
+  loadPersistedGoldRiskCacheIntoRuntime,
+} = require('./api/goldRiskCache')
 
 const app = express()
 const port = Number(process.env.PORT || 8085)
-const ISIN_RISK_SCRAPER_MAX_RETRIES = 1
-
 const redirectToHome = (req, res) => res.redirect('/login/')
 
 const isAppRouteRequest = (req) => req.method === 'GET' && path.extname(req.path) === ''
@@ -47,43 +50,6 @@ const parseRefreshFlag = (refresh, defaultValue) => {
   }
 
   return String(refresh).toLowerCase() === 'true'
-}
-
-/**
- * Resolve the summary risk indicator for every ISIN asset in the current schema.
- * @param {string} passwordHash - The hashed password identifying the user.
- * @param {boolean} refresh - Whether to bypass fresh scraper cache entries.
- * @returns {Promise<{ values: Record<string, number>, failures: string[] }>}
- */
-const getIsinRiskIndicators = async (passwordHash, refresh) => {
-  const assetsSchema = await getAssetsSchema(passwordHash)
-  const isinAssets = assetsSchema.assets.filter(asset => Array.isArray(asset) && asset[0] === 'Isin' && typeof asset[1] === 'string' && asset[1].trim())
-
-  if (!isinAssets.length) {
-    return { values: {}, failures: [] }
-  }
-
-  const cacheKeyToIsin = isinAssets.reduce((acc, asset) => {
-    const isin = asset[1]
-    acc[scrapers.etfScraper.buildIsinRiskCacheKey(isin)] = isin
-    return acc
-  }, {})
-  const requestedIsins = isinAssets.map(asset => asset[1])
-  const scraperOptions = isinAssets.map(asset => scrapers.etfScraper.isinRiskOptionCreator(asset[1]))
-  const scraperResult = await scrapers.multipleScraper(scraperOptions, ISIN_RISK_SCRAPER_MAX_RETRIES, refresh)
-  persistIsinRiskEntries(requestedIsins)
-  const values = Object.entries(scraperResult.values).reduce((acc, [cacheKey, value]) => {
-    const isin = cacheKeyToIsin[cacheKey]
-    if (isin) {
-      acc[isin] = value
-    }
-    return acc
-  }, {})
-
-  return {
-    values,
-    failures: scraperResult.failures.map(cacheKey => cacheKeyToIsin[cacheKey] || cacheKey),
-  }
 }
 
 app.use(cors())
@@ -124,7 +90,11 @@ app.get('/health', (req, res) => {
 })
 
 const hydratedIsinRiskEntries = loadPersistedIsinRiskCacheIntoRuntime()
+const hydratedCryptoRiskEntries = loadPersistedCryptoRiskCacheIntoRuntime()
+const hydratedGoldRiskEntries = loadPersistedGoldRiskCacheIntoRuntime()
 console.log(`Loaded ${hydratedIsinRiskEntries} shared ISIN risk cache entries`)
+console.log(`Loaded ${hydratedCryptoRiskEntries} shared crypto risk cache entries`)
+console.log(`Loaded ${hydratedGoldRiskEntries} shared gold risk cache entries`)
 
 app.listen(port, () => {
   console.log(`Personal finance bot listening on port ${port}`)
@@ -210,8 +180,18 @@ app.get('/assets/schema', authMiddleware, async (req, res) => {
 app.get('/assets/isin-risk', authMiddleware, async (req, res) => {
   const refresh = parseRefreshFlag(req.query.refresh, false)
   const passwordHash = req.userPasswordHash
-  const isinRiskIndicators = await getIsinRiskIndicators(passwordHash, refresh)
-  res.send(isinRiskIndicators)
+  const isinRiskIndicators = await riskIndicatorScripts.getIsinRiskIndicators(passwordHash, refresh)
+  res.send({
+    values: riskIndicatorScripts.toLegacyRiskValues(isinRiskIndicators.values),
+    failures: isinRiskIndicators.failures,
+  })
+})
+
+app.get('/assets/risk-indicators', authMiddleware, async (req, res) => {
+  const refresh = parseRefreshFlag(req.query.refresh, false)
+  const passwordHash = req.userPasswordHash
+  const riskIndicators = await riskIndicatorScripts.getAssetRiskIndicators(passwordHash, refresh)
+  res.send(riskIndicators)
 })
 
 app.put('/assets/schema', authMiddleware, async (req, res) => {

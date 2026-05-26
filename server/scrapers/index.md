@@ -1,10 +1,10 @@
 # Scrapers
 
-This folder groups the shared scraping runtime and the vendor adapters used to fetch live market data, KID-derived ETF risk indicators, or deterministic fixture values during e2e runs, including fetch-only providers for stable quote APIs and browser-profile hardening for automation-sensitive pages.
+This folder groups the shared scraping runtime and the vendor adapters used to fetch live market data, KID-derived ETF risk indicators, computed crypto and gold risk scores, or deterministic fixture values during e2e runs, including fetch-only providers for stable quote APIs and browser-profile hardening for automation-sensitive pages.
 
 ## Files
 
-- [index.js](./index.js): Re-exports the supported scraper adapters and the shared multi-scraper entry point used by both live and test-mode portfolio refreshes plus ISIN risk lookups, including provider fallback, worker-local page reuse, fetch-only API scrapers, browser-profile hardening for headless scrapes, cache-aware runtime behavior, and startup hydration of the shared on-disk ISIN risk cache through the core runtime.
+- [index.js](./index.js): Re-exports the supported scraper adapters and the shared multi-scraper entry point used by both live and test-mode portfolio refreshes plus ISIN, crypto, and gold risk lookups, including provider fallback, worker-local page reuse, fetch-only API scrapers, browser-profile hardening for headless scrapes, cache-aware runtime behavior, and startup hydration of the shared on-disk indicator caches through the core runtime.
 
 ## Subfolders
 
