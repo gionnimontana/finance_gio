@@ -23,6 +23,19 @@ const API_BASE = (() => {
 // Password storage key
 const PASSWORD_KEY = 'userPassword';
 
+// Zero-knowledge session storage keys
+const USER_ID_KEY = 'opaqueUserId';
+const USER_SECRET_KEY = 'opaqueUserSecret';
+
+const USER_BLOB_VERSION = 1;
+const USER_BLOB_KDF_ITERATIONS = 250000;
+const USER_BLOB_KDF_NAME = 'PBKDF2';
+const USER_BLOB_KDF_HASH = 'SHA-256';
+const USER_BLOB_CIPHER_NAME = 'AES-GCM';
+
+const UTF8_ENCODER = new TextEncoder();
+const UTF8_DECODER = new TextDecoder();
+
 const PAGE_LOADING_HIDE_DELAY_MS = 220;
 
 // Absolute values visibility key
@@ -52,6 +65,390 @@ const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
  * @returns {void}
  */
 const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
+
+/**
+ * Read the stored opaque user id from localStorage.
+ * @returns {string|null}
+ */
+const getUserId = () => localStorage.getItem(USER_ID_KEY);
+
+/**
+ * Persist the active opaque user id in localStorage.
+ * @param {string} userId - Client-derived user id.
+ * @returns {void}
+ */
+const setUserId = (userId) => localStorage.setItem(USER_ID_KEY, userId);
+
+/**
+ * Remove the stored opaque user id.
+ * @returns {void}
+ */
+const clearUserId = () => localStorage.removeItem(USER_ID_KEY);
+
+/**
+ * Read the stored zero-knowledge secret from localStorage.
+ * @returns {string|null}
+ */
+const getUserSecret = () => localStorage.getItem(USER_SECRET_KEY);
+
+/**
+ * Persist the active zero-knowledge secret in localStorage.
+ * @param {string} secret - Raw client-owned secret.
+ * @returns {void}
+ */
+const setUserSecret = (secret) => localStorage.setItem(USER_SECRET_KEY, secret);
+
+/**
+ * Remove the stored zero-knowledge secret.
+ * @returns {void}
+ */
+const clearUserSecret = () => localStorage.removeItem(USER_SECRET_KEY);
+
+/**
+ * Clear all stored zero-knowledge session state.
+ * @returns {void}
+ */
+const clearZeroKnowledgeSession = () => {
+    clearUserId();
+    clearUserSecret();
+};
+
+/**
+ * Resolve the browser Web Crypto implementation or throw when unavailable.
+ * @returns {Crypto}
+ */
+const getWebCrypto = () => {
+    const webCrypto = globalThis.crypto;
+    if (!webCrypto || typeof webCrypto.getRandomValues !== 'function' || !webCrypto.subtle) {
+        throw new Error('Web Crypto API unavailable');
+    }
+    return webCrypto;
+};
+
+/**
+ * Convert a byte array into a lowercase hexadecimal string.
+ * @param {Uint8Array} bytes - Source bytes.
+ * @returns {string}
+ */
+const bytesToHex = (bytes) => Array.from(bytes).map((value) => value.toString(16).padStart(2, '0')).join('');
+
+/**
+ * Encode bytes as base64.
+ * @param {Uint8Array} bytes - Source bytes.
+ * @returns {string}
+ */
+const bytesToBase64 = (bytes) => {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return btoa(binary);
+};
+
+/**
+ * Decode a base64 string into bytes.
+ * @param {string} value - Base64 string.
+ * @returns {Uint8Array}
+ */
+const base64ToBytes = (value) => {
+    const normalizedValue = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    const paddedValue = normalizedValue.padEnd(Math.ceil(normalizedValue.length / 4) * 4, '=');
+    const binary = atob(paddedValue);
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+};
+
+/**
+ * Create cryptographically random bytes.
+ * @param {number} length - Number of bytes to generate.
+ * @returns {Uint8Array}
+ */
+const createRandomBytes = (length) => {
+    const bytes = new Uint8Array(length);
+    getWebCrypto().getRandomValues(bytes);
+    return bytes;
+};
+
+/**
+ * Generate a high-entropy secret suitable for the zero-knowledge account flow.
+ * @param {number} [byteLength=24] - Number of random bytes before base64url encoding.
+ * @returns {string}
+ */
+const generateRandomSecret = (byteLength = 24) => bytesToBase64(createRandomBytes(byteLength))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+
+/**
+ * Derive the opaque user id from the raw client-owned secret.
+ * @param {string} secret - Raw client-owned secret.
+ * @returns {Promise<string>}
+ */
+const deriveUserId = async (secret) => {
+    const digest = await getWebCrypto().subtle.digest('SHA-256', UTF8_ENCODER.encode(String(secret || '')));
+    return bytesToHex(new Uint8Array(digest));
+};
+
+/**
+ * Import a raw secret for PBKDF2-based key derivation.
+ * @param {string} secret - Raw client-owned secret.
+ * @returns {Promise<CryptoKey>}
+ */
+const importSecretKeyMaterial = (secret) => getWebCrypto().subtle.importKey(
+    'raw',
+    UTF8_ENCODER.encode(String(secret || '')),
+    USER_BLOB_KDF_NAME,
+    false,
+    ['deriveKey']
+);
+
+/**
+ * Validate the supported opaque blob-envelope shape.
+ * @param {unknown} envelope - Candidate ciphertext envelope.
+ * @returns {boolean}
+ */
+const isValidUserBlobEnvelope = (envelope) => {
+    if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return false;
+    if (envelope.version !== USER_BLOB_VERSION) return false;
+    if (!envelope.kdf || typeof envelope.kdf !== 'object' || Array.isArray(envelope.kdf)) return false;
+    if (envelope.kdf.name !== USER_BLOB_KDF_NAME) return false;
+    if (envelope.kdf.hash !== USER_BLOB_KDF_HASH) return false;
+    if (!Number.isInteger(envelope.kdf.iterations) || envelope.kdf.iterations < 100000) return false;
+    if (typeof envelope.kdf.salt !== 'string' || !envelope.kdf.salt.trim()) return false;
+    if (!envelope.cipher || typeof envelope.cipher !== 'object' || Array.isArray(envelope.cipher)) return false;
+    if (envelope.cipher.name !== USER_BLOB_CIPHER_NAME) return false;
+    if (typeof envelope.cipher.iv !== 'string' || !envelope.cipher.iv.trim()) return false;
+    if (typeof envelope.cipher.ciphertext !== 'string' || !envelope.cipher.ciphertext.trim()) return false;
+    return true;
+};
+
+/**
+ * Derive the AES-GCM key used to encrypt one opaque user blob.
+ * @param {string} secret - Raw client-owned secret.
+ * @param {string} salt - Base64-encoded random salt.
+ * @returns {Promise<CryptoKey>}
+ */
+const deriveUserBlobKey = async (secret, salt) => getWebCrypto().subtle.deriveKey({
+    name: USER_BLOB_KDF_NAME,
+    hash: USER_BLOB_KDF_HASH,
+    salt: base64ToBytes(salt),
+    iterations: USER_BLOB_KDF_ITERATIONS,
+}, await importSecretKeyMaterial(secret), {
+    name: USER_BLOB_CIPHER_NAME,
+    length: 256,
+}, false, ['encrypt', 'decrypt']);
+
+/**
+ * Encrypt a client-owned state document into the opaque user-blob envelope used by the backend.
+ * @param {string} secret - Raw client-owned secret.
+ * @param {unknown} payload - Serializable state document.
+ * @param {{ reuseSaltFrom?: { kdf?: { salt?: string } } }} [options={}] - Encryption overrides.
+ * @returns {Promise<{ version: 1, kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: number, salt: string }, cipher: { name: 'AES-GCM', iv: string, ciphertext: string } }>}
+ */
+const encryptUserBlob = async (secret, payload, options = {}) => {
+    if (!secret) {
+        throw new Error('A secret is required to encrypt user state');
+    }
+
+    const salt = options.reuseSaltFrom?.kdf?.salt || bytesToBase64(createRandomBytes(16));
+    const iv = bytesToBase64(createRandomBytes(12));
+    const key = await deriveUserBlobKey(secret, salt);
+    const plaintextBytes = UTF8_ENCODER.encode(JSON.stringify(payload));
+    const ciphertextBuffer = await getWebCrypto().subtle.encrypt({
+        name: USER_BLOB_CIPHER_NAME,
+        iv: base64ToBytes(iv),
+    }, key, plaintextBytes);
+
+    return {
+        version: USER_BLOB_VERSION,
+        kdf: {
+            name: USER_BLOB_KDF_NAME,
+            hash: USER_BLOB_KDF_HASH,
+            iterations: USER_BLOB_KDF_ITERATIONS,
+            salt,
+        },
+        cipher: {
+            name: USER_BLOB_CIPHER_NAME,
+            iv,
+            ciphertext: bytesToBase64(new Uint8Array(ciphertextBuffer)),
+        },
+    };
+};
+
+/**
+ * Decrypt an opaque user-blob envelope into a parsed state document.
+ * @param {string} secret - Raw client-owned secret.
+ * @param {unknown} envelope - Ciphertext envelope returned by the backend.
+ * @returns {Promise<unknown>}
+ */
+const decryptUserBlob = async (secret, envelope) => {
+    if (!secret) {
+        throw new Error('A secret is required to decrypt user state');
+    }
+
+    if (!isValidUserBlobEnvelope(envelope)) {
+        throw new Error('Invalid user blob envelope');
+    }
+
+    const key = await deriveUserBlobKey(secret, envelope.kdf.salt);
+    const plaintextBuffer = await getWebCrypto().subtle.decrypt({
+        name: USER_BLOB_CIPHER_NAME,
+        iv: base64ToBytes(envelope.cipher.iv),
+    }, key, base64ToBytes(envelope.cipher.ciphertext));
+
+    return JSON.parse(UTF8_DECODER.decode(new Uint8Array(plaintextBuffer)));
+};
+
+/**
+ * Perform a user-id-authenticated fetch against the opaque blob routes.
+ * @param {string} userId - Client-derived user id.
+ * @param {RequestInit & { url: string }} options - Fetch options plus the target URL.
+ * @returns {Promise<Response>}
+ */
+const userIdFetch = async (userId, options) => {
+    if (!userId) {
+        throw new Error('A user id is required');
+    }
+
+    return fetch(options.url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'X-User-Id': userId,
+        },
+    });
+};
+
+/**
+ * Read an error message from a JSON response when available.
+ * @param {Response} response - Failed response.
+ * @returns {Promise<string>}
+ */
+const readResponseErrorMessage = async (response) => {
+    try {
+        const payload = await response.json();
+        if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+            return payload.error.trim();
+        }
+    } catch (error) {
+        // Ignore JSON parse failures and fall back to the status line.
+    }
+
+    return `${response.status} ${response.statusText}`.trim();
+};
+
+/**
+ * Fetch the stored opaque blob envelope for one user id.
+ * @param {string} userId - Client-derived user id.
+ * @returns {Promise<object|null>}
+ */
+const fetchUserBlobEnvelope = async (userId) => {
+    const response = await userIdFetch(userId, {
+        url: `${API_BASE}/user/blob`,
+        method: 'GET',
+    });
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Failed to load user blob (${await readResponseErrorMessage(response)})`);
+    }
+
+    return await response.json();
+};
+
+/**
+ * Persist an opaque user-blob envelope for one user id.
+ * @param {string} userId - Client-derived user id.
+ * @param {object} envelope - Valid ciphertext envelope.
+ * @returns {Promise<object>}
+ */
+const putUserBlobEnvelope = async (userId, envelope) => {
+    const response = await userIdFetch(userId, {
+        url: `${API_BASE}/user/blob`,
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(envelope),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to persist user blob (${await readResponseErrorMessage(response)})`);
+    }
+
+    return await response.json();
+};
+
+/**
+ * Delete the stored opaque user blob for one user id.
+ * @param {string} userId - Client-derived user id.
+ * @returns {Promise<boolean>}
+ */
+const deleteUserBlobEnvelope = async (userId) => {
+    const response = await userIdFetch(userId, {
+        url: `${API_BASE}/user/blob`,
+        method: 'DELETE',
+    });
+
+    if (response.status === 404) {
+        return false;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Failed to delete user blob (${await readResponseErrorMessage(response)})`);
+    }
+
+    return true;
+};
+
+/**
+ * Perform a JSON POST request against a stateless market-data endpoint.
+ * @param {string} url - Target URL.
+ * @param {object} payload - JSON payload.
+ * @returns {Promise<object>}
+ */
+const postJson = async (url, payload) => {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Request failed (${await readResponseErrorMessage(response)})`);
+    }
+
+    return await response.json();
+};
+
+/**
+ * Fetch stateless quote values for explicit dynamic asset descriptors.
+ * @param {Array<{ assetClass: string, assetId: string }>} assets - Dynamic asset descriptors.
+ * @param {boolean} [refresh=false] - Whether to bypass fresh server-side scrape cache entries.
+ * @returns {Promise<{ values: Record<string, number>, failures: string[] }>}
+ */
+const fetchStatelessQuotes = async (assets, refresh = false) => postJson(`${API_BASE}/market/quotes`, {
+    assets,
+    refresh,
+});
+
+/**
+ * Fetch stateless risk indicators for explicit asset descriptors.
+ * @param {Array<{ assetClass: string, assetId: string }>} assets - Asset descriptors.
+ * @param {boolean} [refresh=false] - Whether to bypass fresh server-side scrape cache entries.
+ * @param {Record<string, number>} [riskOverrides={}] - Other-asset overrides to apply locally-owned metadata.
+ * @returns {Promise<{ values: Record<string, { value: number, label: string }>, failures: string[] }>}
+ */
+const fetchStatelessRiskIndicators = async (assets, refresh = false, riskOverrides = {}) => postJson(`${API_BASE}/market/risk-indicators`, {
+    assets,
+    refresh,
+    riskOverrides,
+});
 
 /**
  * Resolve the shared full-screen loading overlay when the current page uses it.
@@ -141,6 +538,7 @@ const setAbsoluteHidden = (hidden) => {
  */
 const logout = () => {
     clearPassword();
+    clearZeroKnowledgeSession();
     localStorage.removeItem('portfolio'); // Clear cached portfolio data
     window.location.href = BASE_PATH + '/login/';
 };
@@ -486,5 +884,22 @@ window.isCompactValuesEnabled = isCompactValuesEnabled;
 window.applyAbsoluteVisibility = applyAbsoluteVisibility;
 window.setAbsoluteHidden = setAbsoluteHidden;
 window.setCompactValuesEnabled = setCompactValuesEnabled;
+window.getUserId = getUserId;
+window.setUserId = setUserId;
+window.clearUserId = clearUserId;
+window.getUserSecret = getUserSecret;
+window.setUserSecret = setUserSecret;
+window.clearUserSecret = clearUserSecret;
+window.clearZeroKnowledgeSession = clearZeroKnowledgeSession;
+window.generateRandomSecret = generateRandomSecret;
+window.deriveUserId = deriveUserId;
+window.isValidUserBlobEnvelope = isValidUserBlobEnvelope;
+window.encryptUserBlob = encryptUserBlob;
+window.decryptUserBlob = decryptUserBlob;
+window.fetchUserBlobEnvelope = fetchUserBlobEnvelope;
+window.putUserBlobEnvelope = putUserBlobEnvelope;
+window.deleteUserBlobEnvelope = deleteUserBlobEnvelope;
+window.fetchStatelessQuotes = fetchStatelessQuotes;
+window.fetchStatelessRiskIndicators = fetchStatelessRiskIndicators;
 window.getAthMood = getAthMood;
 window.renderPercentageValue = renderPercentageValue;

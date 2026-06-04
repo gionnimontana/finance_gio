@@ -31,6 +31,24 @@ server {
         proxy_pass http://localhost:8085;
     }
 
+    location = /user/blob {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /market/quotes {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
+    location = /market/risk-indicators {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass http://localhost:8085;
+    }
+
     location = /health {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

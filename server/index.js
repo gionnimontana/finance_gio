@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 const express = require('express')
 const cors = require('cors')
 const portfolioScripts = require('./scripts/portfolio')
+const marketDataScripts = require('./scripts/marketData')
 const riskIndicatorScripts = require('./scripts/riskIndicators')
 const {
   buildAssetsSchemaCacheKey,
@@ -23,6 +24,7 @@ const {
   userExists,
   deleteUser,
 } = require('./auth')
+const userBlobApi = require('./api/userBlob')
 const {
   loadPersistedIsinRiskCacheIntoRuntime,
 } = require('./api/isinRiskCache')
@@ -52,6 +54,30 @@ const parseRefreshFlag = (refresh, defaultValue) => {
 
   return String(refresh).toLowerCase() === 'true'
 }
+
+/**
+ * Resolve the client-derived user id used by the opaque blob API.
+ * @param {import('express').Request} req - Express request.
+ * @param {import('express').Response} res - Express response.
+ * @returns {string|null}
+ */
+const getOpaqueUserId = (req, res) => {
+  const userId = req.headers['x-user-id']
+
+  if (!userBlobApi.isValidUserId(userId)) {
+    res.status(400).json({ error: 'Valid X-User-Id header required' })
+    return null
+  }
+
+  return userBlobApi.normalizeUserId(userId)
+}
+
+/**
+ * Check whether a thrown error reflects request validation rather than an internal fault.
+ * @param {unknown} error - Candidate runtime error.
+ * @returns {boolean}
+ */
+const isRequestValidationError = (error) => error?.name === 'RequestValidationError'
 
 app.use(cors())
 app.use(express.json())
@@ -90,6 +116,110 @@ app.get('/health', (req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/user/blob', (req, res) => {
+  const userId = getOpaqueUserId(req, res)
+  if (!userId) {
+    return
+  }
+
+  try {
+    const blob = userBlobApi.getUserBlob(userId)
+
+    if (!blob) {
+      res.status(404).json({ error: 'User blob not found' })
+      return
+    }
+
+    res.send(blob)
+  } catch (error) {
+    console.error('Read user blob error:', error)
+    res.status(500).json({ error: 'Failed to read user blob' })
+  }
+})
+
+app.put('/user/blob', (req, res) => {
+  const userId = getOpaqueUserId(req, res)
+  if (!userId) {
+    return
+  }
+
+  if (!userBlobApi.isValidUserBlobEnvelope(req.body || {})) {
+    res.status(400).json({ error: 'Invalid user blob envelope' })
+    return
+  }
+
+  try {
+    const result = userBlobApi.putUserBlob(userId, req.body || {})
+    res.json({ ok: true, bytes: result.bytes })
+  } catch (error) {
+    console.error('Write user blob error:', error)
+
+    if (/Invalid user blob envelope|Invalid userId/i.test(error.message)) {
+      res.status(400).json({ error: error.message })
+      return
+    }
+
+    res.status(500).json({ error: 'Failed to persist user blob' })
+  }
+})
+
+app.delete('/user/blob', (req, res) => {
+  const userId = getOpaqueUserId(req, res)
+  if (!userId) {
+    return
+  }
+
+  try {
+    const deleted = userBlobApi.deleteUserBlob(userId)
+
+    if (!deleted) {
+      res.status(404).json({ ok: false, error: 'User blob not found' })
+      return
+    }
+
+    res.json({ ok: true })
+  } catch (error) {
+    console.error('Delete user blob error:', error)
+    res.status(500).json({ error: 'Failed to delete user blob' })
+  }
+})
+
+app.post('/market/quotes', async (req, res) => {
+  try {
+    const quotes = await marketDataScripts.getAssetQuotes(req.body?.assets, req.body?.refresh)
+    res.send(quotes)
+  } catch (error) {
+    console.error('Market quotes error:', error)
+
+    if (isRequestValidationError(error)) {
+      res.status(400).json({ error: error.message })
+      return
+    }
+
+    res.status(500).json({ error: 'Failed to resolve market quotes' })
+  }
+})
+
+app.post('/market/risk-indicators', async (req, res) => {
+  try {
+    const riskIndicators = await marketDataScripts.getAssetRiskIndicators(
+      req.body?.assets,
+      req.body?.refresh,
+      req.body?.riskOverrides,
+    )
+    res.send(riskIndicators)
+  } catch (error) {
+    console.error('Market risk indicators error:', error)
+
+    if (isRequestValidationError(error)) {
+      res.status(400).json({ error: error.message })
+      return
+    }
+
+    res.status(500).json({ error: 'Failed to resolve market risk indicators' })
+  }
+})
+
 const hydratedIsinRiskEntries = loadPersistedIsinRiskCacheIntoRuntime()
 const hydratedCryptoRiskEntries = loadPersistedCryptoRiskCacheIntoRuntime()
 const hydratedGoldRiskEntries = loadPersistedGoldRiskCacheIntoRuntime()
@@ -104,8 +234,6 @@ app.listen(port, () => {
 app.use((err, req, res, next) => {
   console.log(err.stack)
   console.error(err.stack)
-  console.log('@@@@@req:', req)
-  console.log('@@@@@res:', res)
   next(err)
 })
 

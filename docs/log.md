@@ -167,3 +167,11 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-22] update | Document account deletion lifecycle
 - Extended `docs/data-model.md` so the password-derived storage notes now cover full user-folder deletion from Settings and the accompanying local logout behavior.
 - Refreshed the docs index because the settings flow now includes irreversible account removal alongside the existing per-user JSON persistence model.
+
+## [2026-06-04] update | Add zero-knowledge foundation routes
+- Added an opaque `/user/blob` storage contract plus stateless `/market/quotes` and `/market/risk-indicators` routes, together with shared browser helpers for client-side user-id derivation and ciphertext envelope handling.
+- Updated the backend, frontend, deploy-route, and data-model docs so contributors can find the new zero-knowledge foundation without confusing it with the still-active legacy password-based flow.
+
+## [2026-06-04] update | Add zero-knowledge auth and migration plan
+- Created a new technical plan file documenting the login/registration refactoring flow, local secret generation, zero-knowledge account bootstrapping, and client-mediated data migration for legacy accounts.
+- Updated the main docs index so the zero-knowledge migration strategy is discoverable from the project wiki.
