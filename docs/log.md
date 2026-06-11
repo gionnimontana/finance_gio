@@ -167,3 +167,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-22] update | Document account deletion lifecycle
 - Extended `docs/data-model.md` so the password-derived storage notes now cover full user-folder deletion from Settings and the accompanying local logout behavior.
 - Refreshed the docs index because the settings flow now includes irreversible account removal alongside the existing per-user JSON persistence model.
+
+## [2026-06-11] update | Preserve cached dashboard rows on failed refresh
+- Updated the data-model wiki notes so dashboard refreshes that omit same-schema dynamic assets now document the browser-side cache restoration behavior instead of looking like silent row deletions.
+- Refreshed the docs and dashboard entry points because the local `portfolio` snapshot is now part of failed-refresh recovery, not just cold-load rendering.

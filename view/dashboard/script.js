@@ -18,6 +18,16 @@ const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
 let currentAssetRiskState = { values: {}, failures: [], errorMessage: '' };
 let currentAssetRiskRequest = 0;
+const PORTFOLIO_META_KEYS = new Set([
+    'total',
+    'prevMonthTotal',
+    'initYearNetworth',
+    'schemaCacheKey',
+    'allTimeHighTotal',
+    'allTimeHighLabel',
+    'failures',
+    'viewGroups'
+]);
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -291,6 +301,109 @@ const buildPortfolioAssetLookup = (portfolio) => {
     }
 
     return lookup;
+};
+
+/**
+ * Clone and sort one dashboard detail map by descending asset total.
+ * @param {Record<string, { total?: number, displayName?: string }>|null|undefined} details - Asset detail map.
+ * @returns {Record<string, { total?: number, displayName?: string }>}
+ */
+const clonePortfolioDetails = (details) => Object.entries(details || {})
+    .map(([assetId, detail]) => [assetId, { ...detail }])
+    .sort(([, left], [, right]) => {
+        const leftTotal = Number(left?.total);
+        const rightTotal = Number(right?.total);
+        const safeLeft = Number.isFinite(leftTotal) ? leftTotal : 0;
+        const safeRight = Number.isFinite(rightTotal) ? rightTotal : 0;
+        return safeRight - safeLeft;
+    })
+    .reduce((acc, [assetId, detail]) => {
+        acc[assetId] = detail;
+        return acc;
+    }, {});
+
+/**
+ * Preserve cached dashboard asset rows when a refreshed payload omits failed same-schema assets.
+ * @param {object|null} nextPortfolio - Fresh portfolio payload from the backend.
+ * @param {object|null} cachedPortfolio - Previously persisted browser-local portfolio.
+ * @returns {object|null}
+ */
+const preserveCachedPortfolioOnFailure = (nextPortfolio, cachedPortfolio) => {
+    if (!nextPortfolio || typeof nextPortfolio !== 'object') return nextPortfolio;
+    if (!cachedPortfolio || typeof cachedPortfolio !== 'object') return nextPortfolio;
+    if (!Array.isArray(nextPortfolio.failures) || !nextPortfolio.failures.length) return nextPortfolio;
+    if (!nextPortfolio.schemaCacheKey || nextPortfolio.schemaCacheKey !== cachedPortfolio.schemaCacheKey) return nextPortfolio;
+
+    const groupNames = [...new Set([
+        ...getPortfolioViewGroups(nextPortfolio),
+        ...getPortfolioViewGroups(cachedPortfolio)
+    ])];
+    let didRestoreCachedAssets = false;
+    let total = 0;
+    const mergedPortfolio = { ...nextPortfolio };
+
+    for (const groupName of groupNames) {
+        const nextGroup = nextPortfolio[groupName];
+        const cachedGroup = cachedPortfolio[groupName];
+        const nextDetails = nextGroup?.details && typeof nextGroup.details === 'object'
+            ? clonePortfolioDetails(nextGroup.details)
+            : {};
+        const cachedDetails = cachedGroup?.details && typeof cachedGroup.details === 'object'
+            ? cachedGroup.details
+            : null;
+
+        if (cachedDetails) {
+            for (const [assetId, detail] of Object.entries(cachedDetails)) {
+                if (Object.prototype.hasOwnProperty.call(nextDetails, assetId)) continue;
+                nextDetails[assetId] = { ...detail };
+                didRestoreCachedAssets = true;
+            }
+        }
+
+        const mergedDetails = clonePortfolioDetails(nextDetails);
+        const groupTotal = Object.values(mergedDetails).reduce((sum, detail) => {
+            const numericTotal = Number(detail?.total);
+            return sum + (Number.isFinite(numericTotal) ? numericTotal : 0);
+        }, 0);
+
+        if (nextGroup || cachedGroup || Object.keys(mergedDetails).length) {
+            mergedPortfolio[groupName] = {
+                ...(nextGroup && typeof nextGroup === 'object' ? nextGroup : {}),
+                total: groupTotal,
+                details: mergedDetails,
+            };
+            total += groupTotal;
+        }
+    }
+
+    if (!didRestoreCachedAssets) {
+        return nextPortfolio;
+    }
+
+    for (const key of Object.keys(mergedPortfolio)) {
+        if (PORTFOLIO_META_KEYS.has(key) || groupNames.includes(key)) continue;
+        delete mergedPortfolio[key];
+    }
+
+    mergedPortfolio.total = total;
+    if (!Array.isArray(mergedPortfolio.viewGroups) || !mergedPortfolio.viewGroups.length) {
+        mergedPortfolio.viewGroups = groupNames;
+    }
+
+    return mergedPortfolio;
+};
+
+/**
+ * Persist the latest dashboard portfolio after restoring cached same-schema assets for failed refreshes.
+ * @param {object|null} nextPortfolio - Fresh portfolio payload from the backend.
+ * @param {object|null} [cachedPortfolio=null] - Previously persisted browser-local portfolio.
+ * @returns {object|null}
+ */
+const persistPortfolioSnapshot = (nextPortfolio, cachedPortfolio = null) => {
+    const fallbackPortfolio = cachedPortfolio ?? JSON.parse(localStorage.getItem('portfolio') || 'null');
+    const resolvedPortfolio = preserveCachedPortfolioOnFailure(nextPortfolio, fallbackPortfolio);
+    localStorage.setItem('portfolio', JSON.stringify(resolvedPortfolio));
+    return resolvedPortfolio;
 };
 
 /**
@@ -760,12 +873,12 @@ const streamPortfolioRefresh = (options = {}) => {
             refreshButton.innerHTML = originalLabel;
 
             fetchData(refresh).then(portfolio => {
-                localStorage.setItem('portfolio', JSON.stringify(portfolio));
+                const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
                 setLastUpdateNow();
                 if (fallbackLoadingMessage) {
                     hideProgressBanner();
                 }
-                resolve(portfolio);
+                resolve(resolvedPortfolio);
             }).catch((error) => {
                 if (fallbackLoadingMessage) {
                     hideProgressBanner();
@@ -783,13 +896,13 @@ const streamPortfolioRefresh = (options = {}) => {
             const portfolio = JSON.parse(event.data);
             eventSource.close();
 
-            localStorage.setItem('portfolio', JSON.stringify(portfolio));
+            const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
             setLastUpdateNow();
             renderCompletedProgressAssets(portfolio, cachedPortfolio);
             completeProgressBanner(persistCompletedBanner);
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
-            resolve(portfolio);
+            resolve(resolvedPortfolio);
         });
 
         eventSource.addEventListener('error', (event) => {
@@ -968,7 +1081,7 @@ const getPortfolio = async (refresh) => {
             refreshButton.innerHTML = 'Refreshing...';
             try {
                 const newPortfolio = await fetchData(false);
-                localStorage.setItem('portfolio', JSON.stringify(newPortfolio));
+                persistPortfolioSnapshot(newPortfolio, portfolio);
                 setLastUpdateNow();
                 return newPortfolio;
             } finally {
@@ -993,7 +1106,7 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
             let resolvedPortfolio = portfolio;
             if (resolvedPortfolio && resolvedPortfolio.schemaCacheKey !== schema.schemaCacheKey) {
                 resolvedPortfolio = await fetchData(false);
-                localStorage.setItem('portfolio', JSON.stringify(resolvedPortfolio));
+                resolvedPortfolio = persistPortfolioSnapshot(resolvedPortfolio, portfolio);
                 setLastUpdateNow();
             }
 
