@@ -8,14 +8,15 @@ if (!requireAuth()) {
 }
 
 // Progress state
-let initialPortfolioTotal = null;
 let previousAssetValues = {}; // Map of assetId -> previous total value
-let previousCachedTotal = null; // Total from cached portfolio for delta calculation
 let runningDelta = 0; // Accumulated delta from individual asset changes
 let progressAssetItems = []; // Streamed assets shown in the progress banner
+const PORTFOLIO_CACHE_KEY = 'portfolio';
+const SUCCESSFUL_PORTFOLIO_CACHE_KEY = 'portfolioLastSuccessfulSnapshot';
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
+const PARTIAL_REFRESH_BANNER_TITLE = '⚠️ Partial Refresh Complete';
 let currentAssetRiskState = { values: {}, failures: [], errorMessage: '' };
 let currentAssetRiskRequest = 0;
 const PORTFOLIO_META_KEYS = new Set([
@@ -28,6 +29,110 @@ const PORTFOLIO_META_KEYS = new Set([
     'failures',
     'viewGroups'
 ]);
+
+/**
+ * Read a JSON value from browser storage.
+ * @param {string} key - Storage entry name.
+ * @returns {object|null}
+ */
+const readStoredJson = (key) => {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+};
+
+/**
+ * Persist a JSON value into browser storage.
+ * @param {string} key - Storage entry name.
+ * @param {object|null} value - Serializable payload.
+ * @returns {void}
+ */
+const writeStoredJson = (key, value) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        // ignore
+    }
+};
+
+/**
+ * Remove one browser-storage entry.
+ * @param {string} key - Storage entry name.
+ * @returns {void}
+ */
+const removeStoredItem = (key) => {
+    try {
+        localStorage.removeItem(key);
+    } catch (e) {
+        // ignore
+    }
+};
+
+/**
+ * Determine whether a portfolio payload still contains failed assets.
+ * @param {{ failures?: string[] }|null|undefined} portfolio - Portfolio payload.
+ * @returns {boolean}
+ */
+const hasPortfolioFailures = (portfolio) => Array.isArray(portfolio?.failures) && portfolio.failures.length > 0;
+
+/**
+ * Read one persisted dashboard portfolio snapshot from browser storage.
+ * @param {string} [key=PORTFOLIO_CACHE_KEY] - Snapshot storage key.
+ * @returns {object|null}
+ */
+const readPortfolioSnapshot = (key = PORTFOLIO_CACHE_KEY) => readStoredJson(key);
+
+/**
+ * Persist one dashboard portfolio snapshot in browser storage.
+ * @param {string} key - Snapshot storage key.
+ * @param {object|null} portfolio - Portfolio payload to persist.
+ * @returns {void}
+ */
+const writePortfolioSnapshot = (key, portfolio) => {
+    if (!portfolio || typeof portfolio !== 'object') return;
+    writeStoredJson(key, portfolio);
+};
+
+/**
+ * Resolve the diff baseline used by refresh progress across reloads.
+ * @param {object|null} cachedPortfolio - Latest visible cached portfolio.
+ * @returns {object|null}
+ */
+const getRefreshBaselinePortfolio = (cachedPortfolio) => {
+    const successfulPortfolio = readPortfolioSnapshot(SUCCESSFUL_PORTFOLIO_CACHE_KEY);
+    if (!successfulPortfolio || typeof successfulPortfolio !== 'object') {
+        if (cachedPortfolio && typeof cachedPortfolio === 'object') {
+            writePortfolioSnapshot(SUCCESSFUL_PORTFOLIO_CACHE_KEY, cachedPortfolio);
+        }
+        return cachedPortfolio;
+    }
+
+    const successfulSchemaKey = successfulPortfolio.schemaCacheKey;
+    const cachedSchemaKey = cachedPortfolio?.schemaCacheKey;
+    if (successfulSchemaKey && cachedSchemaKey && successfulSchemaKey !== cachedSchemaKey) {
+        removeStoredItem(SUCCESSFUL_PORTFOLIO_CACHE_KEY);
+        if (cachedPortfolio && typeof cachedPortfolio === 'object') {
+            writePortfolioSnapshot(SUCCESSFUL_PORTFOLIO_CACHE_KEY, cachedPortfolio);
+        }
+        return cachedPortfolio;
+    }
+
+    return successfulPortfolio;
+};
+
+/**
+ * Advance the last-successful-refresh baseline after a fully successful load.
+ * @param {object|null} portfolio - Portfolio payload to store as the new baseline.
+ * @returns {void}
+ */
+const markSuccessfulPortfolioSnapshot = (portfolio) => {
+    if (!portfolio || typeof portfolio !== 'object' || hasPortfolioFailures(portfolio)) return;
+    writePortfolioSnapshot(SUCCESSFUL_PORTFOLIO_CACHE_KEY, portfolio);
+    setLastUpdateNow();
+};
 
 /**
  * Toggle indeterminate progress-bar animation for non-streaming loads.
@@ -136,14 +241,15 @@ const formatProgressBannerTitle = () => {
 /**
  * Mark the progress banner as completed and optionally persist its visible state.
  * @param {boolean} [persistState=true] - Whether the completed banner should survive reloads.
+ * @param {string|null} [titleOverride=null] - Optional banner title override.
  * @returns {void}
  */
-const completeProgressBanner = (persistState = true) => {
+const completeProgressBanner = (persistState = true, titleOverride = null) => {
     const banner = document.getElementById('progress_banner');
     banner.classList.add('completed');
     setProgressBarIndeterminate(false);
     document.getElementById('progress_bar').style.width = '100%';
-    document.getElementById('progress_title').textContent = formatProgressBannerTitle();
+    document.getElementById('progress_title').textContent = titleOverride || formatProgressBannerTitle();
     document.getElementById('progress_close').style.display = 'block';
     
     if (persistState) {
@@ -161,6 +267,7 @@ const completeProgressBanner = (persistState = true) => {
 const saveProgressBannerState = () => {
     try {
         const state = {
+            title: document.getElementById('progress_title').textContent,
             assetsListHtml: document.getElementById('progress_assets_list').innerHTML,
             deltaHtml: document.getElementById('progress_delta').innerHTML,
             deltaClass: document.getElementById('progress_delta').className,
@@ -188,7 +295,7 @@ const restoreProgressBanner = () => {
         banner.classList.add('visible');
         banner.classList.add('completed');
         setProgressBarIndeterminate(false);
-        document.getElementById('progress_title').textContent = formatProgressBannerTitle();
+        document.getElementById('progress_title').textContent = state.title || formatProgressBannerTitle();
         document.getElementById('progress_close').style.display = 'block';
         document.getElementById('progress_bar').style.width = '100%';
         document.getElementById('progress_counter').textContent = state.counter || '';
@@ -400,9 +507,9 @@ const preserveCachedPortfolioOnFailure = (nextPortfolio, cachedPortfolio) => {
  * @returns {object|null}
  */
 const persistPortfolioSnapshot = (nextPortfolio, cachedPortfolio = null) => {
-    const fallbackPortfolio = cachedPortfolio ?? JSON.parse(localStorage.getItem('portfolio') || 'null');
+    const fallbackPortfolio = cachedPortfolio ?? readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
     const resolvedPortfolio = preserveCachedPortfolioOnFailure(nextPortfolio, fallbackPortfolio);
-    localStorage.setItem('portfolio', JSON.stringify(resolvedPortfolio));
+    writePortfolioSnapshot(PORTFOLIO_CACHE_KEY, resolvedPortfolio);
     return resolvedPortfolio;
 };
 
@@ -836,18 +943,17 @@ const streamPortfolioRefresh = (options = {}) => {
         refreshButton.innerHTML = buttonLabel;
 
         // Store initial total and build previous asset values map
-        const cachedPortfolio = JSON.parse(localStorage.getItem('portfolio') || 'null');
-        initialPortfolioTotal = cachedPortfolio?.total || null;
-        previousCachedTotal = cachedPortfolio?.total || null;
+        const cachedPortfolio = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
+        const baselinePortfolio = getRefreshBaselinePortfolio(cachedPortfolio);
         
-        // Build map of assetId -> previous total value from cached portfolio
+        // Build map of assetId -> previous total value from the last fully successful refresh.
         previousAssetValues = {};
-        if (cachedPortfolio) {
-            const viewGroups = Object.keys(cachedPortfolio).filter(k => 
-                cachedPortfolio[k] && typeof cachedPortfolio[k] === 'object' && cachedPortfolio[k].details
+        if (baselinePortfolio) {
+            const viewGroups = Object.keys(baselinePortfolio).filter(k => 
+                baselinePortfolio[k] && typeof baselinePortfolio[k] === 'object' && baselinePortfolio[k].details
             );
             for (const group of viewGroups) {
-                const details = cachedPortfolio[group].details || {};
+                const details = baselinePortfolio[group].details || {};
                 for (const [assetId, assetData] of Object.entries(details)) {
                     previousAssetValues[assetId] = assetData.total;
                 }
@@ -874,7 +980,7 @@ const streamPortfolioRefresh = (options = {}) => {
 
             fetchData(refresh).then(portfolio => {
                 const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
-                setLastUpdateNow();
+                markSuccessfulPortfolioSnapshot(resolvedPortfolio);
                 if (fallbackLoadingMessage) {
                     hideProgressBanner();
                 }
@@ -897,9 +1003,13 @@ const streamPortfolioRefresh = (options = {}) => {
             eventSource.close();
 
             const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
-            setLastUpdateNow();
-            renderCompletedProgressAssets(portfolio, cachedPortfolio);
-            completeProgressBanner(persistCompletedBanner);
+            if (hasPortfolioFailures(portfolio)) {
+                completeProgressBanner(persistCompletedBanner, PARTIAL_REFRESH_BANNER_TITLE);
+            } else {
+                markSuccessfulPortfolioSnapshot(resolvedPortfolio);
+                completeProgressBanner(persistCompletedBanner);
+            }
+            renderCompletedProgressAssets(portfolio, baselinePortfolio);
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
             resolve(resolvedPortfolio);
@@ -1054,7 +1164,7 @@ const fetchData = async (refresh) => {
  * @returns {Promise<object>}
  */
 const getPortfolio = async (refresh) => {
-    let portfolio = JSON.parse(localStorage.getItem('portfolio') || null) || null;
+    let portfolio = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
     // Force refresh if displayName is missing or viewGroups are missing (cache from old version)
     const needsRefresh = portfolio && (
         (portfolio.Equity?.details && Object.values(portfolio.Equity.details).some(d => !d.displayName)) ||
@@ -1081,9 +1191,9 @@ const getPortfolio = async (refresh) => {
             refreshButton.innerHTML = 'Refreshing...';
             try {
                 const newPortfolio = await fetchData(false);
-                persistPortfolioSnapshot(newPortfolio, portfolio);
-                setLastUpdateNow();
-                return newPortfolio;
+                const resolvedPortfolio = persistPortfolioSnapshot(newPortfolio, portfolio);
+                markSuccessfulPortfolioSnapshot(resolvedPortfolio);
+                return resolvedPortfolio;
             } finally {
                 refreshButton.disabled = false;
                 refreshButton.innerHTML = originalLabel;
@@ -1107,7 +1217,7 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
             if (resolvedPortfolio && resolvedPortfolio.schemaCacheKey !== schema.schemaCacheKey) {
                 resolvedPortfolio = await fetchData(false);
                 resolvedPortfolio = persistPortfolioSnapshot(resolvedPortfolio, portfolio);
-                setLastUpdateNow();
+                markSuccessfulPortfolioSnapshot(resolvedPortfolio);
             }
 
             /**
@@ -1161,7 +1271,7 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
 
             // Persist migration so the first render (cached) doesn't show stale keys next time.
             try {
-                localStorage.setItem('portfolio', JSON.stringify(migrated));
+                writePortfolioSnapshot(PORTFOLIO_CACHE_KEY, migrated);
             } catch (e) {
                 // ignore
             }
@@ -1181,7 +1291,7 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
  */
 const renderPortfolio = async (refresh) => {
     // Show cached data first (if available) so old values remain visible during refresh
-    let portfolio = JSON.parse(localStorage.getItem('portfolio') || null);
+    let portfolio = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
     if (portfolio) {
         renderPortfolioData(portfolio);
         hidePageLoading();
@@ -1280,7 +1390,7 @@ const setLastUpdateNow = () => {
 };
 
 window.addEventListener('absolute-visibility-change', () => {
-    const cached = JSON.parse(localStorage.getItem('portfolio') || 'null');
+    const cached = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
     if (cached) {
         renderPortfolioData(cached);
     }

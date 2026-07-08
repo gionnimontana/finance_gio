@@ -8,7 +8,7 @@ This folder contains the backend application logic for authentication, user data
 
 ## Folders
 
-- [api/index.md](./api/index.md): Per-user asset schema and historical portfolio data persistence.
+- [api/index.md](./api/index.md): Per-user asset schema and historical portfolio data persistence, including the guard that keeps current-month history pinned to the last fully successful refresh when live scrapes are partial.
 - [auth/index.md](./auth/index.md): Password generation, user-folder lifecycle, and request authentication.
 - [scrapers/index.md](./scrapers/index.md): Shared scraping runtime and vendor adapters for live market data, ordered provider fallback, TTL-based cache reuse, and deterministic scraper regression coverage.
 - [scripts/index.md](./scripts/index.md): Higher-level backend business logic plus the deploy-time frontend release builder, SSH deploy helpers for the remote host, and the local e2e browser-runtime helper used to keep Playwright and Puppeteer assets available.

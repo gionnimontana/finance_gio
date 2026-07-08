@@ -556,7 +556,7 @@ const updateInitYearNetworth = async (passwordHash) => {
 /**
  * Upsert the current month's portfolio totals into historical storage.
  * @param {string} passwordHash - The hashed password identifying the user.
- * @param {{ total: number, Liquidity?: { total: number }, Crypto?: { total: number }, Houses?: { total: number }, Equity?: { total: number }, Gold?: { total: number } }} portfolio - Aggregated portfolio totals.
+ * @param {{ total: number, Liquidity?: { total: number }, Crypto?: { total: number }, Houses?: { total: number }, Equity?: { total: number }, Gold?: { total: number }, failures?: string[] }} portfolio - Aggregated portfolio totals.
  * @returns {Promise<Array<object>>}
  */
 const updateHistoricalData = async (passwordHash, portfolio) => {
@@ -568,6 +568,12 @@ const updateHistoricalData = async (passwordHash, portfolio) => {
     
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const label = `${monthNames[now.getMonth()]} ${year}`;
+
+    // Keep the last fully successful month snapshot intact when a refresh is partial.
+    let historicalData = await getHistoricalData(passwordHash);
+    if (Array.isArray(portfolio?.failures) && portfolio.failures.length) {
+        return historicalData;
+    }
     
     // Create the new month entry from portfolio data
     const newEntry = {
@@ -580,9 +586,6 @@ const updateHistoricalData = async (passwordHash, portfolio) => {
         Equity: { total: Math.round((portfolio.Equity?.total || 0) * 100) / 100 },
         Gold: { total: Math.round((portfolio.Gold?.total || 0) * 100) / 100 },
     };
-    
-    // Get current historical data
-    let historicalData = await getHistoricalData(passwordHash);
     
     // Find if current month already exists
     const existingIndex = historicalData.findIndex(entry => entry.date === date);

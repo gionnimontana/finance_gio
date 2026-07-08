@@ -27,6 +27,8 @@ const defaultSchemaCacheKey = JSON.stringify({
   viewGroups: defaultSchema.viewGroups,
 })
 
+const toEventStreamBody = (events) => events.map(({ type, data }) => `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`).join('')
+
 test.beforeEach(async ({ page }) => {
   await mockRiskIndicators(page)
 })
@@ -289,6 +291,186 @@ test('keeps cached asset rows when a fallback refresh omits failed dynamic asset
   const storedPortfolio = await page.evaluate(() => JSON.parse(window.localStorage.getItem('portfolio') || 'null'))
   expect(storedPortfolio.total).toBe(21500)
   expect(storedPortfolio.Crypto.details.BTC.total).toBe(18000)
+})
+
+test('reuses the last full refresh baseline after a partial refresh so the next success keeps the full diff', async ({ page }) => {
+  const previousSuccessfulRefreshIso = '2026-01-02T03:04:05.000Z'
+  const cachedPortfolio = {
+    total: 21200,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    failures: [],
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 18000,
+      details: {
+        BTC: { total: 18000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Gold: {
+      total: 900,
+      details: {
+        'physical-gold': { total: 900, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 800,
+      details: {
+        IE00B4L5Y983: { total: 800, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  const partialRefreshPortfolio = {
+    total: 21500,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    failures: ['Gold Reserve', 'World ETF'],
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 20000,
+      details: {
+        BTC: { total: 20000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+  }
+
+  const successfulRefreshPortfolio = {
+    total: 23500,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    failures: [],
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 20000,
+      details: {
+        BTC: { total: 20000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Gold: {
+      total: 1000,
+      details: {
+        'physical-gold': { total: 1000, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 1000,
+      details: {
+        IE00B4L5Y983: { total: 1000, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  const buildProgressEvent = (assetName, assetId, assetTotal, failed, index) => ({
+    type: 'progress',
+    data: {
+      assetName,
+      assetId,
+      value: failed ? null : assetTotal,
+      assetTotal: failed ? null : assetTotal,
+      failed,
+      index,
+      total: 3,
+      currentPortfolioTotal: failed ? 20000 : assetTotal,
+      prevMonthTotal: 22400,
+      initYearNetworth: 18000,
+    },
+  })
+
+  const partialRefreshStream = [
+    buildProgressEvent('Bitcoin Stack', 'BTC', 20000, false, 1),
+    buildProgressEvent('Gold Reserve', 'physical-gold', null, true, 2),
+    buildProgressEvent('World ETF', 'IE00B4L5Y983', null, true, 3),
+    { type: 'complete', data: partialRefreshPortfolio },
+  ]
+
+  const successfulRefreshStream = [
+    buildProgressEvent('Bitcoin Stack', 'BTC', 20000, false, 1),
+    buildProgressEvent('Gold Reserve', 'physical-gold', 1000, false, 2),
+    buildProgressEvent('World ETF', 'IE00B4L5Y983', 1000, false, 3),
+    { type: 'complete', data: successfulRefreshPortfolio },
+  ]
+
+  await page.addInitScript(({ portfolio, previousSuccessfulRefreshIso }) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+    window.localStorage.setItem('portfolioLastSuccessfulSnapshot', JSON.stringify(portfolio))
+    window.localStorage.setItem('portfolioLastUpdate', previousSuccessfulRefreshIso)
+  }, { portfolio: cachedPortfolio, previousSuccessfulRefreshIso })
+
+  let refreshAttempt = 0
+  await page.route(/\/portfolio\/stream\?password=.*/, async route => {
+    refreshAttempt += 1
+    const events = refreshAttempt === 1 ? partialRefreshStream : successfulRefreshStream
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: toEventStreamBody(events),
+    })
+  })
+
+  await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
+
+  await expect(page.locator('#total_value')).toContainText('€21,200')
+
+  await page.locator('#refresh_button').click()
+
+  await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#progress_title')).toHaveText('⚠️ Partial Refresh Complete')
+  await expect(page.locator('#error_banner')).toHaveClass(/visible/)
+  await expect(page.locator('#total_value')).toContainText('€23,200')
+
+  const lastUpdateAfterPartial = await page.evaluate(() => window.localStorage.getItem('portfolioLastUpdate'))
+  expect(lastUpdateAfterPartial).toBe(previousSuccessfulRefreshIso)
+
+  const successfulBaselineAfterPartial = await page.evaluate(() => JSON.parse(window.localStorage.getItem('portfolioLastSuccessfulSnapshot') || 'null'))
+  expect(successfulBaselineAfterPartial.total).toBe(21200)
+
+  await page.locator('#refresh_button').click()
+
+  await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#progress_title')).toContainText('Updated:')
+  await expect(page.locator('#progress_delta .abs_value')).toContainText('+€2,300')
+  await expect(page.getByTestId('progress-group-Crypto').locator('.progress_group_diff .abs_value')).toContainText('+€2,000')
+  await expect(page.getByTestId('progress-group-Gold').locator('.progress_group_diff .abs_value')).toContainText('+€100')
+  await expect(page.getByTestId('progress-group-Equity').locator('.progress_group_diff .abs_value')).toContainText('+€200')
+  await expect(page.locator('#total_value')).toContainText('€23,500')
+
+  const lastUpdateAfterSuccess = await page.evaluate(() => window.localStorage.getItem('portfolioLastUpdate'))
+  expect(lastUpdateAfterSuccess).not.toBe(previousSuccessfulRefreshIso)
+
+  const successfulBaselineAfterSuccess = await page.evaluate(() => JSON.parse(window.localStorage.getItem('portfolioLastSuccessfulSnapshot') || 'null'))
+  expect(successfulBaselineAfterSuccess.total).toBe(23500)
 })
 
 test('refreshes stale cached dashboard data after assets change in another session', async ({ browser }) => {

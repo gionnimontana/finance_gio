@@ -171,3 +171,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-06-11] update | Preserve cached dashboard rows on failed refresh
 - Updated the data-model wiki notes so dashboard refreshes that omit same-schema dynamic assets now document the browser-side cache restoration behavior instead of looking like silent row deletions.
 - Refreshed the docs and dashboard entry points because the local `portfolio` snapshot is now part of failed-refresh recovery, not just cold-load rendering.
+
+## [2026-07-08] update | Preserve full-refresh diffs across partial failures
+- Extended the dashboard and data-model docs so partial refreshes now document the separate `portfolioLastSuccessfulSnapshot` baseline that keeps grouped diffs and the last-update marker pinned to the last fully successful refresh.
+- Updated the backend API notes because current-month history writes now skip partial refresh payloads, preventing stale scraper failures from overwriting the saved monthly snapshot.
