@@ -293,6 +293,109 @@ test('keeps cached asset rows when a fallback refresh omits failed dynamic asset
   expect(storedPortfolio.Crypto.details.BTC.total).toBe(18000)
 })
 
+test('treats silently missing same-schema assets as a partial refresh and preserves the previous baseline', async ({ page }) => {
+  const previousSuccessfulRefreshIso = '2026-01-02T03:04:05.000Z'
+  const cachedPortfolio = {
+    total: 21200,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    failures: [],
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Crypto: {
+      total: 18000,
+      details: {
+        BTC: { total: 18000, displayName: 'Bitcoin Stack' },
+      },
+    },
+    Gold: {
+      total: 900,
+      details: {
+        'physical-gold': { total: 900, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 800,
+      details: {
+        IE00B4L5Y983: { total: 800, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  const partialRefreshPortfolio = {
+    total: 3500,
+    prevMonthTotal: 22400,
+    initYearNetworth: 18000,
+    allTimeHighTotal: 22400,
+    allTimeHighLabel: previousMonthLabel(),
+    schemaCacheKey: defaultSchemaCacheKey,
+    viewGroups: defaultSchema.viewGroups,
+    failures: [],
+    Liquidity: {
+      total: 1500,
+      details: {
+        'cash-wallet': { total: 1500, displayName: 'Cash Wallet' },
+      },
+    },
+    Gold: {
+      total: 1000,
+      details: {
+        'physical-gold': { total: 1000, displayName: 'Gold Reserve' },
+      },
+    },
+    Houses: { total: 0, details: {} },
+    Equity: {
+      total: 1000,
+      details: {
+        IE00B4L5Y983: { total: 1000, displayName: 'World ETF' },
+      },
+    },
+  }
+
+  await page.addInitScript(({ portfolio, previousSuccessfulRefreshIso }) => {
+    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+    window.localStorage.setItem('portfolioLastSuccessfulSnapshot', JSON.stringify(portfolio))
+    window.localStorage.setItem('portfolioLastUpdate', previousSuccessfulRefreshIso)
+  }, { portfolio: cachedPortfolio, previousSuccessfulRefreshIso })
+
+  await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
+
+  await page.route(/\/portfolio\/stream\?password=.*/, route => route.abort('failed'))
+  await page.route(/\/portfolio\?refresh=true$/, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(partialRefreshPortfolio),
+    })
+  })
+
+  await page.locator('#refresh_button').click()
+
+  await expect(page.locator('#error_banner')).toHaveClass(/visible/)
+  await expect(page.locator('#error_list')).toContainText('Bitcoin Stack')
+  await expect(page.locator('#total_value')).toContainText('€21,500')
+  await expect(page.locator('#table_view')).toContainText('Bitcoin Stack')
+
+  const storedPortfolio = await page.evaluate(() => JSON.parse(window.localStorage.getItem('portfolio') || 'null'))
+  expect(storedPortfolio.total).toBe(21500)
+  expect(storedPortfolio.Crypto.details.BTC.total).toBe(18000)
+
+  const storedSuccessfulPortfolio = await page.evaluate(() => JSON.parse(window.localStorage.getItem('portfolioLastSuccessfulSnapshot') || 'null'))
+  expect(storedSuccessfulPortfolio.total).toBe(21200)
+
+  const lastUpdateAfterPartial = await page.evaluate(() => window.localStorage.getItem('portfolioLastUpdate'))
+  expect(lastUpdateAfterPartial).toBe(previousSuccessfulRefreshIso)
+})
+
 test('reuses the last full refresh baseline after a partial refresh so the next success keeps the full diff', async ({ page }) => {
   const previousSuccessfulRefreshIso = '2026-01-02T03:04:05.000Z'
   const cachedPortfolio = {

@@ -411,6 +411,28 @@ const buildPortfolioAssetLookup = (portfolio) => {
 };
 
 /**
+ * Resolve which cached asset ids disappeared from a same-schema portfolio payload.
+ * @param {object|null} nextPortfolio - Fresh portfolio payload.
+ * @param {object|null} cachedPortfolio - Cached portfolio snapshot used for recovery.
+ * @returns {Array<{ assetId: string, displayName: string }>}
+ */
+const getMissingCachedAssets = (nextPortfolio, cachedPortfolio) => {
+    if (!nextPortfolio || typeof nextPortfolio !== 'object') return [];
+    if (!cachedPortfolio || typeof cachedPortfolio !== 'object') return [];
+    if (!nextPortfolio.schemaCacheKey || nextPortfolio.schemaCacheKey !== cachedPortfolio.schemaCacheKey) return [];
+
+    const nextAssetLookup = buildPortfolioAssetLookup(nextPortfolio);
+    const cachedAssetLookup = buildPortfolioAssetLookup(cachedPortfolio);
+
+    return Object.entries(cachedAssetLookup)
+        .filter(([assetId]) => !Object.prototype.hasOwnProperty.call(nextAssetLookup, assetId))
+        .map(([assetId, detail]) => ({
+            assetId,
+            displayName: detail.displayName || assetId,
+        }));
+};
+
+/**
  * Clone and sort one dashboard detail map by descending asset total.
  * @param {Record<string, { total?: number, displayName?: string }>|null|undefined} details - Asset detail map.
  * @returns {Record<string, { total?: number, displayName?: string }>}
@@ -438,8 +460,10 @@ const clonePortfolioDetails = (details) => Object.entries(details || {})
 const preserveCachedPortfolioOnFailure = (nextPortfolio, cachedPortfolio) => {
     if (!nextPortfolio || typeof nextPortfolio !== 'object') return nextPortfolio;
     if (!cachedPortfolio || typeof cachedPortfolio !== 'object') return nextPortfolio;
-    if (!Array.isArray(nextPortfolio.failures) || !nextPortfolio.failures.length) return nextPortfolio;
     if (!nextPortfolio.schemaCacheKey || nextPortfolio.schemaCacheKey !== cachedPortfolio.schemaCacheKey) return nextPortfolio;
+
+    const missingCachedAssets = getMissingCachedAssets(nextPortfolio, cachedPortfolio);
+    if (!hasPortfolioFailures(nextPortfolio) && !missingCachedAssets.length) return nextPortfolio;
 
     const groupNames = [...new Set([
         ...getPortfolioViewGroups(nextPortfolio),
@@ -496,6 +520,14 @@ const preserveCachedPortfolioOnFailure = (nextPortfolio, cachedPortfolio) => {
     if (!Array.isArray(mergedPortfolio.viewGroups) || !mergedPortfolio.viewGroups.length) {
         mergedPortfolio.viewGroups = groupNames;
     }
+
+    const mergedFailureNames = new Set(
+        Array.isArray(nextPortfolio.failures)
+            ? nextPortfolio.failures.filter(value => typeof value === 'string' && value.trim())
+            : []
+    );
+    missingCachedAssets.forEach(({ displayName }) => mergedFailureNames.add(displayName));
+    mergedPortfolio.failures = [...mergedFailureNames];
 
     return mergedPortfolio;
 };
@@ -1003,13 +1035,13 @@ const streamPortfolioRefresh = (options = {}) => {
             eventSource.close();
 
             const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
-            if (hasPortfolioFailures(portfolio)) {
+            if (hasPortfolioFailures(resolvedPortfolio)) {
                 completeProgressBanner(persistCompletedBanner, PARTIAL_REFRESH_BANNER_TITLE);
             } else {
                 markSuccessfulPortfolioSnapshot(resolvedPortfolio);
                 completeProgressBanner(persistCompletedBanner);
             }
-            renderCompletedProgressAssets(portfolio, baselinePortfolio);
+            renderCompletedProgressAssets(resolvedPortfolio, baselinePortfolio);
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
             resolve(resolvedPortfolio);

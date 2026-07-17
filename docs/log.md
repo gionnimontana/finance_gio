@@ -175,3 +175,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-07-08] update | Preserve full-refresh diffs across partial failures
 - Extended the dashboard and data-model docs so partial refreshes now document the separate `portfolioLastSuccessfulSnapshot` baseline that keeps grouped diffs and the last-update marker pinned to the last fully successful refresh.
 - Updated the backend API notes because current-month history writes now skip partial refresh payloads, preventing stale scraper failures from overwriting the saved monthly snapshot.
+
+## [2026-07-17] update | Harden silent partial refresh recovery
+- Extended the dashboard and data-model docs so same-schema asset rows that disappear from a refresh payload are now treated as an implicit partial failure, preventing silent liquidity-only payloads from overwriting the visible cache or the last-successful diff baseline.
+- Updated the scraper runtime notes because unexpected top-level scraper aborts now propagate every still-unresolved asset into the portfolio `failures` list, which keeps the frontend recovery path active even when the refresh dies before explicit per-asset failures are emitted.

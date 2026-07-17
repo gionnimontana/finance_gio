@@ -927,6 +927,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
         const totalAssets = normalizedOptions.length
         const failures = new Set()
         const pendingOptions = []
+        const unresolvedOptionNames = new Set()
         let completedCount = 0
         let browser = null
 
@@ -948,6 +949,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                 }
 
                 pendingOptions.push(entry)
+                unresolvedOptionNames.add(entry.name)
             }
 
             browser = pendingOptions.some((entry) => optionConfigNeedsBrowser(entry.optionConfig))
@@ -959,6 +961,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                 DEFAULT_CONCURRENCY,
                 async (entry, pageResource) => {
                     const result = await scrapeOptionWithFallback(pageResource, entry.name, entry.optionConfig, maxRetries, refresh)
+                    unresolvedOptionNames.delete(entry.name)
                     if (result.failed) {
                         failures.add(entry.name)
                         console.warn(`Scraper failed for ${entry.name}`)
@@ -979,6 +982,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
                 failures: [...failures],
             }
         } catch (error) {
+            unresolvedOptionNames.forEach((name) => failures.add(name))
             console.error('multipleUrlSelectorScraper - unexpected error:', error.message)
             return {
                 values: getCachedValuesSnapshot(normalizedOptions.map(entry => entry.name)),

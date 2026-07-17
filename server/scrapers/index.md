@@ -4,7 +4,7 @@ This folder groups the shared scraping runtime and the vendor adapters used to f
 
 ## Files
 
-- [index.js](./index.js): Re-exports the supported scraper adapters and the shared multi-scraper entry point used by both live and test-mode portfolio refreshes plus ISIN, crypto, and gold risk lookups, including provider fallback, worker-local page reuse, fetch-only API scrapers, browser-profile hardening for headless scrapes, cache-aware runtime behavior, and startup hydration of the shared on-disk indicator caches through the core runtime.
+- [index.js](./index.js): Re-exports the supported scraper adapters and the shared multi-scraper entry point used by both live and test-mode portfolio refreshes plus ISIN, crypto, and gold risk lookups, including provider fallback, worker-local page reuse, fetch-only API scrapers, browser-profile hardening for headless scrapes, cache-aware runtime behavior, startup hydration of the shared on-disk indicator caches through the core runtime, and unresolved-asset failure reporting when an unexpected runtime abort interrupts a refresh pass.
 
 ## Subfolders
 
