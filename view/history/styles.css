@@ -54,69 +54,17 @@
     box-shadow: inset 0 -1px 0 #e0e0e0;
 }
 
-/* ViewGroup column colors - lighter versions of chart colors */
-.history_table thead th.col-equity {
-    background-color: rgb(228, 243, 229);
+/* View-group columns derive their tints from the Settings color map. */
+.history_table thead th.view_group_column {
+    background-color: color-mix(in srgb, var(--view-group-color) 15%, white);
 }
 
-.history_table td.col-equity {
-    background-color: rgba(76, 175, 80, 0.15);
+.history_table td.view_group_column {
+    background-color: color-mix(in srgb, var(--view-group-color) 15%, transparent);
 }
 
-.history_table thead th.col-crypto {
-    background-color: rgb(255, 240, 217);
-}
-
-.history_table td.col-crypto {
-    background-color: rgba(255, 152, 0, 0.15);
-}
-
-.history_table thead th.col-liquidity {
-    background-color: rgb(222, 239, 253);
-}
-
-.history_table td.col-liquidity {
-    background-color: rgba(33, 150, 243, 0.15);
-}
-
-.history_table thead th.col-gold {
-    background-color: rgb(255, 249, 217);
-}
-
-.history_table td.col-gold {
-    background-color: rgba(255, 215, 0, 0.15);
-}
-
-.history_table thead th.col-houses {
-    background-color: rgb(240, 223, 243);
-}
-
-.history_table td.col-houses {
-    background-color: rgba(156, 39, 176, 0.15);
-}
-
-.history_table tbody tr:hover td.col-equity {
-    background-color: rgba(76, 175, 80, 0.25);
-}
-
-.history_table tbody tr:hover td.col-crypto {
-    background-color: rgba(255, 152, 0, 0.25);
-}
-
-.history_table tbody tr:hover td.col-liquidity {
-    background-color: rgba(33, 150, 243, 0.25);
-}
-
-.history_table tbody tr:hover td.col-gold {
-    background-color: rgba(255, 215, 0, 0.25);
-}
-
-.history_table tbody tr:hover td.col-houses {
-    background-color: rgba(156, 39, 176, 0.25);
-}
-
-.history_table th:first-child,
-.history_table td:first-child {
+.history_table tbody tr:hover td.view_group_column {
+    background-color: color-mix(in srgb, var(--view-group-color) 25%, transparent);
     text-align: left;
 }
 

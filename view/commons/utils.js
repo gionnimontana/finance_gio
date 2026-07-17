@@ -34,6 +34,61 @@ const COMPACT_VALUES_KEY = 'useCompactAbsoluteValues';
 // Only EUR is supported today, so shared formatters default to this symbol.
 const CURRENCY_SYMBOL = '€';
 
+const DEFAULT_VIEW_GROUP_COLORS = Object.freeze({
+    Equity: '#4CAF50',
+    Crypto: '#FF9800',
+    Liquidity: '#2196F3',
+    Gold: '#FFD700',
+    Houses: '#9C27B0'
+});
+
+const FALLBACK_VIEW_GROUP_COLORS = Object.freeze([
+    '#00897B',
+    '#5E35B1',
+    '#E53935',
+    '#6D4C41',
+    '#546E7A',
+    '#C2185B'
+]);
+
+/**
+ * Resolve a deterministic default hex color for a view-group label.
+ * @param {string} label - View-group label.
+ * @returns {string}
+ */
+const getDefaultViewGroupColor = (label) => {
+    const groupName = String(label || '');
+    if (DEFAULT_VIEW_GROUP_COLORS[groupName]) {
+        return DEFAULT_VIEW_GROUP_COLORS[groupName];
+    }
+
+    let hash = 0;
+    for (let index = 0; index < groupName.length; index++) {
+        hash = ((hash << 5) - hash) + groupName.charCodeAt(index);
+        hash |= 0;
+    }
+    return FALLBACK_VIEW_GROUP_COLORS[Math.abs(hash) % FALLBACK_VIEW_GROUP_COLORS.length];
+};
+
+/**
+ * Resolve a saved color when valid, otherwise use the stable default for its view group.
+ * @param {string} label - View-group label.
+ * @param {Record<string, string>|null|undefined} viewGroupColors - Saved group-color map.
+ * @returns {string}
+ */
+const resolveViewGroupColor = (label, viewGroupColors) => {
+    const groupName = String(label || '');
+    const savedColor = viewGroupColors && typeof viewGroupColors === 'object' && !Array.isArray(viewGroupColors)
+        ? viewGroupColors[groupName]
+        : null;
+
+    if (typeof savedColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(savedColor)) {
+        return savedColor.toUpperCase();
+    }
+
+    return getDefaultViewGroupColor(groupName);
+};
+
 /**
  * Read the stored user password from localStorage.
  * @returns {string|null}

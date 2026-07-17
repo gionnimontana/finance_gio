@@ -4,7 +4,7 @@ This folder contains the backend application logic for authentication, user data
 
 ## Direct Files
 
-- [index.js](./index.js): Express bootstrap that loads environment variables, hydrates the shared `data/isinRiskCache.json`, `data/cryptoRiskCache.json`, and `data/goldRiskCache.json` indicator caches into the scraper runtime on startup, serves the frontend, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, assets-schema, view-group updates, per-user Other-asset risk-overrides, generic asset-risk-indicator plus legacy ISIN-risk APIs, and provides the health endpoint used by local automation.
+- [index.js](./index.js): Express bootstrap that loads environment variables, hydrates the shared `data/isinRiskCache.json`, `data/cryptoRiskCache.json`, and `data/goldRiskCache.json` indicator caches into the scraper runtime on startup, serves the frontend, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, assets-schema, view-group and color updates, per-user Other-asset risk-overrides, generic asset-risk-indicator plus legacy ISIN-risk APIs, and provides the health endpoint used by local automation.
 
 ## Folders
 

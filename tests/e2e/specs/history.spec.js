@@ -36,7 +36,7 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
   expect(historyTableScrollState.scrollTop).toBe(historyTableScrollState.maxScrollTop)
   await expect(page.locator('#history_table thead th').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#history_table thead th').first()).toHaveCSS('top', '0px')
-  await expect(page.locator('#history_table thead th.col-equity')).toHaveCSS('background-color', 'rgb(228, 243, 229)')
+  await expect(page.locator('#history_table thead th.col-equity')).toHaveAttribute('style', /--view-group-color:\s*#4CAF50/i)
   expect(await canvasHasPaint(page, '#history_chart')).toBeTruthy()
 
   await page.goto('/assets/')

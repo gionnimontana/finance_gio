@@ -2,15 +2,17 @@
  * Render the dashboard pie chart that visualizes portfolio totals by view group.
  */
 const ChartModule = (() => {
-    // Colors for each viewGroup
-    const viewGroupColors = {
-        Equity: '#4CAF50',    // Green
-        Crypto: '#FF9800',    // Orange
-        Liquidity: '#2196F3', // Blue
-        Gold: '#FFD700'       // Gold
-    };
-
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
+    let viewGroupColors = {};
+
+    /**
+     * Set the saved color map used by pie slices, legends, and dashboard group cards.
+     * @param {Record<string, string>|null|undefined} colors - Saved group-color map.
+     * @returns {void}
+     */
+    const setViewGroupColors = (colors) => {
+        viewGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? { ...colors } : {};
+    };
 
     /**
      * Resolve the display color for a view-group label.
@@ -18,7 +20,9 @@ const ChartModule = (() => {
      * @returns {string}
      */
     function getViewGroupColor(label) {
-        return viewGroupColors[label] || hashToColor(label) || defaultColor;
+        return typeof resolveViewGroupColor === 'function'
+            ? resolveViewGroupColor(label, viewGroupColors)
+            : viewGroupColors[label] || defaultColor;
     }
 
     /**
@@ -69,23 +73,6 @@ const ChartModule = (() => {
 
         legendContainer.replaceChildren(...legendItems);
     }
-
-    /**
-     * Generate a deterministic fallback color for dynamic or unknown view-group labels.
-     * @param {string} label - View-group label.
-     * @returns {string}
-     */
-    const hashToColor = (label) => {
-        // Deterministic, pleasant-ish HSL color from a string label
-        const str = String(label || '');
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-        }
-        const hue = Math.abs(hash) % 360;
-        return `hsl(${hue}, 65%, 55%)`;
-    };
 
     /**
      * Render a pie chart showing viewGroup distribution
@@ -151,6 +138,9 @@ const ChartModule = (() => {
     return {
         renderPieChart,
         getViewGroupColor,
-        viewGroupColors
+        setViewGroupColors,
+        get viewGroupColors() {
+            return { ...viewGroupColors };
+        }
     };
 })();

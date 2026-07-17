@@ -2,32 +2,26 @@
  * Render history charts and tables for monthly portfolio data grouped by view group.
  */
 const HistoryChartModule = (() => {
-    // Colors for each viewGroup (matching pie chart)
-    const viewGroupColors = {
-        Equity: '#4CAF50',    // Green
-        Crypto: '#FF9800',    // Orange
-        Liquidity: '#2196F3', // Blue
-        Gold: '#FFD700',      // Gold
-        Houses: '#9C27B0'     // Purple
-    };
-
     const defaultColor = '#9E9E9E'; // Grey for unknown groups
+    let viewGroupColors = {};
 
     /**
-     * Generate a deterministic fallback color for dynamic or unknown view-group labels.
+     * Set the saved color map used by the history chart and monthly table.
+     * @param {Record<string, string>|null|undefined} colors - Saved group-color map.
+     * @returns {void}
+     */
+    const setViewGroupColors = (colors) => {
+        viewGroupColors = colors && typeof colors === 'object' && !Array.isArray(colors) ? { ...colors } : {};
+    };
+
+    /**
+     * Resolve the configured display color for one view group.
      * @param {string} label - View-group label.
      * @returns {string}
      */
-    const hashToColor = (label) => {
-        const str = String(label || '');
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-        }
-        const hue = Math.abs(hash) % 360;
-        return `hsl(${hue}, 65%, 55%)`;
-    };
+    const getViewGroupColor = (label) => (typeof resolveViewGroupColor === 'function'
+        ? resolveViewGroupColor(label, viewGroupColors)
+        : viewGroupColors[label] || defaultColor);
 
     /**
      * Infer view-group keys from the historical dataset when schema data is unavailable.
@@ -130,7 +124,7 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 if (month[group] && month[group].total > 0) {
                     const segmentHeight = month[group].total * scale;
-                    const color = viewGroupColors[group] || hashToColor(group) || defaultColor;
+                    const color = getViewGroupColor(group);
 
                     ctx.fillStyle = color;
                     ctx.fillRect(x, currentY - segmentHeight, columnWidth, segmentHeight);
@@ -175,7 +169,7 @@ const HistoryChartModule = (() => {
         let legendX = legendStartX;
 
         viewGroups.forEach(group => {
-            const color = viewGroupColors[group] || hashToColor(group) || defaultColor;
+            const color = getViewGroupColor(group);
 
             // Color box
             ctx.fillStyle = color;
@@ -252,7 +246,7 @@ const HistoryChartModule = (() => {
         viewGroups.forEach(group => {
             // Keep class friendly even with spaces
             const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-            html += `<th class="col-${cls}">${group}</th>`;
+            html += `<th class="view_group_column col-${cls}" style="--view-group-color: ${getViewGroupColor(group)};">${group}</th>`;
         });
         html += '<th class="total_column">Total</th><th>Change</th></tr></thead>';
 
@@ -272,7 +266,7 @@ const HistoryChartModule = (() => {
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
                 const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
-                html += `<td class="col-${cls}"><span class="abs_value">${formatCompactValue(value, 1, { includeCurrency: false })}</span>${pctSpan(value, month.total)}</td>`;
+                html += `<td class="view_group_column col-${cls}" style="--view-group-color: ${getViewGroupColor(group)};"><span class="abs_value">${formatCompactValue(value, 1, { includeCurrency: false })}</span>${pctSpan(value, month.total)}</td>`;
             });
 
             html += `<td class="total_cell total_column"><span class="abs_value">${formatCompactValue(month.total)}</span>${pctSpan(month.total, month.total)}</td>
@@ -287,6 +281,10 @@ const HistoryChartModule = (() => {
     return {
         renderColumnChart,
         renderHistoryTable,
-        viewGroupColors
+        getViewGroupColor,
+        setViewGroupColors,
+        get viewGroupColors() {
+            return { ...viewGroupColors };
+        }
     };
 })();

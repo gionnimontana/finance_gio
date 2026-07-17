@@ -178,4 +178,8 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
 ## [2026-07-17] update | Harden silent partial refresh recovery
 - Extended the dashboard and data-model docs so same-schema asset rows that disappear from a refresh payload are now treated as an implicit partial failure, preventing silent liquidity-only payloads from overwriting the visible cache or the last-successful diff baseline.
+
+## [2026-07-17] update | Persist configurable view-group colors
+- Added per-user `assetsSchema.viewGroupColors` values managed from Settings and preserved through simple view-group renames.
+- Documented the shared Dashboard and History rendering contract for group cards, charts, and History table tints.
 - Updated the scraper runtime notes because unexpected top-level scraper aborts now propagate every still-unresolved asset into the portfolio `failures` list, which keeps the frontend recovery path active even when the refresh dies before explicit per-asset failures are emitted.

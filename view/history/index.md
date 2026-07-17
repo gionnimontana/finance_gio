@@ -4,10 +4,10 @@ This folder contains the authenticated historical portfolio page and its chart/t
 
 ## Files
 
-- [chart.js](./chart.js): Canvas-based stacked history chart and monthly breakdown table rendering, with always-compact bare canvas labels, currency-prefixed total cells, and bare non-total table values.
+- [chart.js](./chart.js): Canvas-based stacked history chart and monthly breakdown table rendering, with saved Settings colors applied to chart segments and table-column tints, always-compact bare canvas labels, currency-prefixed total cells, and bare non-total table values.
 - [index.html](./index.html): History page markup for summary cards, chart output, detailed monthly data, the runtime-updated page title, and the shared loading overlay that masks cold page loads, with display preferences now managed from Settings.
-- [script.js](./script.js): History data loading, title mood updates based on the latest historical ATH, summary-card updates, visibility-change re-rendering, auto-scrolling the monthly table to the newest month after each render, and dismissal of the shared loading overlay only after the first history render completes.
-- [styles.css](./styles.css): Page-specific styling for the history chart area and the scrollable breakdown table with a sticky, readable header row.
+- [script.js](./script.js): History data loading, title mood updates based on the latest historical ATH, summary-card updates, schema-backed color setup, visibility-change re-rendering, auto-scrolling the monthly table to the newest month after each render, and dismissal of the shared loading overlay only after the first history render completes.
+- [styles.css](./styles.css): Page-specific styling for the history chart area and the scrollable breakdown table with a sticky, readable header row and Settings-driven group tints.
 
 ## Related Docs
 

@@ -7,7 +7,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - Each user folder stores two JSON files: `assetsSchema.json` for editable assets and view groups, and `historicalData.json` for monthly portfolio snapshots grouped by view group.
 - The backend data root also stores shared `isinRiskCache.json`, `cryptoRiskCache.json`, and `goldRiskCache.json` files outside `users/`, so KID-derived ISIN risk values plus computed crypto and gold risk scores are reused across all accounts on the same server.
 - The settings page can delete the current user by removing that hashed user folder entirely, so account removal wipes both persisted JSON files in one server-side operation.
-- `assetsSchema.json` currently persists `assets`, `viewGroups`, `riskOverrides`, `prevMonthTotal`, and `initYearNetworth`, so asset definitions, display grouping, `Other`-asset manual risk overrides, and summary baselines live together.
+- `assetsSchema.json` currently persists `assets`, `viewGroups`, `viewGroupColors`, `riskOverrides`, `prevMonthTotal`, and `initYearNetworth`, so asset definitions, display grouping, per-group display colors, `Other`-asset manual risk overrides, and summary baselines live together.
 - `viewGroups` is the canonical ordering shared by Settings, Dashboard, and History when those pages render group rows, cards, charts, and tables.
 - `historicalData.json` stores monthly entries with `date`, `label`, `total`, and one total bucket per view group.
 - The settings page always reads the latest schema from `/assets/schema`, writes asset updates back through `/assets/schema`, and writes explicit group-order changes through `/assets/view-groups`.
@@ -16,6 +16,7 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 ## Notes
 - Saving assets keeps the existing `viewGroups` list but automatically appends any newly referenced group so ad-hoc regrouping stays valid.
 - Saving `viewGroups` can treat one removed group plus one added group as a rename. In that case the backend migrates both asset rows and historical monthly group buckets to the new label before persisting the schema.
+- `viewGroupColors` is a per-user `#RRGGBB` map keyed by canonical view-group names. Settings saves the current colors with the group list, carries a selected color through a local rename, and Dashboard and History use the same map for group cards, charts, and History table tints. Schemas without this map retain the built-in deterministic defaults.
 - The dashboard cache key is derived from the persisted asset rows plus the explicit view-group ordering. Changes such as adding, removing, renaming, regrouping, or resizing assets invalidate an older dashboard snapshot on the next load.
 - The dashboard also merges the latest schema view-group order into cached portfolio data before rendering, while the history page fetches the schema for the same stable ordering and falls back to inferred group keys only when schema loading fails.
 - When a live dashboard refresh returns failures and omits same-schema dynamic asset rows, the frontend preserves the last cached rows for those missing assets before it overwrites the visible `portfolio` snapshot, so the dashboard stays readable while still surfacing the refresh error banner.

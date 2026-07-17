@@ -139,6 +139,10 @@ const renderHistory = async () => {
         const schema = await fetchAssetsSchema().catch(() => null);
         const viewGroups = Array.isArray(schema?.viewGroups) ? schema.viewGroups : null;
 
+        if (typeof HistoryChartModule === 'object' && typeof HistoryChartModule.setViewGroupColors === 'function') {
+            HistoryChartModule.setViewGroupColors(schema?.viewGroupColors);
+        }
+
         cachedHistoryData = historyData;
         cachedHistoryViewGroups = viewGroups;
 

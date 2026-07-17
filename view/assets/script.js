@@ -109,6 +109,16 @@ const getViewGroups = () => {
 };
 
 /**
+ * Resolve the saved color map from a schema object.
+ * @param {{ viewGroupColors?: Record<string, string> }|null|undefined} schema - Schema state.
+ * @returns {Record<string, string>}
+ */
+const getViewGroupColors = (schema = assetsSchema) => {
+    const colors = schema?.viewGroupColors;
+    return colors && typeof colors === 'object' && !Array.isArray(colors) ? colors : {};
+};
+
+/**
  * Deduplicate string values while preserving their first occurrence order.
  * @param {unknown[]} arr - Values to normalize and deduplicate.
  * @returns {string[]}
@@ -283,6 +293,16 @@ const renderGroupsTable = () => {
         const tdName = document.createElement('td');
         tdName.innerHTML = `<input value="${escapeHtml(groupName)}" onchange="onGroupNameChange(${idx}, this.value)" />`;
 
+        const tdColor = document.createElement('td');
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.className = 'view_group_color_input';
+        colorInput.value = resolveViewGroupColor(groupName, getViewGroupColors());
+        colorInput.setAttribute('aria-label', `Color for ${groupName}`);
+        colorInput.setAttribute('data-testid', `view-group-color-${String(groupName).replaceAll(/[^a-zA-Z0-9_-]+/g, '-')}`);
+        colorInput.addEventListener('change', () => window.onGroupColorChange(idx, colorInput.value));
+        tdColor.appendChild(colorInput);
+
         const tdCount = document.createElement('td');
         tdCount.textContent = String(usage[groupName] || 0);
 
@@ -296,6 +316,7 @@ const renderGroupsTable = () => {
         `;
 
         tr.appendChild(tdName);
+    tr.appendChild(tdColor);
         tr.appendChild(tdCount);
         tr.appendChild(tdActions);
         tbody.appendChild(tr);
@@ -505,7 +526,7 @@ const putSchema = async (payload) => {
 
 /**
  * Persist the view-group list to the backend.
- * @param {{ viewGroups: string[] }} payload - View groups to save.
+ * @param {{ viewGroups: string[], viewGroupColors: Record<string, string> }} payload - View groups and their display colors to save.
  * @returns {Promise<object>}
  */
 const putViewGroups = async (payload) => {
@@ -990,11 +1011,40 @@ window.onGroupNameChange = (groupIndex, value) => {
 
     const next = JSON.parse(JSON.stringify(assetsSchema));
     next.viewGroups = Array.isArray(next.viewGroups) ? next.viewGroups : DEFAULT_VIEW_GROUPS.slice();
+    const previousName = String(next.viewGroups[groupIndex] ?? '').trim();
     next.viewGroups[groupIndex] = name;
+    if (previousName && previousName !== name && Object.prototype.hasOwnProperty.call(getViewGroupColors(next), previousName)) {
+        next.viewGroupColors = { ...getViewGroupColors(next), [name]: getViewGroupColors(next)[previousName] };
+        delete next.viewGroupColors[previousName];
+    }
     // Keep ordering stable; only trim and drop empties here.
     next.viewGroups = next.viewGroups.map(g => String(g).trim()).filter(Boolean);
     assetsSchema = next;
     renderTable();
+    renderGroupsTable();
+};
+
+/**
+ * Update a view group's display color in the local editable schema.
+ * @param {number} groupIndex - View-group index.
+ * @param {string} color - Selected hex color.
+ * @returns {void}
+ */
+window.onGroupColorChange = (groupIndex, color) => {
+    clearError();
+    clearSuccess();
+    if (!assetsSchema) return;
+
+    const groupName = String(getViewGroups()[groupIndex] ?? '').trim();
+    const normalizedColor = String(color ?? '').trim();
+    if (!groupName || !/^#[0-9a-fA-F]{6}$/.test(normalizedColor)) {
+        showError('View-group color must use the #RRGGBB format');
+        return;
+    }
+
+    const next = JSON.parse(JSON.stringify(assetsSchema));
+    next.viewGroupColors = { ...getViewGroupColors(next), [groupName]: normalizedColor.toUpperCase() };
+    assetsSchema = next;
     renderGroupsTable();
 };
 
@@ -1017,6 +1067,7 @@ window.addGroup = () => {
     }
     groups.push(candidate);
     next.viewGroups = groups;
+    next.viewGroupColors = { ...getViewGroupColors(next), [candidate]: resolveViewGroupColor(candidate, getViewGroupColors(next)) };
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -1043,6 +1094,8 @@ window.deleteGroup = (groupIndex) => {
     const next = JSON.parse(JSON.stringify(assetsSchema));
     next.viewGroups = groups.slice();
     next.viewGroups.splice(groupIndex, 1);
+    next.viewGroupColors = { ...getViewGroupColors(next) };
+    delete next.viewGroupColors[groupName];
     assetsSchema = next;
     renderTable();
     renderGroupsTable();
@@ -1077,7 +1130,11 @@ window.saveGroups = async () => {
 
     setButtonsDisabled(true);
     try {
-        const result = await putViewGroups({ viewGroups: groups });
+        const viewGroupColors = groups.reduce((colors, groupName) => {
+            colors[groupName] = resolveViewGroupColor(groupName, getViewGroupColors());
+            return colors;
+        }, {});
+        const result = await putViewGroups({ viewGroups: groups, viewGroupColors });
         assetsSchema = result.assetsSchema;
         renderTable();
         renderGroupsTable();

@@ -1244,6 +1244,9 @@ const mergeViewGroupsIntoPortfolio = async (portfolio) => {
     // Keep older cached portfolio working, but ensure we always render with the latest group labels/order.
     try {
         const schema = await fetchAssetsSchema();
+        if (schema && typeof ChartModule === 'object' && typeof ChartModule.setViewGroupColors === 'function') {
+            ChartModule.setViewGroupColors(schema.viewGroupColors);
+        }
         if (schema && Array.isArray(schema.viewGroups)) {
             let resolvedPortfolio = portfolio;
             if (resolvedPortfolio && resolvedPortfolio.schemaCacheKey !== schema.schemaCacheKey) {

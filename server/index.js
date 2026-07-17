@@ -205,7 +205,7 @@ app.put('/assets/schema', authMiddleware, async (req, res) => {
   res.send({ ok: true, assetsSchema: result.assetsSchema })
 })
 
-// View groups management
+// View groups and their display colors
 app.put('/assets/view-groups', authMiddleware, async (req, res) => {
   const passwordHash = req.userPasswordHash
   const result = await updateViewGroups(passwordHash, req.body || {})

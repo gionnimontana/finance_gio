@@ -43,6 +43,16 @@ td.actions {
     text-align: right;
 }
 
+.view_group_color_input {
+    width: 42px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+}
+
 .footer_actions {
     display: flex;
     gap: 12px;

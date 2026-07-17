@@ -59,7 +59,7 @@ test('manages assets, view groups, password export, delete modal export, and log
   await expect(page.getByTestId('asset-row-bonus-fund')).toBeVisible()
   await expect(page.getByTestId('asset-row-physical-gold')).toHaveCount(0)
 
-  const cryptoGroupInput = page.getByTestId('view-group-row-Crypto').locator('input')
+  const cryptoGroupInput = page.getByTestId('view-group-row-Crypto').locator('td').first().locator('input')
   await cryptoGroupInput.fill('Digital Assets')
   await cryptoGroupInput.press('Tab')
   await page.locator('#groups_save_btn').click()
@@ -151,6 +151,43 @@ test('enables hidden absolute values from settings', async ({ page }) => {
 
   await page.goto('/assets/')
   await expect(page.locator('#hide_absolute_toggle')).toBeChecked()
+})
+
+test('persists view-group colors across dashboard cards, charts, and history tables', async ({ page }) => {
+  const expectedColor = '#123456'
+  const expectedRgb = [18, 52, 86]
+  const canvasHasExpectedColor = (selector) => page.locator(selector).evaluate((canvas, rgb) => {
+    const context = canvas.getContext('2d')
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height)
+    for (let index = 0; index < data.length; index += 4) {
+      if (data[index] === rgb[0] && data[index + 1] === rgb[1] && data[index + 2] === rgb[2]) {
+        return true
+      }
+    }
+    return false
+  }, expectedRgb)
+
+  await openAuthenticatedPage(page, '/assets/', DASHBOARD_USER_PASSWORD)
+
+  await page.getByTestId('view-group-color-Crypto').evaluate((input, color) => {
+    input.value = color
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  }, expectedColor)
+  await page.locator('#groups_save_btn').click()
+  await expect(page.locator('#success_banner')).toContainText('Groups saved')
+
+  await page.reload()
+  await expect(page.getByTestId('view-group-color-Crypto')).toHaveValue(expectedColor)
+
+  await page.goto('/dashboard/')
+  const cryptoCard = page.locator('#table_view .group_row').filter({ hasText: 'Crypto:' })
+  await expect(cryptoCard).toHaveAttribute('style', /--group-accent:\s*#123456/i)
+  await expect.poll(() => canvasHasExpectedColor('#portfolio_chart')).toBe(true)
+
+  await page.goto('/history/')
+  await expect(page.locator('th.col-crypto')).toHaveAttribute('style', /--view-group-color:\s*#123456/i)
+  await expect(page.locator('td.col-crypto').first()).toHaveAttribute('style', /--view-group-color:\s*#123456/i)
+  await expect.poll(() => canvasHasExpectedColor('#history_chart')).toBe(true)
 })
 
 test('saves and reloads Other asset risk overrides from settings', async ({ page }) => {

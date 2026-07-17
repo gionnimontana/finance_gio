@@ -9,6 +9,7 @@ const { getUserDataDir } = require('../auth');
 const DEFAULT_ASSETS_SCHEMA = {
     assets: [],
     viewGroups: ['Liquidity', 'Crypto', 'Gold', 'Equity'],
+    viewGroupColors: {},
     riskOverrides: {},
     prevMonthTotal: null,
     initYearNetworth: null
@@ -94,6 +95,7 @@ const writeHistoricalData = async (passwordHash, historicalData) => {
 const ALLOWED_ASSET_CLASSES = ['Isin', 'Gold', 'Crypto', 'Other'];
 
 const DEFAULT_VIEW_GROUPS = ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'];
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
  
 /**
  * Normalize a candidate view-group name into a trimmed string.
@@ -121,6 +123,36 @@ const uniqStrings = (arr) => {
         }
     }
     return out;
+}
+
+/**
+ * Normalize a hex color received from a view-group color control.
+ * @param {unknown} color - Raw color value.
+ * @returns {string|null}
+ */
+const normalizeViewGroupColor = (color) => {
+    const normalized = String(color ?? '').trim();
+    return HEX_COLOR_PATTERN.test(normalized) ? normalized.toUpperCase() : null;
+}
+
+/**
+ * Keep only valid color values that belong to current view groups.
+ * @param {unknown} viewGroupColors - Candidate color map.
+ * @param {unknown[]} viewGroups - Canonical view-group labels.
+ * @returns {Record<string, string>}
+ */
+const sanitizeViewGroupColors = (viewGroupColors, viewGroups) => {
+    if (!viewGroupColors || typeof viewGroupColors !== 'object' || Array.isArray(viewGroupColors)) {
+        return {};
+    }
+
+    const allowedGroups = new Set((Array.isArray(viewGroups) ? viewGroups : []).map((group) => String(group)));
+    return Object.entries(viewGroupColors).reduce((colors, [groupName, color]) => {
+        const normalizedColor = normalizeViewGroupColor(color);
+        if (!allowedGroups.has(groupName) || !normalizedColor) return colors;
+        colors[groupName] = normalizedColor;
+        return colors;
+    }, {});
 }
 
 /**
@@ -225,12 +257,13 @@ const isValidAssetRow = (asset) => {
 /**
  * Fill missing schema fields with defaults while preserving stored values when valid.
  * @param {unknown} schema - Raw schema object read from disk.
- * @returns {{ assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null }}
+ * @returns {{ assets: unknown[], viewGroups: string[], viewGroupColors: Record<string, string>, prevMonthTotal: number|null, initYearNetworth: number|null }}
  */
 const normalizeAssetsSchema = (schema) => {
     const base = {
         assets: [],
         viewGroups: DEFAULT_VIEW_GROUPS,
+        viewGroupColors: {},
         riskOverrides: {},
         prevMonthTotal: null,
         initYearNetworth: null
@@ -240,6 +273,10 @@ const normalizeAssetsSchema = (schema) => {
     return {
         assets: Array.isArray(schema.assets) ? schema.assets : [],
         viewGroups: Array.isArray(schema.viewGroups) ? schema.viewGroups : DEFAULT_VIEW_GROUPS,
+        viewGroupColors: sanitizeViewGroupColors(
+            schema.viewGroupColors,
+            Array.isArray(schema.viewGroups) ? schema.viewGroups : DEFAULT_VIEW_GROUPS
+        ),
         riskOverrides: sanitizeRiskOverrides(schema.riskOverrides, Array.isArray(schema.assets) ? schema.assets : []),
         prevMonthTotal: schema.prevMonthTotal ?? null,
         initYearNetworth: schema.initYearNetworth ?? null,
@@ -288,6 +325,34 @@ const validateViewGroupsPayload = (viewGroups) => {
     const invalid = unique.find(g => g.length > 40);
     if (invalid) return { ok: false, error: `Invalid viewGroup '${invalid}': too long (max 40 chars)` };
     return { ok: true, viewGroups: unique };
+}
+
+/**
+ * Validate a color map submitted with the current view-group list.
+ * @param {unknown} viewGroupColors - Candidate color map.
+ * @param {string[]} viewGroups - Validated view-group labels.
+ * @returns {{ ok: boolean, error?: string, viewGroupColors?: Record<string, string> }}
+ */
+const validateViewGroupColorsPayload = (viewGroupColors, viewGroups) => {
+    if (!viewGroupColors || typeof viewGroupColors !== 'object' || Array.isArray(viewGroupColors)) {
+        return { ok: false, error: 'Invalid payload: viewGroupColors must be an object map' };
+    }
+
+    const allowedGroups = new Set(viewGroups);
+    const normalized = {};
+    for (const [groupName, color] of Object.entries(viewGroupColors)) {
+        if (!allowedGroups.has(groupName)) {
+            return { ok: false, error: `Invalid view-group color '${groupName}': group does not exist` };
+        }
+
+        const normalizedColor = normalizeViewGroupColor(color);
+        if (!normalizedColor) {
+            return { ok: false, error: `Invalid view-group color for '${groupName}': expected #RRGGBB` };
+        }
+        normalized[groupName] = normalizedColor;
+    }
+
+    return { ok: true, viewGroupColors: normalized };
 }
 
 // Replace assets array with provided one (preserves prevMonthTotal/initYearNetworth)
@@ -342,14 +407,20 @@ const updateAssetsSchema = async (passwordHash, { assets }) => {
 /**
  * Replace the stored view groups and migrate dependent data during simple renames.
  * @param {string} passwordHash - The hashed password identifying the user.
- * @param {{ viewGroups: unknown }} payload - Proposed view-group list.
+ * @param {{ viewGroups: unknown, viewGroupColors?: Record<string, string> }} payload - Proposed view-group list and optional color map.
  * @returns {Promise<{ ok: boolean, error?: string, assetsSchema?: { assets: unknown[], viewGroups: string[], prevMonthTotal: number|null, initYearNetworth: number|null } }>}
  */
-const updateViewGroups = async (passwordHash, { viewGroups }) => {
+const updateViewGroups = async (passwordHash, { viewGroups, viewGroupColors }) => {
     const existing = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
 
     const validation = validateViewGroupsPayload(viewGroups);
     if (!validation.ok) return { ok: false, error: validation.error };
+
+    const includesColors = viewGroupColors !== undefined;
+    const colorValidation = includesColors
+        ? validateViewGroupColorsPayload(viewGroupColors, validation.viewGroups)
+        : { ok: true };
+    if (!colorValidation.ok) return { ok: false, error: colorValidation.error };
 
     const referenced = computeViewGroupsFromAssets(existing.assets);
     const nextGroups = validation.viewGroups;
@@ -404,10 +475,21 @@ const updateViewGroups = async (passwordHash, { viewGroups }) => {
         };
     }
 
+    let nextViewGroupColors = includesColors ? colorValidation.viewGroupColors : existing.viewGroupColors;
+    if (isSimpleRename && !includesColors) {
+        const from = missingReferenced[0];
+        const to = added[0];
+        if (nextViewGroupColors[from] && !nextViewGroupColors[to]) {
+            nextViewGroupColors = { ...nextViewGroupColors, [to]: nextViewGroupColors[from] };
+            delete nextViewGroupColors[from];
+        }
+    }
+
     const next = {
         ...existing,
         assets: migratedAssets,
-        viewGroups: nextGroups
+        viewGroups: nextGroups,
+        viewGroupColors: sanitizeViewGroupColors(nextViewGroupColors, nextGroups)
     };
 
     const wroteSchema = await writeAssetsSchema(passwordHash, next);
