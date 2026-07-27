@@ -63,16 +63,6 @@ const renderHistoryTitle = (historyData) => {
 };
 
 /**
- * Fetch the portfolio history dataset from the backend.
- * @returns {Promise<object[]>}
- */
-const fetchHistoricalData = async () => {
-    const response = await authFetch(`${API_BASE}/portfolio/history`);
-    const data = await response.json();
-    return data;
-};
-
-/**
  * Render the history summary cards from the loaded monthly data.
  * @param {Array<{ total: number }>} historyData - Historical monthly portfolio snapshots.
  * @returns {void}

@@ -496,16 +496,6 @@ window.addNewRow = () => {
 };
 
 /**
- * Fetch the latest assets schema from the backend.
- * @returns {Promise<object>}
- */
-const fetchSchema = async () => {
-    const res = await authFetch(`${API_BASE}/assets/schema`);
-    if (!res.ok) throw new Error(`Failed to load schema (${res.status})`);
-    return await res.json();
-};
-
-/**
  * Persist the full assets payload to the backend.
  * @param {{ assets: unknown[] }} payload - Asset payload to save.
  * @returns {Promise<object>}
@@ -560,16 +550,6 @@ const putRiskOverrides = async (payload) => {
         throw new Error(msg);
     }
     return json;
-};
-
-/**
- * Fetch the persisted historical portfolio data from the backend.
- * @returns {Promise<object[]>}
- */
-const fetchHistoricalData = async () => {
-    const res = await authFetch(`${API_BASE}/portfolio/history`);
-    if (!res.ok) throw new Error(`Failed to load history (${res.status})`);
-    return await res.json();
 };
 
 /**
@@ -845,7 +825,7 @@ window.exportUserData = async () => {
 
     try {
         const [schema, historicalData] = await Promise.all([
-            fetchSchema(),
+            fetchAssetsSchema(),
             fetchHistoricalData(),
         ]);
         const { schemaCacheKey, ...persistedAssetsSchema } = schema || {};
@@ -939,7 +919,7 @@ window.loadSchema = async () => {
     setButtonsDisabled(true);
 
     try {
-        assetsSchema = await fetchSchema();
+        assetsSchema = await fetchAssetsSchema();
         syncRiskOverridesWithAssets(assetsSchema);
         renderTable();
         renderGroupsTable();

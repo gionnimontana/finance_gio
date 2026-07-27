@@ -67,6 +67,7 @@ If you ran `npm install` before switching this repo to Node 24.15.0+, rerun `npm
 ## Key Wiki Topics
 
 - [docs/data-model.md](./docs/data-model.md): user storage, view-group ordering, schema-cache invalidation, and cross-device behavior
+- [docs/shared-risk-caches.md](./docs/shared-risk-caches.md): shared ISIN, crypto, and gold risk-cache persistence across users and restarts
 - [docs/portfolio-metrics.md](./docs/portfolio-metrics.md): ATH rules and summary baselines shared across dashboard and history
 - [docs/frontend-cache.md](./docs/frontend-cache.md): production cache-control, generated release artifacts, and deploy/runtime expectations
 - [docs/scraper-runtime.md](./docs/scraper-runtime.md): provider fallback, fetch-only scrapers, stale-cache recovery, and low-memory scraper tuning

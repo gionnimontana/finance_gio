@@ -439,6 +439,16 @@ const fetchAssetsSchema = async () => {
 };
 
 /**
+ * Fetch the persisted historical portfolio data for the authenticated user.
+ * @returns {Promise<object[]>}
+ */
+const fetchHistoricalData = async () => {
+    const res = await authFetch(`${API_BASE}/portfolio/history`);
+    if (!res.ok) throw new Error(`Failed to load history (${res.status})`);
+    return await res.json();
+};
+
+/**
  * Fetch the authenticated user's asset risk indicators.
  * @param {boolean} [refresh=false] - Whether to bypass fresh backend cache entries.
  * @returns {Promise<{ values?: Record<string, { value?: number, label?: string }>, failures?: string[] }>}

@@ -37,4 +37,5 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - [../view/assets/index.md](../view/assets/index.md)
 - [../view/dashboard/index.md](../view/dashboard/index.md)
 - [../view/history/index.md](../view/history/index.md)
+- [./shared-risk-caches.md](./shared-risk-caches.md)
 - [./portfolio-metrics.md](./portfolio-metrics.md)

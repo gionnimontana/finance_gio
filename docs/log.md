@@ -12,6 +12,11 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-07-27] update | Health-check wiki links
+- Replaced the superseded ISIN-only cache plan page with `docs/shared-risk-caches.md`, covering the current shared ISIN, crypto, and gold risk-cache model.
+- Added cross-references from the data-model and scraper-runtime pages, refreshed the docs index, and linked the new topic from the README key wiki list.
+- Softened the WisdomTree scraper note so it records the durable direct-document fallback without freezing an external 403 status that can change independently of the code.
+
 ## [2026-05-26] update | Add crypto risk indicators
 - Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
 - Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
