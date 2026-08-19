@@ -1,6 +1,6 @@
 # Scrapers
 
-This folder groups the shared scraping runtime and the vendor adapters used to fetch live market data, KID-derived ETF risk indicators, computed crypto and gold risk scores, or deterministic fixture values during e2e runs, including fetch-only providers for stable quote APIs and browser-profile hardening for automation-sensitive pages.
+This folder groups the shared scraping runtime and the vendor adapters used to fetch live market data, KID-derived ETF risk indicators, computed crypto and gold risk scores, or deterministic fixture values during e2e runs, including fetch-only providers for stable quote APIs, browser-profile hardening for automation-sensitive pages, and issuer-domain-aware KID fallbacks for products whose justETF profile links out to a blocking issuer site.
 
 ## Files
 

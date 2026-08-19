@@ -11,7 +11,7 @@ const ISIN_RISK_CACHE_KEY_PREFIX = 'isin-risk:'
 const ISIN_RISK_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 const KNOWN_DIRECT_ISSUER_KID_URLS = {
     GB00BJYDH287: {
-        issuerHost: 'wisdomtree.eu',
+        issuerHosts: ['wisdomtree.eu', 'wisdomtree.com'],
         url: 'https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/WIXL/GB/EN-GB/GB00BJYDH287/',
     },
 }
@@ -161,7 +161,11 @@ const buildKnownDirectIssuerKidUrl = (isin, issuerProfileUrl) => {
     }
 
     const issuerHost = new URL(issuerProfileUrl).hostname.replace(/^www\./i, '').toLowerCase()
-    if (issuerHost !== knownEntry.issuerHost) {
+    const allowedIssuerHosts = Array.isArray(knownEntry.issuerHosts)
+        ? knownEntry.issuerHosts.map((host) => String(host || '').replace(/^www\./i, '').toLowerCase()).filter(Boolean)
+        : [String(knownEntry.issuerHost || '').replace(/^www\./i, '').toLowerCase()].filter(Boolean)
+
+    if (!allowedIssuerHosts.includes(issuerHost)) {
         return null
     }
 

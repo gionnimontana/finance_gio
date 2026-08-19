@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-08-19] update | Accept current WisdomTree issuer domain
+- Updated `docs/scraper-runtime.md` so the direct dataspan fallback for `GB00BJYDH287` now records the current `wisdomtree.com` issuer domain alongside the older `wisdomtree.eu` host.
+- Refreshed the docs and scraper vendor index entries because the justETF risk-indicator path now matches either supported WisdomTree issuer domain before falling back to the direct KID document.
+
 ## [2026-07-27] update | Health-check wiki links
 - Replaced the superseded ISIN-only cache plan page with `docs/shared-risk-caches.md`, covering the current shared ISIN, crypto, and gold risk-cache model.
 - Added cross-references from the data-model and scraper-runtime pages, refreshed the docs index, and linked the new topic from the README key wiki list.

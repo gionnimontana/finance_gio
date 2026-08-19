@@ -47,6 +47,16 @@ test('buildKnownDirectIssuerKidUrl returns the direct WisdomTree KID when the is
   )
 })
 
+test('buildKnownDirectIssuerKidUrl accepts the current WisdomTree.com issuer profile host', () => {
+  assert.equal(
+    justEtfScraper.buildKnownDirectIssuerKidUrl(
+      'GB00BJYDH287',
+      'https://www.wisdomtree.com/de/products/digital-assets/wisdomtree-physical-bitcoin'
+    ),
+    'https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/WIXL/GB/EN-GB/GB00BJYDH287/'
+  )
+})
+
 test('extractKidDocumentUrl accepts issuer-hosted PRIIP KID links that match the ISIN', () => {
   const html = `
     <div id="product-documents">
