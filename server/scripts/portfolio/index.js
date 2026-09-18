@@ -141,6 +141,7 @@ const buildPortfolioPayload = (assetsSchema, assetValues, failures, historicalDa
         total: totalPortfolio,
         allTimeHighTotal,
         allTimeHighLabel,
+        shortHorizon: assetsSchema.shortHorizon || null,
         failures: failedAssets,
         ...assetsDetails
     }
@@ -285,7 +286,8 @@ const streamPortfolio = async (passwordHash, sendEvent, refresh = true) => {
             total,
             currentPortfolioTotal: currentTotal,
             prevMonthTotal: assetsSchema.prevMonthTotal,
-            initYearNetworth: assetsSchema.initYearNetworth
+            initYearNetworth: assetsSchema.initYearNetworth,
+            shortHorizon: assetsSchema.shortHorizon || null
         })
     }
 

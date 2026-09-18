@@ -84,6 +84,10 @@
     line-height: 1.35;
 }
 
+.dashboard_title_base {
+    margin-right: 8px;
+}
+
 #ath_distance_value.positive {
     color: #4CAF50;
 }
@@ -397,6 +401,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 6px;
 }
 
 .progress_group_diff {
@@ -413,6 +418,25 @@
 
 .progress_group_diff.empty {
     color: #1976D2;
+}
+
+.progress_group_mood {
+    display: inline-flex;
+    flex: 0 0 1.5em;
+    width: 1.5em;
+    justify-content: center;
+    align-items: center;
+}
+
+@media (max-width: 520px) {
+    .progress_group_row {
+        align-items: flex-start;
+    }
+
+    .progress_group_summary {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
 }
 
 .progress_asset_subrow {

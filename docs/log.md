@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-09-19] update | Add percentage-driven performance weather
+- Added shared daily/weekly weather and grouped refresh-delta mood contracts, composed accessible dashboard title moods, and persisted completion markup.
+- Added the explicit `shortHorizon` payload contract and documented unavailable-baseline behavior so monthly and in-progress totals are not reused as weather percentages.
+
 ## [2026-08-19] update | Accept current WisdomTree issuer domain
 - Updated `docs/scraper-runtime.md` so the direct dataspan fallback for `GB00BJYDH287` now records the current `wisdomtree.com` issuer domain alongside the older `wisdomtree.eu` host.
 - Refreshed the docs and scraper vendor index entries because the justETF risk-indicator path now matches either supported WisdomTree issuer domain before falling back to the direct KID document.

@@ -13,7 +13,7 @@
         <div class="page_loading_icon" aria-hidden="true">🕵️‍♂️</div>
     </div>
     <div id="page_title">
-        <h1 id="dashboard_title">🕵️‍♂️ Billy Tracker</h1>
+        <h1 id="dashboard_title"><span class="dashboard_title_base">🕵️‍♂️ Billy Tracker</span><span id="dashboard_ath_mood" role="img" aria-label="All-time-high mood"></span><span id="dashboard_performance_mood" role="img" aria-label="Short-horizon performance data unavailable">🌤️</span></h1>
         <div class="nav_links">
             <a href="../history/" class="nav_link">📊 History</a>
             <a href="../assets/" class="nav_link">⚙️ Settings</a>
@@ -59,6 +59,10 @@
             <div class="overview">
                 <div class="overview_title">Δ Prev Month</div>
                 <div id="prevMonth_delta_value" class="overview_value">?</div>
+            </div>
+            <div class="overview">
+                <div class="overview_title" id="short_horizon_title">Δ Short Horizon</div>
+                <div id="short_horizon_delta_value" class="overview_value">—</div>
             </div>
             <div class="overview">
                 <div class="overview_title">Last update</div>

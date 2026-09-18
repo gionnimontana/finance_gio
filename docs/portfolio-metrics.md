@@ -8,6 +8,8 @@ This page explains the cross-cutting summary values shared across the dashboard 
 - When the current total matches the saved ATH within the frontend rounding threshold (`±0.005`), the dashboard shows `At ...` instead of a delta. Values above the saved historical ATH still render as positive and update the title mood as a new high versus saved history.
 - The history page title mood is separate from the live dashboard summary. It compares the latest loaded history row against the highest total inside the loaded history dataset, so it reflects the monthly history view rather than the live portfolio fetch.
 - `prevMonthTotal` and `initYearNetworth` are persisted in `assetsSchema.json` and refreshed from saved history during live refreshes before the backend returns portfolio summaries.
+- Short-horizon weather uses the explicit `shortHorizon` payload object (`currentTotal`, `previousTotal`, `horizon`, and optional unrounded `percentage`) rather than the monthly or year-to-date fields. When no finite baseline is supplied, the dashboard says that short-horizon performance data is unavailable.
+- Portfolio weather bands are `<= -10`, `<= -5`, `<= -2`, `<= -1`, `< -0.25`, `<= 0.25`, `< 1`, `< 4`, `< 10`, and otherwise, mapping to `☠️`, `💥`, `🌪️`, `⛈️`, `🌧️`, `🌤️`, `☀️`, `🌞`, `🌈`, and `🦄`. Completed group deltas use the same numeric boundaries through the separate `getProgressGroupDeltaMood()` contract and omit a mood when their prior total is absent or zero.
 
 ## Notes
 - Older cached dashboard payloads that lack `allTimeHighTotal` or `allTimeHighLabel` trigger a refresh instead of silently rendering incomplete ATH UI.

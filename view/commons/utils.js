@@ -288,6 +288,48 @@ const getAthMood = (distancePercentage) => {
 };
 
 /**
+ * Resolve a short-horizon portfolio weather icon from an unrounded percentage.
+ * @param {number} percentage - Daily or weekly portfolio percentage change.
+ * @returns {{ icon: string, label: string }}
+ */
+const getPerformanceWeatherMood = (percentage) => {
+    if (typeof percentage !== 'number' || !Number.isFinite(percentage)) {
+        return { icon: '🌤️', label: 'Short-horizon performance data unavailable' };
+    }
+
+    if (percentage <= -10) return { icon: '☠️', label: 'Short-horizon performance down at least 10 percent' };
+    if (percentage <= -5) return { icon: '💥', label: 'Short-horizon performance down between 5 and 10 percent' };
+    if (percentage <= -2) return { icon: '🌪️', label: 'Short-horizon performance down between 2 and 5 percent' };
+    if (percentage <= -1) return { icon: '⛈️', label: 'Short-horizon performance down between 1 and 2 percent' };
+    if (percentage < -0.25) return { icon: '🌧️', label: 'Short-horizon performance down between 0.25 and 1 percent' };
+    if (percentage <= 0.25) return { icon: '🌤️', label: 'Short-horizon performance is within 0.25 percent of unchanged' };
+    if (percentage < 1) return { icon: '☀️', label: 'Short-horizon performance up between 0.25 and 1 percent' };
+    if (percentage < 4) return { icon: '🌞', label: 'Short-horizon performance up between 1 and 4 percent' };
+    if (percentage < 10) return { icon: '🌈', label: 'Short-horizon performance up between 4 and 10 percent' };
+    return { icon: '🦄', label: 'Short-horizon performance up at least 10 percent' };
+};
+
+/**
+ * Resolve a completed group refresh delta mood from its unrounded percentage.
+ * @param {number} percentage - Group refresh percentage change.
+ * @returns {{ icon: string, label: string }|null}
+ */
+const getProgressGroupDeltaMood = (percentage) => {
+    if (typeof percentage !== 'number' || !Number.isFinite(percentage)) return null;
+
+    if (percentage <= -10) return { icon: '☠️', label: 'Group delta down at least 10 percent' };
+    if (percentage <= -5) return { icon: '💥', label: 'Group delta down between 5 and 10 percent' };
+    if (percentage <= -2) return { icon: '🌪️', label: 'Group delta down between 2 and 5 percent' };
+    if (percentage <= -1) return { icon: '⛈️', label: 'Group delta down between 1 and 2 percent' };
+    if (percentage < -0.25) return { icon: '🌧️', label: 'Group delta down between 0.25 and 1 percent' };
+    if (percentage <= 0.25) return { icon: '🌤️', label: 'Group delta is within 0.25 percent of unchanged' };
+    if (percentage < 1) return { icon: '☀️', label: 'Group delta up between 0.25 and 1 percent' };
+    if (percentage < 4) return { icon: '🌞', label: 'Group delta up between 1 and 4 percent' };
+    if (percentage < 10) return { icon: '🌈', label: 'Group delta up between 4 and 10 percent' };
+    return { icon: '🦄', label: 'Group delta up at least 10 percent' };
+};
+
+/**
  * Prefix a formatted absolute-value label with the supported currency symbol unless disabled.
  * @param {string} formattedValue - Preformatted numeric label.
  * @param {{ includeCurrency?: boolean }} [options={}] - Formatting overrides.
@@ -552,4 +594,6 @@ window.applyAbsoluteVisibility = applyAbsoluteVisibility;
 window.setAbsoluteHidden = setAbsoluteHidden;
 window.setCompactValuesEnabled = setCompactValuesEnabled;
 window.getAthMood = getAthMood;
+window.getPerformanceWeatherMood = getPerformanceWeatherMood;
+window.getProgressGroupDeltaMood = getProgressGroupDeltaMood;
 window.renderPercentageValue = renderPercentageValue;

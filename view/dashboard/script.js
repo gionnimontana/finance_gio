@@ -11,6 +11,8 @@ if (!requireAuth()) {
 let previousAssetValues = {}; // Map of assetId -> previous total value
 let runningDelta = 0; // Accumulated delta from individual asset changes
 let progressAssetItems = []; // Streamed assets shown in the progress banner
+let currentPerformanceWeatherPercentage = null;
+let currentAthMood = null;
 const PORTFOLIO_CACHE_KEY = 'portfolio';
 const SUCCESSFUL_PORTFOLIO_CACHE_KEY = 'portfolioLastSuccessfulSnapshot';
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
@@ -26,6 +28,8 @@ const PORTFOLIO_META_KEYS = new Set([
     'schemaCacheKey',
     'allTimeHighTotal',
     'allTimeHighLabel',
+    'shortHorizon',
+    'performanceWeather',
     'failures',
     'viewGroups'
 ]);
@@ -315,10 +319,69 @@ const restoreProgressBanner = () => {
  * @returns {void}
  */
 const setDashboardTitle = (mood = null) => {
-    const titleEl = document.getElementById('dashboard_title');
-    if (!titleEl) return;
+    currentAthMood = mood;
+    const moodEl = document.getElementById('dashboard_ath_mood');
+    if (!moodEl) return;
 
-    titleEl.textContent = mood?.icon ? `${DASHBOARD_TITLE_BASE} ${mood.icon}` : DASHBOARD_TITLE_BASE;
+    moodEl.textContent = mood?.icon || '';
+    moodEl.setAttribute('aria-label', mood?.label || 'All-time-high data unavailable');
+};
+
+/**
+ * Resolve the canonical daily or weekly portfolio performance metadata.
+ * @param {object} portfolio - Portfolio payload.
+ * @returns {{ currentTotal: number, previousTotal: number, horizon: string, percentage: number }|null}
+ */
+const getShortHorizonMeta = (portfolio) => {
+    const candidate = portfolio?.shortHorizon || portfolio?.performanceWeather;
+    if (!candidate || typeof candidate !== 'object') return null;
+
+    const currentTotal = Number(candidate.currentTotal);
+    const previousTotal = Number(candidate.previousTotal);
+    const suppliedPercentage = Number(candidate.percentage);
+    const percentage = Number.isFinite(suppliedPercentage)
+        ? suppliedPercentage
+        : (Number.isFinite(currentTotal) && Number.isFinite(previousTotal) && previousTotal !== 0
+            ? ((currentTotal - previousTotal) / previousTotal) * 100
+            : null);
+
+    if (!Number.isFinite(percentage)) return null;
+    return {
+        currentTotal,
+        previousTotal,
+        horizon: candidate.horizon || 'Short horizon',
+        percentage
+    };
+};
+
+/**
+ * Render the independent short-horizon weather title mood and overview row.
+ * @param {object} portfolio - Portfolio payload.
+ * @returns {void}
+ */
+const renderPerformanceWeather = (portfolio) => {
+    const meta = getShortHorizonMeta(portfolio);
+    currentPerformanceWeatherPercentage = meta?.percentage ?? null;
+    const mood = getPerformanceWeatherMood(currentPerformanceWeatherPercentage);
+    const moodEl = document.getElementById('dashboard_performance_mood');
+    if (moodEl) {
+        moodEl.textContent = mood.icon;
+        moodEl.setAttribute('aria-label', mood.label);
+    }
+
+    const titleEl = document.getElementById('short_horizon_title');
+    const valueEl = document.getElementById('short_horizon_delta_value');
+    if (!titleEl || !valueEl) return;
+    titleEl.textContent = meta ? `Δ ${meta.horizon}` : 'Δ Short Horizon';
+    if (!meta) {
+        valueEl.className = 'overview_value';
+        valueEl.textContent = '—';
+        return;
+    }
+
+    const delta = meta.currentTotal - meta.previousTotal;
+    valueEl.className = `overview_value ${delta >= 0 ? 'positive' : 'negative'}`;
+    valueEl.innerHTML = `<span class="abs_value">${formatCompactValue(delta)}</span>${renderPercentageValue(`${t(meta.percentage)}%`)} ${mood.icon}`;
 };
 
 /**
@@ -332,7 +395,7 @@ const renderAthDistance = (portfolio) => {
 
     const allTimeHighTotal = portfolio.allTimeHighTotal;
     if (typeof allTimeHighTotal !== 'number' || !Number.isFinite(allTimeHighTotal) || allTimeHighTotal < 0) {
-        setDashboardTitle();
+        setDashboardTitle(null);
         el.textContent = '—';
         el.className = 'overview_value';
         return;
@@ -894,13 +957,19 @@ const renderCompletedProgressAssets = (portfolio, cachedPortfolio = null) => {
 
     listEl.innerHTML = orderedGroupNames.map(groupName => {
         const group = groupedAssets.get(groupName);
-        const groupDiffMeta = group.hasPrevious ? getProgressDiffMeta(group.currentTotal, group.previousTotal) : null;
+        const groupDiffMeta = group.hasPrevious && group.previousTotal !== 0
+            ? getProgressDiffMeta(group.currentTotal, group.previousTotal)
+            : null;
+        const groupMood = getProgressGroupDeltaMood(groupDiffMeta?.diffPct);
+        const groupMoodHtml = groupMood
+            ? `<span class="progress_group_mood" data-testid="${getProgressGroupTestId(groupName)}-mood" role="img" aria-label="${escapeHtml(groupMood.label)}">${groupMood.icon}</span>`
+            : '';
 
         return `
             <div class="progress_group_section" data-testid="${getProgressGroupTestId(groupName)}">
                 <div class="progress_group_row">
                     <span class="progress_group_name">${escapeHtml(groupName)}:</span>
-                    <span class="progress_group_summary">${renderProgressDiffHtml(groupDiffMeta, 'progress_group_diff', '—')}</span>
+                    <span class="progress_group_summary">${renderProgressDiffHtml(groupDiffMeta, 'progress_group_diff', '—')}${groupMoodHtml}</span>
                 </div>
                 ${group.items.map(asset => renderProgressAssetRow(asset, { grouped: true, displayName: asset.assetName, assetTotal: asset.assetTotal })).join('')}
             </div>
@@ -914,7 +983,7 @@ const renderCompletedProgressAssets = (portfolio, cachedPortfolio = null) => {
  * @returns {void}
  */
 const updateProgress = (data) => {
-    const { assetName, assetId, value, assetTotal, failed, index, total, currentPortfolioTotal, prevMonthTotal } = data;
+    const { assetName, assetId, value, assetTotal, failed, index, total, shortHorizon } = data;
     let latestAssetDiff = null;
     
     // Update progress bar
@@ -942,15 +1011,23 @@ const updateProgress = (data) => {
     // Auto-scroll to bottom
     listEl.scrollTop = listEl.scrollHeight;
 
-    // Update portfolio delta using the current asset's previous value as the percentage baseline.
+    // Use the stable portfolio baseline; the running asset delta remains the absolute value.
     if (latestAssetDiff) {
-        const { diffPct, sign: assetSign } = latestAssetDiff;
+        const shortHorizonPercentage = Number(shortHorizon?.percentage);
+        const portfolioPercentage = Number.isFinite(shortHorizonPercentage)
+            ? shortHorizonPercentage
+            : currentPerformanceWeatherPercentage;
         const runningSign = runningDelta >= 0 ? '+' : '';
-        const emoji = runningDelta >= 0 ? '🚀' : '🔥';
-        const deltaPctLabel = diffPct === null ? '—' : `${assetSign}${t(diffPct)}%`;
+        const hasPortfolioPercentage = Number.isFinite(portfolioPercentage);
+        const weatherMood = hasPortfolioPercentage
+            ? getPerformanceWeatherMood(portfolioPercentage)
+            : (runningDelta >= 0
+                ? { icon: '☀️', label: 'Refresh delta increased; portfolio percentage unavailable' }
+                : { icon: '🌧️', label: 'Refresh delta decreased; portfolio percentage unavailable' });
+        const deltaPctLabel = hasPortfolioPercentage ? `${portfolioPercentage >= 0 ? '+' : ''}${t(portfolioPercentage)}%` : '—';
         
         const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${runningSign}${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} ${emoji}`;
+        deltaEl.innerHTML = `<span class="abs_value">${runningSign}${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} <span role="img" aria-label="${escapeHtml(weatherMood.label)}">${weatherMood.icon}</span>`;
         deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
     }
 };
@@ -1356,24 +1433,21 @@ const renderPortfolioData = (portfolio) => {
     const delta = total - initYearNetworth;
     const hasInitYear = typeof initYearNetworth === 'number' && initYearNetworth > 0;
     const deltaPercentage = hasInitYear ? (delta / initYearNetworth) * 100 : null;
-    const deltaPercentageLabel = delta >= 0 ? '🚀' : '🔥';
     const prevMonthdelta = total - prevMonthTotal;
     const hasPrevMonth = typeof prevMonthTotal === 'number' && prevMonthTotal > 0;
     const prevMonthdeltaPercentage = hasPrevMonth ? (prevMonthdelta / prevMonthTotal) * 100 : null;
-    const prevMonthdeltaPercentageLabel = prevMonthdelta >= 0 ? '🚀' : '🔥';
 
     // Update overview values
     document.getElementById('total_value').innerHTML = `<span class="abs_value">${formatCompactValue(total)}</span><span class="pct_value pct_placeholder">—</span>`;
     document.getElementById('delta_value').innerHTML = `
         <span class="abs_value">${formatCompactValue(delta)}</span>
         ${renderPercentageValue(deltaPercentage === null ? '—' : `${t(deltaPercentage)}%`)}
-        ${deltaPercentageLabel}
     `;
     document.getElementById('prevMonth_delta_value').innerHTML = `
         <span class="abs_value">${formatCompactValue(prevMonthdelta)}</span>
         ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
-        ${prevMonthdeltaPercentageLabel}
     `;
+    renderPerformanceWeather(portfolio);
     renderPortfolioRiskIndicator(portfolio);
     renderAthDistance(portfolio);
     renderLastUpdate();

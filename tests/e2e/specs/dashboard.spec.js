@@ -33,6 +33,27 @@ test.beforeEach(async ({ page }) => {
   await mockRiskIndicators(page)
 })
 
+test('exports deterministic performance and group weather mood bands', async ({ page }) => {
+  await storePassword(page, DASHBOARD_USER_PASSWORD)
+  await page.goto('/dashboard/')
+
+  const moods = await page.evaluate(() => ({
+    portfolio: [-10, -5, -2, -1, -0.25, 0.25, 1, 4, 10].map(value => [value, window.getPerformanceWeatherMood(value).icon]),
+    groups: [Number.NaN, -11, -6, -3, -1.5, -0.5, -0.1, 0.5, 1.5, 6, 11].map(value => [value, window.getProgressGroupDeltaMood(value)?.icon || null]),
+    unavailable: window.getPerformanceWeatherMood(Number.NaN),
+  }))
+
+  expect(moods.portfolio).toEqual([
+    [-10, '☠️'], [-5, '💥'], [-2, '🌪️'], [-1, '⛈️'], [-0.25, '🌤️'],
+    [0.25, '🌤️'], [1, '🌞'], [4, '🌈'], [10, '🦄'],
+  ])
+  expect(moods.groups).toEqual([
+    [Number.NaN, null], [-11, '☠️'], [-6, '💥'], [-3, '🌪️'], [-1.5, '⛈️'],
+    [-0.5, '🌧️'], [-0.1, '🌤️'], [0.5, '☀️'], [1.5, '🌞'], [6, '🌈'], [11, '🦄'],
+  ])
+  expect(moods.unavailable).toEqual({ icon: '🌤️', label: 'Short-horizon performance data unavailable' })
+})
+
 test('streams per-asset progress on the first dashboard load without cache', async ({ page }) => {
   await storePassword(page, DASHBOARD_USER_PASSWORD)
 
@@ -667,7 +688,8 @@ test('shows the deep drawdown ATH face from cached portfolio data', async ({ pag
 
   await page.goto('/dashboard/')
 
-  await expect(page.locator('#dashboard_title')).toHaveText('🕵️‍♂️ Billy Tracker 😭')
+  await expect(page.locator('#dashboard_title .dashboard_title_base')).toHaveText('🕵️‍♂️ Billy Tracker')
+  await expect(page.locator('#dashboard_ath_mood')).toHaveText('😭')
   await expect(page.locator('#ath_distance_value')).toContainText('(-50.00%)')
   await expect(page.locator('#ath_distance_value')).toContainText('Jan 2025')
   await expect(page.locator('#ath_distance_value')).toHaveClass(/negative/)

@@ -12,7 +12,8 @@ const DEFAULT_ASSETS_SCHEMA = {
     viewGroupColors: {},
     riskOverrides: {},
     prevMonthTotal: null,
-    initYearNetworth: null
+    initYearNetworth: null,
+    shortHorizon: null
 };
 
 // Default historical data used when JSON file doesn't exist
