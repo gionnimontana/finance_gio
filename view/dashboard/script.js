@@ -1112,13 +1112,13 @@ const streamPortfolioRefresh = (options = {}) => {
             eventSource.close();
 
             const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
+            renderCompletedProgressAssets(resolvedPortfolio, baselinePortfolio);
             if (hasPortfolioFailures(resolvedPortfolio)) {
                 completeProgressBanner(persistCompletedBanner, PARTIAL_REFRESH_BANNER_TITLE);
             } else {
                 markSuccessfulPortfolioSnapshot(resolvedPortfolio);
                 completeProgressBanner(persistCompletedBanner);
             }
-            renderCompletedProgressAssets(resolvedPortfolio, baselinePortfolio);
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
             resolve(resolvedPortfolio);
