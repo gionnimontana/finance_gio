@@ -186,7 +186,9 @@ test('groups completed refresh progress by view group and shows grouped diffs', 
   }
 
   await page.addInitScript((portfolio) => {
-    window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+    if (!window.localStorage.getItem('portfolio')) {
+      window.localStorage.setItem('portfolio', JSON.stringify(portfolio))
+    }
   }, cachedPortfolio)
 
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
@@ -196,6 +198,9 @@ test('groups completed refresh progress by view group and shows grouped diffs', 
   await page.locator('#refresh_button').click()
 
   await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#progress_delta .pct_value')).toContainText('+10.85%')
+  await expect(page.locator('#dashboard_performance_mood')).toHaveText('🦄')
+  await expect(page.locator('#dashboard_performance_mood')).toHaveAttribute('aria-label', /up at least 10 percent/)
   await expect(page.locator('#progress_assets_list .progress_group_name')).toHaveText(['Crypto:', 'Gold:', 'Equity:'])
   await expect(page.locator('[data-testid="progress-group-Liquidity"]')).toHaveCount(0)
   await expect(page.getByTestId('progress-group-Crypto').locator('.progress_group_diff .abs_value')).toContainText('+€2,000')
@@ -208,6 +213,7 @@ test('groups completed refresh progress by view group and shows grouped diffs', 
   await page.reload()
 
   await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('#dashboard_performance_mood')).toHaveText('🦄')
   await expect(page.locator('#progress_assets_list .progress_group_name')).toHaveText(['Crypto:', 'Gold:', 'Equity:'])
   await expect(page.getByTestId('progress-group-Crypto').getByTestId('progress-asset-BTC')).toBeVisible()
   await expect(page.getByTestId('progress-group-Gold').getByTestId('progress-asset-physical-gold')).toBeVisible()

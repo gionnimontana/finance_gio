@@ -11,10 +11,12 @@ if (!requireAuth()) {
 let previousAssetValues = {}; // Map of assetId -> previous total value
 let runningDelta = 0; // Accumulated delta from individual asset changes
 let progressAssetItems = []; // Streamed assets shown in the progress banner
-let currentPerformanceWeatherPercentage = null;
+let refreshBaselineTotal = null;
+let currentRefreshDeltaMeta = null;
 let currentAthMood = null;
 const PORTFOLIO_CACHE_KEY = 'portfolio';
 const SUCCESSFUL_PORTFOLIO_CACHE_KEY = 'portfolioLastSuccessfulSnapshot';
+const LAST_REFRESH_DELTA_KEY = 'portfolioLastRefreshDelta';
 const LAST_UPDATE_KEY = 'portfolioLastUpdate';
 const PROGRESS_BANNER_KEY = 'portfolioProgressBanner';
 const DASHBOARD_TITLE_BASE = '🕵️‍♂️ Billy Tracker';
@@ -328,6 +330,20 @@ const setDashboardTitle = (mood = null) => {
 };
 
 /**
+ * Render the dashboard title's weather mood from the latest portfolio refresh delta.
+ * @param {{ diffPct: number|null }|null} diffMeta - Refresh-total delta metadata.
+ * @returns {void}
+ */
+const renderDashboardPerformanceMood = (diffMeta) => {
+    const mood = getPerformanceWeatherMood(diffMeta?.diffPct);
+    const moodEl = document.getElementById('dashboard_performance_mood');
+    if (!moodEl) return;
+
+    moodEl.textContent = mood.icon;
+    moodEl.setAttribute('aria-label', mood.label);
+};
+
+/**
  * Resolve the canonical daily or weekly portfolio performance metadata.
  * @param {object} portfolio - Portfolio payload.
  * @returns {{ currentTotal: number, previousTotal: number, horizon: string, percentage: number }|null}
@@ -355,19 +371,13 @@ const getShortHorizonMeta = (portfolio) => {
 };
 
 /**
- * Render the independent short-horizon weather title mood and overview row.
+ * Render the independent short-horizon overview row.
  * @param {object} portfolio - Portfolio payload.
  * @returns {void}
  */
 const renderPerformanceWeather = (portfolio) => {
     const meta = getShortHorizonMeta(portfolio);
-    currentPerformanceWeatherPercentage = meta?.percentage ?? null;
-    const mood = getPerformanceWeatherMood(currentPerformanceWeatherPercentage);
-    const moodEl = document.getElementById('dashboard_performance_mood');
-    if (moodEl) {
-        moodEl.textContent = mood.icon;
-        moodEl.setAttribute('aria-label', mood.label);
-    }
+    const mood = getPerformanceWeatherMood(meta?.percentage);
 
     const titleEl = document.getElementById('short_horizon_title');
     const valueEl = document.getElementById('short_horizon_delta_value');
@@ -857,6 +867,66 @@ const getProgressDiffMeta = (currentValue, previousValue) => {
 };
 
 /**
+ * Add the source totals to generic diff metadata for a whole-portfolio refresh.
+ * @param {number|null} currentTotal - Latest portfolio total.
+ * @param {number|null} previousTotal - Total from the previous successful refresh.
+ * @returns {{ currentTotal: number, previousTotal: number, diff: number, diffPct: number|null, sign: string, diffClass: string, diffPctLabel: string }|null}
+ */
+const getPortfolioRefreshDiffMeta = (currentTotal, previousTotal) => {
+    const diffMeta = getProgressDiffMeta(currentTotal, previousTotal);
+    return diffMeta ? { ...diffMeta, currentTotal, previousTotal } : null;
+};
+
+/**
+ * Store the current refresh delta in memory and, after a full refresh, browser storage.
+ * @param {number|null} currentTotal - Latest portfolio total.
+ * @param {number|null} previousTotal - Total from the previous successful refresh.
+ * @param {boolean} [persist=false] - Whether the refresh completed without failures.
+ * @returns {{ currentTotal: number, previousTotal: number, diff: number, diffPct: number|null, sign: string, diffClass: string, diffPctLabel: string }|null}
+ */
+const setCurrentRefreshDeltaMeta = (currentTotal, previousTotal, persist = false) => {
+    currentRefreshDeltaMeta = getPortfolioRefreshDiffMeta(currentTotal, previousTotal);
+
+    if (persist) {
+        if (currentRefreshDeltaMeta) {
+            writeStoredJson(LAST_REFRESH_DELTA_KEY, {
+                currentTotal: currentRefreshDeltaMeta.currentTotal,
+                previousTotal: currentRefreshDeltaMeta.previousTotal
+            });
+        } else {
+            removeStoredItem(LAST_REFRESH_DELTA_KEY);
+        }
+    }
+
+    return currentRefreshDeltaMeta;
+};
+
+/**
+ * Resolve the refresh delta that belongs to the portfolio currently being rendered.
+ * @param {object} portfolio - Portfolio payload being displayed.
+ * @returns {{ currentTotal: number, previousTotal: number, diff: number, diffPct: number|null, sign: string, diffClass: string, diffPctLabel: string }|null}
+ */
+const getRenderedRefreshDeltaMeta = (portfolio) => {
+    const currentTotal = portfolio?.total;
+    if (typeof currentTotal !== 'number' || !Number.isFinite(currentTotal)) return null;
+
+    if (currentRefreshDeltaMeta?.currentTotal === currentTotal) {
+        return currentRefreshDeltaMeta;
+    }
+
+    const storedDelta = readStoredJson(LAST_REFRESH_DELTA_KEY);
+    if (
+        typeof storedDelta?.currentTotal !== 'number' ||
+        typeof storedDelta?.previousTotal !== 'number' ||
+        storedDelta.currentTotal !== currentTotal
+    ) {
+        return null;
+    }
+
+    return getPortfolioRefreshDiffMeta(storedDelta.currentTotal, storedDelta.previousTotal);
+};
+
+/**
  * Render a progress-banner diff badge.
  * @param {{ diff: number, sign: string, diffClass: string, diffPctLabel: string }|null} diffMeta - Precomputed diff metadata.
  * @param {string} [className='asset_diff'] - CSS class applied to the diff badge.
@@ -869,6 +939,20 @@ const renderProgressDiffHtml = (diffMeta, className = 'asset_diff', emptyLabel =
     }
 
     return `<span class="${className} ${diffMeta.diffClass}"><span class="abs_value">${diffMeta.sign}${formatCompactValue(diffMeta.diff)}</span>${renderPercentageValue(diffMeta.diffPctLabel)}</span>`;
+};
+
+/**
+ * Render the overall portfolio delta in the refresh progress banner.
+ * @param {{ diff: number, diffPct: number|null, sign: string, diffClass: string, diffPctLabel: string }|null} diffMeta - Refresh-total delta metadata.
+ * @returns {void}
+ */
+const renderProgressDelta = (diffMeta) => {
+    if (!diffMeta) return;
+
+    const weatherMood = getPerformanceWeatherMood(diffMeta.diffPct);
+    const deltaEl = document.getElementById('progress_delta');
+    deltaEl.innerHTML = `<span class="abs_value">${diffMeta.sign}${formatCompactValue(diffMeta.diff)}</span>${renderPercentageValue(diffMeta.diffPctLabel)} <span role="img" aria-label="${escapeHtml(weatherMood.label)}">${weatherMood.icon}</span>`;
+    deltaEl.className = `progress_delta ${diffMeta.diffClass}`;
 };
 
 /**
@@ -983,7 +1067,7 @@ const renderCompletedProgressAssets = (portfolio, cachedPortfolio = null) => {
  * @returns {void}
  */
 const updateProgress = (data) => {
-    const { assetName, assetId, value, assetTotal, failed, index, total, shortHorizon } = data;
+    const { assetName, assetId, value, assetTotal, failed, index, total } = data;
     let latestAssetDiff = null;
     
     // Update progress bar
@@ -1011,24 +1095,17 @@ const updateProgress = (data) => {
     // Auto-scroll to bottom
     listEl.scrollTop = listEl.scrollHeight;
 
-    // Use the stable portfolio baseline; the running asset delta remains the absolute value.
+    // Compare changed streamed assets against the complete portfolio baseline.
     if (latestAssetDiff) {
-        const shortHorizonPercentage = Number(shortHorizon?.percentage);
-        const portfolioPercentage = Number.isFinite(shortHorizonPercentage)
-            ? shortHorizonPercentage
-            : currentPerformanceWeatherPercentage;
-        const runningSign = runningDelta >= 0 ? '+' : '';
-        const hasPortfolioPercentage = Number.isFinite(portfolioPercentage);
-        const weatherMood = hasPortfolioPercentage
-            ? getPerformanceWeatherMood(portfolioPercentage)
-            : (runningDelta >= 0
-                ? { icon: '☀️', label: 'Refresh delta increased; portfolio percentage unavailable' }
-                : { icon: '🌧️', label: 'Refresh delta decreased; portfolio percentage unavailable' });
-        const deltaPctLabel = hasPortfolioPercentage ? `${portfolioPercentage >= 0 ? '+' : ''}${t(portfolioPercentage)}%` : '—';
-        
-        const deltaEl = document.getElementById('progress_delta');
-        deltaEl.innerHTML = `<span class="abs_value">${runningSign}${formatCompactValue(runningDelta)}</span>${renderPercentageValue(deltaPctLabel)} <span role="img" aria-label="${escapeHtml(weatherMood.label)}">${weatherMood.icon}</span>`;
-        deltaEl.className = 'progress_delta ' + (runningDelta >= 0 ? 'positive' : 'negative');
+        const currentTotal = Number.isFinite(refreshBaselineTotal)
+            ? refreshBaselineTotal + runningDelta
+            : null;
+        const refreshDiffMeta = getPortfolioRefreshDiffMeta(currentTotal, refreshBaselineTotal);
+        if (refreshDiffMeta) {
+            currentRefreshDeltaMeta = refreshDiffMeta;
+            renderProgressDelta(refreshDiffMeta);
+            renderDashboardPerformanceMood(refreshDiffMeta);
+        }
     }
 };
 
@@ -1054,6 +1131,9 @@ const streamPortfolioRefresh = (options = {}) => {
         // Store initial total and build previous asset values map
         const cachedPortfolio = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
         const baselinePortfolio = getRefreshBaselinePortfolio(cachedPortfolio);
+        refreshBaselineTotal = typeof baselinePortfolio?.total === 'number' && Number.isFinite(baselinePortfolio.total)
+            ? baselinePortfolio.total
+            : null;
         
         // Build map of assetId -> previous total value from the last fully successful refresh.
         previousAssetValues = {};
@@ -1089,7 +1169,11 @@ const streamPortfolioRefresh = (options = {}) => {
 
             fetchData(refresh).then(portfolio => {
                 const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
-                markSuccessfulPortfolioSnapshot(resolvedPortfolio);
+                const isCompleteRefresh = !hasPortfolioFailures(resolvedPortfolio);
+                setCurrentRefreshDeltaMeta(resolvedPortfolio.total, refreshBaselineTotal, isCompleteRefresh);
+                if (isCompleteRefresh) {
+                    markSuccessfulPortfolioSnapshot(resolvedPortfolio);
+                }
                 if (fallbackLoadingMessage) {
                     hideProgressBanner();
                 }
@@ -1113,7 +1197,15 @@ const streamPortfolioRefresh = (options = {}) => {
 
             const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
             renderCompletedProgressAssets(resolvedPortfolio, baselinePortfolio);
-            if (hasPortfolioFailures(resolvedPortfolio)) {
+            const isCompleteRefresh = !hasPortfolioFailures(resolvedPortfolio);
+            const refreshDiffMeta = setCurrentRefreshDeltaMeta(
+                resolvedPortfolio.total,
+                refreshBaselineTotal,
+                isCompleteRefresh
+            );
+            renderProgressDelta(refreshDiffMeta);
+            renderDashboardPerformanceMood(refreshDiffMeta);
+            if (!isCompleteRefresh) {
                 completeProgressBanner(persistCompletedBanner, PARTIAL_REFRESH_BANNER_TITLE);
             } else {
                 markSuccessfulPortfolioSnapshot(resolvedPortfolio);
@@ -1429,6 +1521,7 @@ const renderPortfolioData = (portfolio) => {
     const total = portfolio.total;
     const prevMonthTotal = portfolio.prevMonthTotal;
     const initYearNetworth = portfolio.initYearNetworth;
+    const refreshDiffMeta = getRenderedRefreshDeltaMeta(portfolio);
 
     const delta = total - initYearNetworth;
     const hasInitYear = typeof initYearNetworth === 'number' && initYearNetworth > 0;
@@ -1447,6 +1540,7 @@ const renderPortfolioData = (portfolio) => {
         <span class="abs_value">${formatCompactValue(prevMonthdelta)}</span>
         ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
     `;
+    renderDashboardPerformanceMood(refreshDiffMeta);
     renderPerformanceWeather(portfolio);
     renderPortfolioRiskIndicator(portfolio);
     renderAthDistance(portfolio);
@@ -1507,6 +1601,7 @@ window.addEventListener('absolute-visibility-change', () => {
 
 // Initialize on page load
 setDashboardTitle();
+renderDashboardPerformanceMood(null);
 renderLastUpdate();
 restoreProgressBanner();
 renderPortfolio();

@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-09-21] update | Fix dashboard refresh performance summary
+- Made the dashboard title weather mood and progress-banner percentage use the latest total against the last fully successful refresh total.
+- Persisted clean refresh source totals so the title mood remains correct after reload while partial refreshes keep their existing baseline safeguards.
+
 ## [2026-09-19] update | Add percentage-driven performance weather
 - Added shared daily/weekly weather and grouped refresh-delta mood contracts, composed accessible dashboard title moods, and persisted completion markup.
 - Added the explicit `shortHorizon` payload contract and documented unavailable-baseline behavior so monthly and in-progress totals are not reused as weather percentages.
