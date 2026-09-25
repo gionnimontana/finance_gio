@@ -100,10 +100,15 @@ const renderSummaryCards = (historyData) => {
     const avgMonthlyGrowthPct = hasHistoryBaseline
         ? ((Math.pow(latest.total / first.total, 1 / totalMonths) - 1) * 100).toFixed(2)
         : null;
+    const avgAnnualGrowthPct = hasHistoryBaseline
+        ? ((Math.pow(latest.total / first.total, 12 / totalMonths) - 1) * 100).toFixed(1)
+        : null;
     const avgClass = totalGrowth >= 0 ? 'positive' : 'negative';
     const avgSign = totalGrowth >= 0 ? '+' : '';
     document.getElementById('avg_growth').innerHTML = `<span class="pct_value">${avgMonthlyGrowthPct === null ? '—' : avgSign + avgMonthlyGrowthPct + '%'}</span>`;
     document.getElementById('avg_growth').className = `summary_card_value ${avgClass}`;
+    document.getElementById('avg_annual_growth').innerHTML = `<span class="pct_value">${avgAnnualGrowthPct === null ? '—' : avgSign + avgAnnualGrowthPct + '%'}</span>`;
+    document.getElementById('avg_annual_growth').className = `summary_card_value ${avgClass}`;
 };
 
 let cachedHistoryData = null;

@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-09-25] update | Add history average annual growth
+- Added an `Avg Annual Growth` summary card on the history page that annualizes the compounded monthly growth rate.
+- Documented the annualized formula in `docs/portfolio-metrics.md`.
+
 ## [2026-09-25] update | Compound history average monthly growth
 - Changed the history `Avg Monthly Growth` card from a linear average of total growth to the compounded monthly rate across loaded history.
 - Documented the formula and its positive-baseline fallback in `docs/portfolio-metrics.md`.
