@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-09-25] update | Compound history average monthly growth
+- Changed the history `Avg Monthly Growth` card from a linear average of total growth to the compounded monthly rate across loaded history.
+- Documented the formula and its positive-baseline fallback in `docs/portfolio-metrics.md`.
+
 ## [2026-09-21] update | Fix dashboard refresh performance summary
 - Made the dashboard title weather mood and progress-banner percentage use the latest total against the last fully successful refresh total.
 - Persisted clean refresh source totals so the title mood remains correct after reload while partial refreshes keep their existing baseline safeguards.

@@ -90,13 +90,16 @@ const renderSummaryCards = (historyData) => {
     `;
     document.getElementById('total_change').className = `summary_card_value ${changeClass}`;
     
-    // Average monthly growth over entire history
+    // Average monthly growth over entire history (compounded monthly rate)
     const first = historyData[0];
     const totalMonths = historyData.length - 1;
     const totalGrowth = latest.total - first.total;
-    const hasHistoryBaseline = typeof first.total === 'number' && first.total > 0 && totalMonths > 0;
-    const avgMonthlyGrowth = hasHistoryBaseline ? totalGrowth / totalMonths : null;
-    const avgMonthlyGrowthPct = hasHistoryBaseline ? ((avgMonthlyGrowth / first.total) * 100).toFixed(2) : null;
+    const hasHistoryBaseline = typeof first.total === 'number' && first.total > 0
+        && typeof latest.total === 'number' && latest.total > 0
+        && totalMonths > 0;
+    const avgMonthlyGrowthPct = hasHistoryBaseline
+        ? ((Math.pow(latest.total / first.total, 1 / totalMonths) - 1) * 100).toFixed(2)
+        : null;
     const avgClass = totalGrowth >= 0 ? 'positive' : 'negative';
     const avgSign = totalGrowth >= 0 ? '+' : '';
     document.getElementById('avg_growth').innerHTML = `<span class="pct_value">${avgMonthlyGrowthPct === null ? '—' : avgSign + avgMonthlyGrowthPct + '%'}</span>`;
