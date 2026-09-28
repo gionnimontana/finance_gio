@@ -19,6 +19,9 @@ test('renders historical summaries, chart, and monthly table', async ({ page }) 
   await expect(page.locator('#history_table tbody tr').last().locator('td.change_cell .abs_value')).toContainText('+1,100')
   await expect(page.locator('#history_table tbody tr').last().locator('td.change_cell .abs_value')).not.toContainText('€')
   await expect(page.locator('#history_table')).toContainText('Month')
+  await expect(page.locator('#history_table thead th').allTextContents()).resolves.toEqual([
+    'Month', 'Total', 'Change', 'Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity',
+  ])
   await expect(page.locator('#history_table')).toHaveCSS('overflow-y', 'auto')
   await expect.poll(async () => {
     return page.locator('#history_table').evaluate((table) => ({

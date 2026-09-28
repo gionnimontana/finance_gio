@@ -243,12 +243,13 @@ const HistoryChartModule = (() => {
         
         // Header
         html += '<thead><tr><th>Month</th>';
+        html += '<th class="total_column">Total</th><th>Change</th>';
         viewGroups.forEach(group => {
             // Keep class friendly even with spaces
             const cls = String(group).toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
             html += `<th class="view_group_column col-${cls}" style="--view-group-color: ${getViewGroupColor(group)};">${group}</th>`;
         });
-        html += '<th class="total_column">Total</th><th>Change</th></tr></thead>';
+        html += '</tr></thead>';
 
         // Body
         html += '<tbody>';
@@ -262,6 +263,9 @@ const HistoryChartModule = (() => {
 
             html += `<tr>
                 <td class="month_label">${month.label}</td>`;
+
+            html += `<td class="total_cell total_column"><span class="abs_value">${formatCompactValue(month.total)}</span>${pctSpan(month.total, month.total)}</td>
+                <td class="change_cell ${changeClass}">${changeLabel}</td>`;
             
             viewGroups.forEach(group => {
                 const value = month[group]?.total || 0;
@@ -269,9 +273,7 @@ const HistoryChartModule = (() => {
                 html += `<td class="view_group_column col-${cls}" style="--view-group-color: ${getViewGroupColor(group)};"><span class="abs_value">${formatCompactValue(value, 1, { includeCurrency: false })}</span>${pctSpan(value, month.total)}</td>`;
             });
 
-            html += `<td class="total_cell total_column"><span class="abs_value">${formatCompactValue(month.total)}</span>${pctSpan(month.total, month.total)}</td>
-                <td class="change_cell ${changeClass}">${changeLabel}</td>
-            </tr>`;
+            html += '</tr>';
         });
         html += '</tbody></table>';
 
