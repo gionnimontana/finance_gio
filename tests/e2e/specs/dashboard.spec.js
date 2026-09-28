@@ -599,6 +599,7 @@ test('reuses the last full refresh baseline after a partial refresh so the next 
   await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
   await expect(page.locator('#progress_title')).toContainText('Updated:')
   await expect(page.locator('#progress_delta .abs_value')).toContainText('+€2,300')
+  await expect(page.locator('#progress_delta')).toContainText(/ in \d+(m|h|d)/)
   await expect(page.getByTestId('progress-group-Crypto').locator('.progress_group_diff .abs_value')).toContainText('+€2,000')
   await expect(page.getByTestId('progress-group-Gold').locator('.progress_group_diff .abs_value')).toContainText('+€100')
   await expect(page.getByTestId('progress-group-Equity').locator('.progress_group_diff .abs_value')).toContainText('+€200')

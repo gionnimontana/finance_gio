@@ -12,6 +12,10 @@ Use one heading per entry:
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
+## [2026-09-28] update | Add elapsed-time label to refresh delta
+- The dashboard progress-banner delta now appends a compact `in 5h35m`-style label for the time elapsed since the previous successful refresh.
+- Persisted `baselineUpdatedAt` and `refreshedAt` in `portfolioLastRefreshDelta` and documented the behavior in `docs/portfolio-metrics.md`.
+
 ## [2026-09-25] update | Add history average annual growth
 - Added an `Avg Annual Growth` summary card on the history page that annualizes the compounded monthly growth rate.
 - Documented the annualized formula in `docs/portfolio-metrics.md`.

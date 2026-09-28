@@ -12,6 +12,7 @@ let previousAssetValues = {}; // Map of assetId -> previous total value
 let runningDelta = 0; // Accumulated delta from individual asset changes
 let progressAssetItems = []; // Streamed assets shown in the progress banner
 let refreshBaselineTotal = null;
+let refreshBaselineUpdatedAt = null; // Timestamp of the last successful refresh used as the diff baseline
 let currentRefreshDeltaMeta = null;
 let currentAthMood = null;
 const PORTFOLIO_CACHE_KEY = 'portfolio';
@@ -842,6 +843,47 @@ const renderPortfolioRiskIndicator = (portfolio) => {
 };
 
 /**
+ * Format an elapsed duration in milliseconds as a compact label (e.g. "5h35m").
+ * @param {number} elapsedMs - Elapsed time in milliseconds.
+ * @returns {string|null}
+ */
+const formatElapsedDuration = (elapsedMs) => {
+    if (typeof elapsedMs !== 'number' || !Number.isFinite(elapsedMs) || elapsedMs < 0) return null;
+
+    const totalMinutes = Math.floor(elapsedMs / 60000);
+    if (totalMinutes < 1) return '<1m';
+    if (totalMinutes < 60) return `${totalMinutes}m`;
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (totalHours < 24) return minutes > 0 ? `${totalHours}h${minutes}m` : `${totalHours}h`;
+
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return hours > 0 ? `${days}d${hours}h` : `${days}d`;
+};
+
+/**
+ * Format the elapsed time between two ISO timestamps as a compact label.
+ * @param {string|null} fromIso - Baseline timestamp.
+ * @param {string|null} toIso - Later timestamp.
+ * @returns {string|null}
+ */
+const formatElapsedBetween = (fromIso, toIso) => {
+    if (!fromIso || !toIso) return null;
+    const from = new Date(fromIso).getTime();
+    const to = new Date(toIso).getTime();
+    if (Number.isNaN(from) || Number.isNaN(to)) return null;
+    return formatElapsedDuration(to - from);
+};
+
+/**
+ * Resolve the elapsed label between the baseline refresh timestamp and now.
+ * @returns {string|null}
+ */
+const getRefreshElapsedLabel = () => formatElapsedBetween(refreshBaselineUpdatedAt, new Date().toISOString());
+
+/**
  * Calculate absolute and percentage delta metadata for progress rows.
  * @param {number|null} currentValue - Current value.
  * @param {number|null|undefined} previousValue - Previous cached value.
@@ -887,11 +929,17 @@ const getPortfolioRefreshDiffMeta = (currentTotal, previousTotal) => {
 const setCurrentRefreshDeltaMeta = (currentTotal, previousTotal, persist = false) => {
     currentRefreshDeltaMeta = getPortfolioRefreshDiffMeta(currentTotal, previousTotal);
 
+    if (currentRefreshDeltaMeta) {
+        currentRefreshDeltaMeta.elapsedLabel = getRefreshElapsedLabel();
+    }
+
     if (persist) {
         if (currentRefreshDeltaMeta) {
             writeStoredJson(LAST_REFRESH_DELTA_KEY, {
                 currentTotal: currentRefreshDeltaMeta.currentTotal,
-                previousTotal: currentRefreshDeltaMeta.previousTotal
+                previousTotal: currentRefreshDeltaMeta.previousTotal,
+                baselineUpdatedAt: refreshBaselineUpdatedAt,
+                refreshedAt: new Date().toISOString()
             });
         } else {
             removeStoredItem(LAST_REFRESH_DELTA_KEY);
@@ -923,7 +971,12 @@ const getRenderedRefreshDeltaMeta = (portfolio) => {
         return null;
     }
 
-    return getPortfolioRefreshDiffMeta(storedDelta.currentTotal, storedDelta.previousTotal);
+    const storedMeta = getPortfolioRefreshDiffMeta(storedDelta.currentTotal, storedDelta.previousTotal);
+    if (storedMeta) {
+        storedMeta.elapsedLabel = formatElapsedBetween(storedDelta.baselineUpdatedAt, storedDelta.refreshedAt);
+    }
+
+    return storedMeta;
 };
 
 /**
@@ -950,8 +1003,9 @@ const renderProgressDelta = (diffMeta) => {
     if (!diffMeta) return;
 
     const weatherMood = getPerformanceWeatherMood(diffMeta.diffPct);
+    const elapsedHtml = diffMeta.elapsedLabel ? ` in ${escapeHtml(diffMeta.elapsedLabel)}` : '';
     const deltaEl = document.getElementById('progress_delta');
-    deltaEl.innerHTML = `<span class="abs_value">${diffMeta.sign}${formatCompactValue(diffMeta.diff)}</span>${renderPercentageValue(diffMeta.diffPctLabel)} <span role="img" aria-label="${escapeHtml(weatherMood.label)}">${weatherMood.icon}</span>`;
+    deltaEl.innerHTML = `<span class="abs_value">${diffMeta.sign}${formatCompactValue(diffMeta.diff)}</span>${renderPercentageValue(diffMeta.diffPctLabel)}${elapsedHtml} <span role="img" aria-label="${escapeHtml(weatherMood.label)}">${weatherMood.icon}</span>`;
     deltaEl.className = `progress_delta ${diffMeta.diffClass}`;
 };
 
@@ -1102,6 +1156,7 @@ const updateProgress = (data) => {
             : null;
         const refreshDiffMeta = getPortfolioRefreshDiffMeta(currentTotal, refreshBaselineTotal);
         if (refreshDiffMeta) {
+            refreshDiffMeta.elapsedLabel = getRefreshElapsedLabel();
             currentRefreshDeltaMeta = refreshDiffMeta;
             renderProgressDelta(refreshDiffMeta);
             renderDashboardPerformanceMood(refreshDiffMeta);
@@ -1134,6 +1189,7 @@ const streamPortfolioRefresh = (options = {}) => {
         refreshBaselineTotal = typeof baselinePortfolio?.total === 'number' && Number.isFinite(baselinePortfolio.total)
             ? baselinePortfolio.total
             : null;
+        refreshBaselineUpdatedAt = localStorage.getItem(LAST_UPDATE_KEY);
         
         // Build map of assetId -> previous total value from the last fully successful refresh.
         previousAssetValues = {};
