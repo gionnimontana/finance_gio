@@ -14,3 +14,8 @@ This folder contains source-specific scraping adapters that translate each upstr
 - [xeScraper.js](./xeScraper.js): Exposes XE crypto-to-EUR providers used as the last fallback source.
 - [yahooFinance.js](./yahooFinance.js): Exposes Yahoo Finance crypto-to-EUR providers that hit the chart API first and fall back to page parsing only when needed, plus reusable history-fetch helpers consumed by the crypto risk scorer.
 - [youngPlatformScraper.js](./youngPlatformScraper.js): Builds the active crypto quote chain, preferring Yahoo Finance's API-first provider stack before Young Platform and XE.
+
+## Related Docs
+
+- [../../../docs/scraper-runtime.md](../../../docs/scraper-runtime.md): Provider fallback, risk-scoring buckets, and KID fallback behavior.
+- [../../../docs/shared-risk-caches.md](../../../docs/shared-risk-caches.md): Persistence of the ISIN, crypto, and gold risk results.

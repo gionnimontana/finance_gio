@@ -1,5 +1,7 @@
 # Performance Weather Moods
 
+> **Status:** implemented on 2026-09-19 and since revised. Treat this page as the original plan and band tables. Shipped behavior differs: the title mood and streamed `progress_delta` compare against the last fully successful refresh total (not a daily/weekly baseline), and `shortHorizon` only feeds the separate overview row. See [portfolio-metrics.md](./portfolio-metrics.md) for the current contract. Nothing in `server/` computes `shortHorizon`; it is passed through from `assetsSchema.json` (default `null`), so the overview row shows its unavailable state unless the field is populated externally.
+
 This page is an implementation plan for replacing the dashboard's current rocket/fire performance emojis with a daily/weekly percentage-driven weather forecast and rare-event moods. The forecast will appear both in the dashboard top bar beside the existing ATH percentage mood and in the relevant short-horizon performance surface. Completed refresh groups will also receive their own delta-specific mood.
 
 ## Goal
@@ -126,3 +128,4 @@ Finally, search the frontend for `🚀` and `🔥` to confirm the old performanc
 - [../view/dashboard/script.js](../view/dashboard/script.js)
 - [../view/dashboard/index.md](../view/dashboard/index.md)
 - [./portfolio-metrics.md](./portfolio-metrics.md)
+- [./data-model.md](./data-model.md)

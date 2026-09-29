@@ -14,3 +14,8 @@ This folder holds higher-level backend business logic plus release-build and dep
 
 - [portfolio/index.md](./portfolio/index.md): Portfolio aggregation and streaming orchestration.
 - [portfolio/index.js](./portfolio/index.js): Builds grouped portfolio totals plus all-time-high summary metadata from the asset schema, saved history before the current month, and live scraper results.
+
+## Related Docs
+
+- [../../docs/frontend-cache.md](../../docs/frontend-cache.md): Release build, SSH helpers, and remote deploy workflow.
+- [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): Cache model behind the asset-risk payload.

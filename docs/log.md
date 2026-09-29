@@ -212,3 +212,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Added per-user `assetsSchema.viewGroupColors` values managed from Settings and preserved through simple view-group renames.
 - Documented the shared Dashboard and History rendering contract for group cards, charts, and History table tints.
 - Updated the scraper runtime notes because unexpected top-level scraper aborts now propagate every still-unresolved asset into the portfolio `failures` list, which keeps the frontend recovery path active even when the refresh dies before explicit per-asset failures are emitted.
+
+## [2026-09-29] lint | Wiki health check
+- Linked the orphaned `performance-weather-moods.md` from the docs index, README, and view index, and added a status banner because the plan now diverges from shipped title-mood and progress-delta behavior.
+- Recorded that nothing in `server/` populates `shortHorizon`, added the crypto/gold risk bucket thresholds and cache TTL to `scraper-runtime.md`, and added missing cross-references between the deploy, scraper, and structural pages.

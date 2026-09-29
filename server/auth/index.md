@@ -5,3 +5,7 @@ This folder manages password generation, user-folder lifecycle, account deletion
 ## Files
 
 - [index.js](./index.js): Generates account passwords, hashes credentials, creates or deletes user data folders, and exposes the Express auth handlers and middleware.
+
+## Related Docs
+
+- [../../docs/data-model.md](../../docs/data-model.md): Password-derived user folders, browser-local login state, and account deletion.

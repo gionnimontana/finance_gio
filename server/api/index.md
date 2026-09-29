@@ -9,3 +9,8 @@ This folder persists and normalizes per-user asset schema data and monthly histo
 - [goldRiskCache.js](./goldRiskCache.js): Loads and atomically rewrites the shared `goldRiskCache.json` file stored under the backend data root so computed physical-gold risk scores survive server restarts and remain shared across all users.
 - [isinRiskCache.js](./isinRiskCache.js): Loads and atomically rewrites the shared `isinRiskCache.json` file stored under the backend data root so KID-derived ISIN risk values survive server restarts and remain shared across all users.
 - [sharedRiskCache.js](./sharedRiskCache.js): Provides the shared on-disk cache helper reused by ISIN, crypto, and gold risk-indicator persistence modules, including best-effort persistence when disk writes fail at runtime.
+
+## Related Docs
+
+- [../../docs/data-model.md](../../docs/data-model.md): Persisted schema/history fields and migration rules.
+- [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): Shared risk-cache file model and persistence behavior.

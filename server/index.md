@@ -18,3 +18,5 @@ This folder contains the backend application logic for authentication, user data
 - [../docs/data-model.md](../docs/data-model.md): Password-derived user identity, persisted schema/history files, and cache invalidation rules shared with the frontend.
 - [../docs/frontend-cache.md](../docs/frontend-cache.md): Production route ownership, static cache policy, and deploy/runtime verification behavior.
 - [../docs/scraper-runtime.md](../docs/scraper-runtime.md): Provider fallback, fetch-only runtime behavior, and low-memory scraper tuning.
+- [../docs/shared-risk-caches.md](../docs/shared-risk-caches.md): Shared on-disk ISIN, crypto, and gold risk caches hydrated at startup.
+- [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): ATH and summary baselines produced by the portfolio builder.
