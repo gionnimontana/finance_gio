@@ -4,7 +4,7 @@ This folder contains the backend application logic for authentication, user data
 
 ## Direct Files
 
-- [index.js](./index.js): Express bootstrap that loads environment variables, hydrates the shared `data/isinRiskCache.json`, `data/cryptoRiskCache.json`, and `data/goldRiskCache.json` indicator caches into the scraper runtime on startup, serves the frontend, preserves permissive local/file-based API access with a small built-in CORS middleware, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, assets-schema, view-group and color updates, per-user Other-asset risk-overrides, generic asset-risk-indicator plus legacy ISIN-risk APIs, and provides the health endpoint used by local automation.
+- [index.js](./index.js): Express bootstrap that loads environment variables, hydrates the shared `data/isinRiskCache.json`, `data/cryptoRiskCache.json`, and `data/goldRiskCache.json` indicator caches into the scraper runtime on startup, serves the frontend, preserves permissive local/file-based API access with a small built-in CORS middleware, redirects root and unknown non-asset app URLs to the login entrypoint, exposes auth, account-deletion, assets-schema, view-group and color updates, per-user Other-asset risk-overrides, generic asset-risk-indicator plus legacy ISIN-risk APIs, the header-authenticated `/portfolio/stream` SSE endpoint, and provides the health endpoint used by local automation.
 
 ## Folders
 
@@ -16,7 +16,7 @@ This folder contains the backend application logic for authentication, user data
 ## Related Docs
 
 - [../docs/data-model.md](../docs/data-model.md): Password-derived user identity, persisted schema/history files, and cache invalidation rules shared with the frontend.
-- [../docs/frontend-cache.md](../docs/frontend-cache.md): Production route ownership, static cache policy, and deploy/runtime verification behavior.
+- [../docs/deploy-runtime.md](../docs/deploy-runtime.md): Production route ownership, static cache policy, and deploy/runtime verification behavior.
 - [../docs/scraper-runtime.md](../docs/scraper-runtime.md): Provider fallback, fetch-only runtime behavior, and low-memory scraper tuning.
 - [../docs/shared-risk-caches.md](../docs/shared-risk-caches.md): Shared on-disk ISIN, crypto, and gold risk caches hydrated at startup.
 - [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): ATH and summary baselines produced by the portfolio builder.

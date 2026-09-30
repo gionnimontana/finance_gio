@@ -1,6 +1,6 @@
-# Frontend Cache
+# Deploy Runtime
 
-This page documents how production frontend releases force browsers to fetch fresh files on the next page load without requiring users to hard-refresh manually.
+This page documents how production deploys ship the backend and frontend, how Nginx owns routing and cache policy, and how browsers fetch fresh files on the next page load without a manual hard refresh.
 
 ## Current State
 - Production serves the finance frontend from Nginx under `/var/www/$PFB_DEPLOY_SITE_DOMAIN`.
@@ -39,7 +39,9 @@ This page documents how production frontend releases force browsers to fetch fre
 ## Related
 - [../view/index.md](../view/index.md)
 - [../server/scripts/index.md](../server/scripts/index.md)
-- [./data-model.md](./data-model.md): auth header and SSE query-parameter behavior behind the proxied routes
+- [./data-model.md](./data-model.md): persisted data behind the proxied routes
+- [./auth-security.md](./auth-security.md): header auth expected by the proxied routes
+- [./configuration.md](./configuration.md): full `PFB_DEPLOY_*` and `PFB_SCRAPER_*` reference
 - [./scraper-runtime.md](./scraper-runtime.md): the `PFB_SCRAPER_*` systemd env vars that `deploy.sh` writes
 - [../deploy.sh](../deploy.sh)
 - [../site.nginx.template](../site.nginx.template)

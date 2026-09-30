@@ -17,5 +17,7 @@ This folder holds higher-level backend business logic plus release-build and dep
 
 ## Related Docs
 
-- [../../docs/frontend-cache.md](../../docs/frontend-cache.md): Release build, SSH helpers, and remote deploy workflow.
+- [../../docs/deploy-runtime.md](../../docs/deploy-runtime.md): Release build, SSH helpers, and remote deploy workflow.
 - [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): Cache model behind the asset-risk payload.
+- [../../docs/risk-indicators.md](../../docs/risk-indicators.md): Risk payload shape, badge families, and PRIIPs context.
+- [../../docs/configuration.md](../../docs/configuration.md): Deploy and SSH helper variables.

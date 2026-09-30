@@ -23,6 +23,16 @@ const API_BASE = (() => {
 // Password storage key
 const PASSWORD_KEY = 'userPassword';
 
+// Dashboard caches tied to one user; display preferences stay because they belong to the device.
+const USER_SCOPED_STORAGE_KEYS = Object.freeze([
+    PASSWORD_KEY,
+    'portfolio',
+    'portfolioLastSuccessfulSnapshot',
+    'portfolioLastRefreshDelta',
+    'portfolioLastUpdate',
+    'portfolioProgressBanner'
+]);
+
 const PAGE_LOADING_HIDE_DELAY_MS = 220;
 
 // Absolute values visibility key
@@ -103,10 +113,12 @@ const getPassword = () => localStorage.getItem(PASSWORD_KEY);
 const setPassword = (password) => localStorage.setItem(PASSWORD_KEY, password);
 
 /**
- * Remove the stored user password during logout or auth expiry.
+ * Remove the stored password and every per-user dashboard cache during logout or auth expiry.
  * @returns {void}
  */
-const clearPassword = () => localStorage.removeItem(PASSWORD_KEY);
+const clearUserSession = () => {
+    USER_SCOPED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+};
 
 /**
  * Resolve the shared full-screen loading overlay when the current page uses it.
@@ -195,8 +207,7 @@ const setAbsoluteHidden = (hidden) => {
  * @returns {void}
  */
 const logout = () => {
-    clearPassword();
-    localStorage.removeItem('portfolio'); // Clear cached portfolio data
+    clearUserSession();
     window.location.href = BASE_PATH + '/login/';
 };
 
@@ -238,7 +249,7 @@ const authFetch = async (url, options = {}) => {
     
     // If 401, redirect to login
     if (response.status === 401) {
-        clearPassword();
+        clearUserSession();
         window.location.href = BASE_PATH + '/login/';
         throw new Error('Authentication expired');
     }

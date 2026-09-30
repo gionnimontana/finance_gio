@@ -1165,6 +1165,43 @@ const updateProgress = (data) => {
 };
 
 /**
+ * Read a text/event-stream response body and dispatch each parsed event.
+ * @param {Response} response - Streaming fetch response.
+ * @param {(eventType: string, data: string) => void} onEvent - Callback for each event with data.
+ * @returns {Promise<void>}
+ */
+const readServerSentEvents = async (response, onEvent) => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const dispatchBlock = (block) => {
+        let eventType = 'message';
+        const dataLines = [];
+        for (const line of block.split('\n')) {
+            if (line.startsWith('event:')) eventType = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+        }
+        if (dataLines.length) onEvent(eventType, dataLines.join('\n'));
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf('\n\n');
+        while (boundary !== -1) {
+            dispatchBlock(buffer.slice(0, boundary));
+            buffer = buffer.slice(boundary + 2);
+            boundary = buffer.indexOf('\n\n');
+        }
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) dispatchBlock(buffer);
+};
+
+/**
  * Stream portfolio data through the SSE endpoint while showing per-asset progress updates.
  * @param {{ refresh?: boolean, title?: string, buttonLabel?: string, persistCompletedBanner?: boolean, fallbackLoadingMessage?: string|null }} [options] - Streaming behavior overrides.
  * @returns {Promise<object>}
@@ -1207,8 +1244,7 @@ const streamPortfolioRefresh = (options = {}) => {
 
         showProgressBanner(title);
 
-        const password = getPassword();
-        const eventSource = new EventSource(`${API_BASE}/portfolio/stream?password=${encodeURIComponent(password)}&refresh=${refresh ? 'true' : 'false'}`);
+        let settled = false;
 
         const fallbackToStandardFetch = () => {
             if (fallbackLoadingMessage) {
@@ -1242,14 +1278,18 @@ const streamPortfolioRefresh = (options = {}) => {
             });
         };
 
-        eventSource.addEventListener('progress', (event) => {
-            const data = JSON.parse(event.data);
-            updateProgress(data);
-        });
+        const handleStreamFailure = (error) => {
+            if (settled) {
+                if (error) console.error('Stream error after completion:', error);
+                return;
+            }
+            settled = true;
+            if (error) console.error('Stream error:', error);
+            fallbackToStandardFetch();
+        };
 
-        eventSource.addEventListener('complete', (event) => {
-            const portfolio = JSON.parse(event.data);
-            eventSource.close();
+        const handleStreamComplete = (portfolio) => {
+            settled = true;
 
             const resolvedPortfolio = persistPortfolioSnapshot(portfolio, cachedPortfolio);
             renderCompletedProgressAssets(resolvedPortfolio, baselinePortfolio);
@@ -1270,23 +1310,31 @@ const streamPortfolioRefresh = (options = {}) => {
             refreshButton.disabled = false;
             refreshButton.innerHTML = originalLabel;
             resolve(resolvedPortfolio);
-        });
-
-        eventSource.addEventListener('error', (event) => {
-            // Check if it's a custom error event with data
-            if (event.data) {
-                console.error('Stream error:', JSON.parse(event.data));
-            }
-            eventSource.close();
-            fallbackToStandardFetch();
-        });
-
-        eventSource.onerror = () => {
-            // Connection error - close and fallback
-            eventSource.close();
-
-            fallbackToStandardFetch();
         };
+
+        authFetch(`${API_BASE}/portfolio/stream?refresh=${refresh ? 'true' : 'false'}`, {
+            headers: { Accept: 'text/event-stream' }
+        })
+            .then((response) => {
+                if (!response.ok || !response.body) {
+                    throw new Error(`Stream request failed with status ${response.status}`);
+                }
+
+                return readServerSentEvents(response, (eventType, data) => {
+                    if (settled) return;
+                    if (eventType === 'progress') {
+                        updateProgress(JSON.parse(data));
+                    } else if (eventType === 'complete') {
+                        handleStreamComplete(JSON.parse(data));
+                    } else if (eventType === 'error') {
+                        handleStreamFailure(JSON.parse(data));
+                    }
+                });
+            })
+            .then(() => {
+                if (!settled) handleStreamFailure(new Error('Stream ended before completion'));
+            })
+            .catch(handleStreamFailure);
     });
 };
 

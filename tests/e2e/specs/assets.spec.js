@@ -96,8 +96,28 @@ test('manages assets, view groups, password export, delete modal export, and log
   await page.locator('#export_password_btn').click()
   await expect(page.locator('#success_banner')).toContainText('Password copied to clipboard')
 
+  await page.evaluate(() => {
+    for (const key of ['portfolio', 'portfolioLastSuccessfulSnapshot', 'portfolioLastRefreshDelta', 'portfolioLastUpdate', 'portfolioProgressBanner']) {
+      window.localStorage.setItem(key, '{}')
+    }
+    window.localStorage.setItem('hideAbsoluteValues', '1')
+  })
+
   await page.getByRole('button', { name: '🚪 Logout' }).click()
   await expect(page).toHaveURL(/\/login\/$/)
+
+  const remainingKeys = await page.evaluate(() => Object.keys(window.localStorage))
+  for (const key of [
+    'userPassword',
+    'portfolio',
+    'portfolioLastSuccessfulSnapshot',
+    'portfolioLastRefreshDelta',
+    'portfolioLastUpdate',
+    'portfolioProgressBanner',
+  ]) {
+    expect(remainingKeys).not.toContain(key)
+  }
+  expect(remainingKeys).toContain('hideAbsoluteValues')
 })
 
 test('removes the current user after confirmation', async ({ page }) => {

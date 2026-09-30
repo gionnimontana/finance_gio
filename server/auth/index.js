@@ -125,7 +125,7 @@ const recordSuccessfulAccountCreation = (now = Date.now()) => {
 const generatePassword = () => {
     const words = [];
     for (let i = 0; i < 5; i++) {
-        const randomIndex = Math.floor(Math.random() * ITALIAN_WORDS.length);
+        const randomIndex = crypto.randomInt(ITALIAN_WORDS.length);
         words.push(ITALIAN_WORDS[randomIndex]);
     }
     return words.join('-');

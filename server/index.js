@@ -18,8 +18,6 @@ const {
   handleGenerate,
   handleValidate,
   authMiddleware,
-  hashPassword,
-  userExists,
   deleteUser,
 } = require('./auth')
 const {
@@ -125,19 +123,9 @@ app.get('/health', (req, res) => {
   res.json({ ok: true })
 })
 
-// SSE endpoint for streaming portfolio loads and manual refreshes (requires auth via query param for SSE)
-app.get('/portfolio/stream', async (req, res) => {
-  // For SSE, we need to get password from query param since headers aren't reliable
-  const password = req.query.password || req.headers['x-user-password']
-  if (!password) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
-  const passwordHash = hashPassword(password)
-  if (!userExists(passwordHash)) {
-    return res.status(401).json({ error: 'Invalid password' })
-  }
-
+// SSE endpoint for streaming portfolio loads and manual refreshes; the dashboard reads it through fetch so auth stays in the header
+app.get('/portfolio/stream', authMiddleware, async (req, res) => {
+  const passwordHash = req.userPasswordHash
   const refresh = parseRefreshFlag(req.query.refresh, true)
 
   // Set SSE headers

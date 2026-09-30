@@ -97,3 +97,58 @@ test('updateHistoricalData keeps the last full current-month snapshot when a ref
     assert.equal(afterSuccessfulRefresh[0].Equity.total, 1000)
   })
 })
+
+test('updateHistoricalData writes one bucket per schema view group, including custom groups', { concurrency: false }, async () => {
+  await withTempDataDir(async ({ auth, api }) => {
+    const passwordHash = auth.hashPassword('portfolio-history-custom-groups-test')
+    auth.createUser(passwordHash)
+
+    const saved = await api.updateAssetsSchema(passwordHash, {
+      assets: [
+        ['Other', 'cash', 500, 'Cash', 'Liquidity'],
+        ['Other', 'stocks', 1200, 'Brokerage', 'Stocks'],
+      ],
+    })
+    assert.equal(saved.ok, true)
+
+    await api.updateHistoricalData(passwordHash, {
+      total: 1700,
+      Liquidity: { total: 500 },
+      Stocks: { total: 1200 },
+      failures: [],
+    })
+
+    const [entry] = await api.getHistoricalData(passwordHash)
+    assert.equal(entry.Stocks.total, 1200)
+    assert.equal(entry.Liquidity.total, 500)
+    assert.deepEqual(
+      Object.keys(entry).filter((key) => !['date', 'label', 'total'].includes(key)).sort(),
+      [...saved.assetsSchema.viewGroups].sort()
+    )
+  })
+})
+
+test('Settings saves keep an externally set shortHorizon baseline', { concurrency: false }, async () => {
+  await withTempDataDir(async ({ auth, api }) => {
+    const passwordHash = auth.hashPassword('portfolio-short-horizon-test')
+    auth.createUser(passwordHash)
+
+    const shortHorizon = { currentTotal: 1010, previousTotal: 1000, horizon: 'daily', percentage: 1 }
+    const schema = await api.getAssetsSchema(passwordHash)
+    const assetsPath = path.join(auth.getUserDataDir(passwordHash), 'assetsSchema.json')
+    fs.writeFileSync(assetsPath, JSON.stringify({ ...schema, shortHorizon }, null, 2), 'utf8')
+
+    const assetsResult = await api.updateAssetsSchema(passwordHash, {
+      assets: [['Other', 'cash', 500, 'Cash', 'Liquidity']],
+    })
+    assert.deepEqual(assetsResult.assetsSchema.shortHorizon, shortHorizon)
+
+    const groupsResult = await api.updateViewGroups(passwordHash, { viewGroups: ['Liquidity', 'Crypto'] })
+    assert.deepEqual(groupsResult.assetsSchema.shortHorizon, shortHorizon)
+
+    const overridesResult = await api.updateRiskOverrides(passwordHash, { riskOverrides: { cash: 2 } })
+    assert.deepEqual(overridesResult.assetsSchema.shortHorizon, shortHorizon)
+
+    assert.deepEqual(JSON.parse(fs.readFileSync(assetsPath, 'utf8')).shortHorizon, shortHorizon)
+  })
+})

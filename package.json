@@ -11,7 +11,8 @@
     "start": "node server/index.js",
     "start:live": "node server/index.js",
     "e2e:reset": "node tests/e2e/setup/resetTestData.js",
-    "test": "npm run test:e2e",
+    "test": "npm run test:server && npm run test:e2e",
+    "test:server": "node --test tests/server/*.test.js",
     "test:e2e": "npm run browsers:install && npm run e2e:reset && playwright test",
     "test:e2e:smoke": "npm run browsers:install && npm run e2e:reset && playwright test --grep @smoke",
     "test:e2e:headed": "npm run browsers:install && npm run e2e:reset && playwright test --headed",
@@ -23,7 +24,7 @@
     "node": ">=24.15.0"
   },
   "simple-git-hooks": {
-    "pre-commit": "npm run test:e2e:smoke"
+    "pre-commit": "npm run test:server && npm run test:e2e:smoke"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

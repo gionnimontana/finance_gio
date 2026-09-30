@@ -14,5 +14,4 @@ This folder contains the frontend pages, shared browser utilities, and page-spec
 
 - [../docs/data-model.md](../docs/data-model.md): Persisted schema/history files, view-group ordering, and browser-local cache behavior shared across pages.
 - [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): Dashboard ATH rules and the summary baselines reused across dashboard and history.
-- [../docs/frontend-cache.md](../docs/frontend-cache.md): Production-only generated frontend release behavior and cache-control expectations.
-- [../docs/performance-weather-moods.md](../docs/performance-weather-moods.md): Original plan and band tables for the dashboard weather moods; current contracts live in `portfolio-metrics.md`.
+- [../docs/deploy-runtime.md](../docs/deploy-runtime.md): Production-only generated frontend release behavior and cache-control expectations.

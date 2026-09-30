@@ -223,7 +223,7 @@ test('groups completed refresh progress by view group and shows grouped diffs', 
 test('falls back to a regular refresh when the event stream cannot connect', async ({ page }) => {
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
 
-  await page.route(/\/portfolio\/stream\?password=.*/, route => route.abort('failed'))
+  await page.route(/\/portfolio\/stream\?refresh=(true|false)$/, route => route.abort('failed'))
   const fallbackResponse = page.waitForResponse(response => response.url().includes('/portfolio?refresh=true') && response.ok())
 
   await page.locator('#refresh_button').click()
@@ -306,7 +306,7 @@ test('keeps cached asset rows when a fallback refresh omits failed dynamic asset
 
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
 
-  await page.route(/\/portfolio\/stream\?password=.*/, route => route.abort('failed'))
+  await page.route(/\/portfolio\/stream\?refresh=(true|false)$/, route => route.abort('failed'))
   await page.route(/\/portfolio\?refresh=true$/, async route => {
     await route.fulfill({
       status: 200,
@@ -404,7 +404,7 @@ test('treats silently missing same-schema assets as a partial refresh and preser
 
   await openAuthenticatedPage(page, '/dashboard/', DASHBOARD_USER_PASSWORD)
 
-  await page.route(/\/portfolio\/stream\?password=.*/, route => route.abort('failed'))
+  await page.route(/\/portfolio\/stream\?refresh=(true|false)$/, route => route.abort('failed'))
   await page.route(/\/portfolio\?refresh=true$/, async route => {
     await route.fulfill({
       status: 200,
@@ -566,8 +566,10 @@ test('reuses the last full refresh baseline after a partial refresh so the next 
   }, { portfolio: cachedPortfolio, previousSuccessfulRefreshIso })
 
   let refreshAttempt = 0
-  await page.route(/\/portfolio\/stream\?password=.*/, async route => {
+  await page.route(/\/portfolio\/stream\?refresh=(true|false)$/, async route => {
     refreshAttempt += 1
+    expect(route.request().url()).not.toContain('password=')
+    expect(route.request().headers()['x-user-password']).toBe(DASHBOARD_USER_PASSWORD)
     const events = refreshAttempt === 1 ? partialRefreshStream : successfulRefreshStream
 
     await route.fulfill({

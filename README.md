@@ -27,8 +27,10 @@ The app runs on `http://localhost:8085`
 
 The repository now includes a deterministic full-stack e2e harness under `tests/e2e/`.
 
+- `npm run test:server`: fast `node:test` backend unit suite under `tests/server/`
 - `npm run test:e2e:smoke`: fast smoke coverage used by the local `pre-commit` hook
 - `npm run test:e2e`: full Playwright suite against the real Express server and frontend
+- `npm test`: backend unit suite followed by the full Playwright suite
 - `npm run test:e2e:headed`: headed Playwright run for local debugging
 
 The tests boot the real application in a dedicated test mode:
@@ -47,8 +49,8 @@ If you ran `npm install` before switching this repo to Node 24.15.0+, rerun `npm
 
 ## Commit And CI Automation
 
-- `pre-commit` runs `npm run test:e2e:smoke`
-- GitHub Actions runs the full e2e suite on pushes to `main` and on pull requests
+- `pre-commit` runs `npm run test:server` and `npm run test:e2e:smoke`
+- GitHub Actions runs the backend unit suite and the full e2e suite on pushes to `main` and on pull requests
 
 ## Use The App
 
@@ -68,10 +70,14 @@ If you ran `npm install` before switching this repo to Node 24.15.0+, rerun `npm
 
 - [docs/data-model.md](./docs/data-model.md): user storage, view-group ordering, schema-cache invalidation, and cross-device behavior
 - [docs/shared-risk-caches.md](./docs/shared-risk-caches.md): shared ISIN, crypto, and gold risk-cache persistence across users and restarts
-- [docs/portfolio-metrics.md](./docs/portfolio-metrics.md): ATH rules and summary baselines shared across dashboard and history
-- [docs/performance-weather-moods.md](./docs/performance-weather-moods.md): original plan and mood-band tables for the dashboard weather icons (current behavior is in `portfolio-metrics.md`)
-- [docs/frontend-cache.md](./docs/frontend-cache.md): production cache-control, generated release artifacts, and deploy/runtime expectations
+- [docs/portfolio-metrics.md](./docs/portfolio-metrics.md): ATH rules, weather and ATH mood bands, and summary baselines shared across dashboard and history
+- [docs/deploy-runtime.md](./docs/deploy-runtime.md): production cache-control, generated release artifacts, and deploy/runtime expectations
 - [docs/scraper-runtime.md](./docs/scraper-runtime.md): provider fallback, fetch-only scrapers, stale-cache recovery, and low-memory scraper tuning
+- [docs/auth-security.md](./docs/auth-security.md): password-as-identity model and its security trade-offs
+- [docs/portfolio-refresh.md](./docs/portfolio-refresh.md): refresh endpoints, SSE events, fallbacks, and history writes
+- [docs/risk-indicators.md](./docs/risk-indicators.md): risk badge sources and how they relate to PRIIPs SRI
+- [docs/configuration.md](./docs/configuration.md): environment variable reference
+- [docs/testing.md](./docs/testing.md): test suites, isolation, hooks, and CI
 
 ## Working In This Repo
 

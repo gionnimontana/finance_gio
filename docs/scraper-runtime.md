@@ -25,7 +25,7 @@ This page captures the cross-cutting scraper behavior that matters beyond a sing
 - justETF ETF quotes now come from `https://www.justetf.com/api/etfs/:isin/quote`, which avoids the rendered quote shell that can appear incomplete or anti-bot-filtered in headless Chromium. The same vendor adapter first prefers justETF-linked PRIIPs/KID PDFs, then falls back to issuer-hosted PRIIP KIDs for products whose justETF profile only links out to the issuer, including a direct WisdomTree dataspan KID URL for `GB00BJYDH287` when justETF points at either the `wisdomtree.eu` or `wisdomtree.com` issuer site because those product pages can redirect or block server-side fetches, and now recognizes both the original English PRIIPs wording and localized issuer wording such as “Abbiamo classificato questo prodotto al livello N su 7”.
 - Yahoo Finance crypto quotes now come from `https://query1.finance.yahoo.com/v8/finance/chart/:symbol-EUR` before any browser navigation is attempted, which removes the heaviest path for the common BTC and ETH refresh case while retaining browser-backed fallbacks.
 - The existing `PFB_TEST_MODE=1` fixture runtime still drives dashboard e2e flows. The dedicated scraper spec covers parser and fallback logic without depending on third-party sites.
-- Risk scorers, KID parsing, risk caches, and the unexpected-abort path are also covered by `node:test` files under `tests/server/`. Run them with `node --test tests/server/*.test.js` (the bare directory form fails); no npm script, pre-commit hook, or CI job runs them yet.
+- Risk scorers, KID parsing, risk caches, and the unexpected-abort path are also covered by `node:test` files under `tests/server/`. Run them with `npm run test:server`; they also run in `npm test`, the pre-commit hook, and CI.
 - On constrained Linux servers, the main failure mode for non-crypto scraping is usually timeout pressure rather than selector drift. justETF pages are materially heavier than the crypto sources, so reducing concurrency and increasing ETF and gold timeouts is the primary mitigation.
 - The deployment service now exports `PFB_SCRAPER_CONCURRENCY`, `PFB_SCRAPER_TIMEOUT_MS`, `PFB_SCRAPER_SELECTOR_TIMEOUT_MS`, `PFB_SCRAPER_ETF_TIMEOUT_MS`, `PFB_SCRAPER_ETF_SELECTOR_TIMEOUT_MS`, `PFB_SCRAPER_GOLD_TIMEOUT_MS`, and `PFB_SCRAPER_GOLD_SELECTOR_TIMEOUT_MS` for a 2 GB server profile.
 
@@ -34,4 +34,7 @@ This page captures the cross-cutting scraper behavior that matters beyond a sing
 - [Scraper structure](../server/scrapers/index.md)
 - [Portfolio orchestration](../server/scripts/portfolio/index.md)
 - [Shared risk caches](./shared-risk-caches.md)
-- [Deploy runtime and systemd env](./frontend-cache.md)
+- [Deploy runtime and systemd env](./deploy-runtime.md)
+- [Risk indicators](./risk-indicators.md): badge families and how computed scores differ from PRIIPs SRI
+- [Configuration](./configuration.md): every `PFB_SCRAPER_*` variable and default
+- [Testing](./testing.md)

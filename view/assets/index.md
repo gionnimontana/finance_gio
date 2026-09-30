@@ -12,3 +12,4 @@ This folder contains the authenticated settings page used to manage assets, view
 
 - [../../docs/data-model.md](../../docs/data-model.md): Schema fields, view-group rename migration, `viewGroupColors`, `riskOverrides`, and account deletion.
 - [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): Why shared risk caches survive account deletion.
+- [../../docs/risk-indicators.md](../../docs/risk-indicators.md): How `Other` risk overrides feed dashboard badges.

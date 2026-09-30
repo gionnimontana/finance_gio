@@ -1,6 +1,6 @@
 # Docs Log
 
-This file is an append-only history of notable wiki updates.
+This file is an append-only history of notable wiki updates, ordered oldest first. Add new entries at the bottom.
 
 Use one heading per entry:
 
@@ -11,107 +11,6 @@ Use one heading per entry:
 ```
 
 Supported labels are `bootstrap`, `update`, `query`, and `lint`.
-
-## [2026-09-28] update | Add elapsed-time label to refresh delta
-- The dashboard progress-banner delta now appends a compact `in 5h35m`-style label for the time elapsed since the previous successful refresh.
-- Persisted `baselineUpdatedAt` and `refreshedAt` in `portfolioLastRefreshDelta` and documented the behavior in `docs/portfolio-metrics.md`.
-
-## [2026-09-25] update | Add history average annual growth
-- Added an `Avg Annual Growth` summary card on the history page that annualizes the compounded monthly growth rate.
-- Documented the annualized formula in `docs/portfolio-metrics.md`.
-
-## [2026-09-25] update | Compound history average monthly growth
-- Changed the history `Avg Monthly Growth` card from a linear average of total growth to the compounded monthly rate across loaded history.
-- Documented the formula and its positive-baseline fallback in `docs/portfolio-metrics.md`.
-
-## [2026-09-21] update | Fix dashboard refresh performance summary
-- Made the dashboard title weather mood and progress-banner percentage use the latest total against the last fully successful refresh total.
-- Persisted clean refresh source totals so the title mood remains correct after reload while partial refreshes keep their existing baseline safeguards.
-
-## [2026-09-19] update | Add percentage-driven performance weather
-- Added shared daily/weekly weather and grouped refresh-delta mood contracts, composed accessible dashboard title moods, and persisted completion markup.
-- Added the explicit `shortHorizon` payload contract and documented unavailable-baseline behavior so monthly and in-progress totals are not reused as weather percentages.
-
-## [2026-08-19] update | Accept current WisdomTree issuer domain
-- Updated `docs/scraper-runtime.md` so the direct dataspan fallback for `GB00BJYDH287` now records the current `wisdomtree.com` issuer domain alongside the older `wisdomtree.eu` host.
-- Refreshed the docs and scraper vendor index entries because the justETF risk-indicator path now matches either supported WisdomTree issuer domain before falling back to the direct KID document.
-
-## [2026-07-27] update | Health-check wiki links
-- Replaced the superseded ISIN-only cache plan page with `docs/shared-risk-caches.md`, covering the current shared ISIN, crypto, and gold risk-cache model.
-- Added cross-references from the data-model and scraper-runtime pages, refreshed the docs index, and linked the new topic from the README key wiki list.
-- Softened the WisdomTree scraper note so it records the durable direct-document fallback without freezing an external 403 status that can change independently of the code.
-
-## [2026-05-26] update | Add crypto risk indicators
-- Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
-- Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
-
-## [2026-05-26] update | Harden shared risk-cache persistence failures
-- Documented and implemented best-effort shared risk-cache persistence so disk-write failures are logged without failing risk-indicator API responses.
-- Updated backend API docs and scraper-runtime wiki notes so deploy-time permission and filesystem edge cases are discoverable during troubleshooting.
-
-## [2026-05-26] update | Proxy new asset-risk routes in Nginx
-- Updated the checked-in site template so production now proxies the generic asset-risk, legacy ISIN-risk, risk-override, and account-deletion endpoints to Express instead of redirecting them into the static app shell.
-- Refreshed the frontend deploy/runtime wiki notes because the exact backend route allowlist was lagging behind the server routes and caused remote-only failures after deploy.
-
-## [2026-05-26] update | Add Other risk defaults and per-user overrides
-- Extended the shared asset-risk flow so `Other` assets now always publish a default `Risk 1/7`, while allowing per-user integer `1-7` overrides persisted in `assetsSchema.riskOverrides` and saved through the new authenticated `/assets/risk-overrides` endpoint.
-- Refreshed backend/frontend structural docs and the data-model wiki so contributors can find the `Other`-only override rules, settings-table controls, and dashboard weighted-risk behavior updates.
-
-## [2026-05-26] update | Add gold risk indicators
-- Extended the generic asset-risk flow so physical gold assets now get fetch-first 1-7 `Risk` badges backed by Yahoo Finance gold-futures history plus a shared `goldRiskCache.json` file.
-- Refreshed the backend, frontend, and wiki entry points so contributors can find the gold risk cache module, gold risk scraper, and the dashboard’s mixed ISIN, crypto, and gold badge behavior.
-
-## [2026-05-26] update | Bypass blocked WisdomTree KID page
-- Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
-- Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.
-
-## [2026-05-26] update | Persist shared ISIN risk cache
-- Updated the data-model and scraper-runtime wiki pages to document the new shared `data/isinRiskCache.json` file, which is loaded on server startup and reused across all users on the same backend.
-- Refreshed the docs index and the existing ISIN risk cache topic so contributors can find the implemented startup-hydration and atomic write-through behavior from the main wiki entry points.
-
-## [2026-05-25] update | Record ISIN risk cache plan
-- Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
-- Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.
-
-## [2026-05-25] update | Add issuer fallback for ISIN KIDs
-- Updated `docs/scraper-runtime.md` with the issuer-hosted PRIIP fallback now used when a justETF profile does not expose a fundinfo-style KID URL, plus the localized wording needed to parse issuer PDFs.
-- Refreshed the docs and scraper structural entry points so contributors can find the new ETN fallback path from the wiki index and vendor navigation docs.
-
-## [2026-05-24] update | Add KID-based ISIN risk scraping
-- Extended the justETF scraper so ISIN assets can resolve a Synthetic Risk Indicator by discovering the linked fundinfo KID PDF and parsing its standard PRIIPs risk wording.
-- Refreshed the server and scraper docs because the backend now exposes a dedicated authenticated ISIN risk endpoint alongside the existing quote and portfolio flows.
-
-## [2026-05-22] update | Mask cold auth handoffs with shared loading overlay
-- Added a shared dark loading overlay to the frontend page shells and documented that it now stays visible until login validation or the first protected-page render completes.
-- Extended the frontend cache/runtime wiki notes because no-cache navigations still revalidate HTML first, so the cold-boot auth handoff behavior is now an intentional part of the source frontend.
-
-## [2026-05-21] update | Probe deployed domain during deploy
-- Updated `deploy.sh` and `finance-site.nginx.template` so deploys now reload Nginx, expose `/health` through the checked-in vhost template, and verify service health at `https://$PFB_DEPLOY_SITE_DOMAIN/health` from the server itself.
-- Refreshed the deploy/runtime wiki notes because the post-restart probe now validates the live domain-backed surface instead of curling the backend directly on `127.0.0.1:8085`.
-
-## [2026-05-21] update | Speed up crypto scraper runtime
-- Updated the shared scraper runtime to avoid launching Puppeteer pages for fetch-only provider chains, so API-backed scrapes no longer pay browser startup costs.
-- Refreshed the scraper wiki notes because Yahoo Finance crypto quotes now use the chart API first and only fall back to browser-backed sources when the fast path fails.
-
-## [2026-05-21] update | Add remote deploy helper
-- Added `npm run deploy:remote`, which reuses the local SSH credentials from `.env` plus `PFB_DEPLOY_APP_PATH` to run `bash ./deploy.sh` from the configured remote app directory.
-- Updated the deploy/runtime wiki notes and `.env.example` so the remote repository path is configured explicitly instead of being hard-coded into the helper.
-
-## [2026-05-21] update | Externalize deploy site domain
-- Replaced the checked-in finance Nginx file with `finance-site.nginx.template` and updated `deploy.sh` to render the deploy target paths from `PFB_DEPLOY_SITE_DOMAIN` instead of keeping the production hostname hard-coded in the script and template.
-- Added `.env.example` plus refreshed the deploy/runtime wiki notes so contributors know the shared `.env` file now carries the site domain used for deploy-time Nginx rendering.
-
-## [2026-05-21] update | Redirect unknown app routes home
-- Updated Express and the deployed Nginx template so unknown non-asset app URLs redirect to `/login/` instead of leaving the browser on a dead route or serving the login shell under the wrong path.
-- Refreshed the frontend routing wiki notes so contributors know authenticated users still land on `/dashboard/` through the existing login-page handoff.
-
-## [2026-05-21] update | Reload nginx after deploy config changes
-- Updated `deploy.sh` to validate the rendered finance site include file with `nginx -t` and reload the live `nginx` service after the backend restart so route and cache changes in the checked-in template actually take effect on the server.
-- Extended the frontend deploy wiki notes because copying the include file into `/var/www/...` is not enough to change live route handling by itself.
-
-## [2026-05-21] update | Re-exec deploy after pull
-- Updated `deploy.sh` to restart itself once when `git pull` advances the checked-out commit, so the running deploy process uses the freshly pulled script body and Nginx template instead of continuing with stale pre-pull shell code.
-- Extended the frontend deploy wiki notes with the self-reexec behavior because deploy-time script updates are now part of the supported production workflow.
 
 ## [2026-04-24] bootstrap | Create docs wiki
 - Added the initial `docs/` wiki shell with `index.md`, `schema.md`, and `log.md`.
@@ -189,6 +88,34 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Updated `deploy.sh` so deploys now install `finance.gingergio.it.nginx` into `/var/www/finance.gingergio.it/finance.gingergio.it.nginx` on the server, keeping the live include file aligned with the checked-in config.
 - Refreshed the finance Nginx reference and deployment wiki notes so contributors know `/etc/nginx/nginx.conf` should include the deployed file instead of embedding the finance server block inline.
 
+## [2026-05-21] update | Re-exec deploy after pull
+- Updated `deploy.sh` to restart itself once when `git pull` advances the checked-out commit, so the running deploy process uses the freshly pulled script body and Nginx template instead of continuing with stale pre-pull shell code.
+- Extended the frontend deploy wiki notes with the self-reexec behavior because deploy-time script updates are now part of the supported production workflow.
+
+## [2026-05-21] update | Reload nginx after deploy config changes
+- Updated `deploy.sh` to validate the rendered finance site include file with `nginx -t` and reload the live `nginx` service after the backend restart so route and cache changes in the checked-in template actually take effect on the server.
+- Extended the frontend deploy wiki notes because copying the include file into `/var/www/...` is not enough to change live route handling by itself.
+
+## [2026-05-21] update | Redirect unknown app routes home
+- Updated Express and the deployed Nginx template so unknown non-asset app URLs redirect to `/login/` instead of leaving the browser on a dead route or serving the login shell under the wrong path.
+- Refreshed the frontend routing wiki notes so contributors know authenticated users still land on `/dashboard/` through the existing login-page handoff.
+
+## [2026-05-21] update | Externalize deploy site domain
+- Replaced the checked-in finance Nginx file with `finance-site.nginx.template` and updated `deploy.sh` to render the deploy target paths from `PFB_DEPLOY_SITE_DOMAIN` instead of keeping the production hostname hard-coded in the script and template.
+- Added `.env.example` plus refreshed the deploy/runtime wiki notes so contributors know the shared `.env` file now carries the site domain used for deploy-time Nginx rendering.
+
+## [2026-05-21] update | Add remote deploy helper
+- Added `npm run deploy:remote`, which reuses the local SSH credentials from `.env` plus `PFB_DEPLOY_APP_PATH` to run `bash ./deploy.sh` from the configured remote app directory.
+- Updated the deploy/runtime wiki notes and `.env.example` so the remote repository path is configured explicitly instead of being hard-coded into the helper.
+
+## [2026-05-21] update | Speed up crypto scraper runtime
+- Updated the shared scraper runtime to avoid launching Puppeteer pages for fetch-only provider chains, so API-backed scrapes no longer pay browser startup costs.
+- Refreshed the scraper wiki notes because Yahoo Finance crypto quotes now use the chart API first and only fall back to browser-backed sources when the fast path fails.
+
+## [2026-05-21] update | Probe deployed domain during deploy
+- Updated `deploy.sh` and `finance-site.nginx.template` so deploys now reload Nginx, expose `/health` through the checked-in vhost template, and verify service health at `https://$PFB_DEPLOY_SITE_DOMAIN/health` from the server itself.
+- Refreshed the deploy/runtime wiki notes because the post-restart probe now validates the live domain-backed surface instead of curling the backend directly on `127.0.0.1:8085`.
+
 ## [2026-05-22] update | Generalize nginx template naming
 - Renamed the checked-in Nginx server-block template from `finance-site.nginx.template` to `site.nginx.template` so deploy assets are named generically and no longer finance-specific.
 - Updated `deploy.sh` and deploy/runtime wiki references so template rendering and contributor documentation stay aligned with the new generic template name.
@@ -196,6 +123,50 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-05-22] update | Document account deletion lifecycle
 - Extended `docs/data-model.md` so the password-derived storage notes now cover full user-folder deletion from Settings and the accompanying local logout behavior.
 - Refreshed the docs index because the settings flow now includes irreversible account removal alongside the existing per-user JSON persistence model.
+
+## [2026-05-22] update | Mask cold auth handoffs with shared loading overlay
+- Added a shared dark loading overlay to the frontend page shells and documented that it now stays visible until login validation or the first protected-page render completes.
+- Extended the frontend cache/runtime wiki notes because no-cache navigations still revalidate HTML first, so the cold-boot auth handoff behavior is now an intentional part of the source frontend.
+
+## [2026-05-24] update | Add KID-based ISIN risk scraping
+- Extended the justETF scraper so ISIN assets can resolve a Synthetic Risk Indicator by discovering the linked fundinfo KID PDF and parsing its standard PRIIPs risk wording.
+- Refreshed the server and scraper docs because the backend now exposes a dedicated authenticated ISIN risk endpoint alongside the existing quote and portfolio flows.
+
+## [2026-05-25] update | Add issuer fallback for ISIN KIDs
+- Updated `docs/scraper-runtime.md` with the issuer-hosted PRIIP fallback now used when a justETF profile does not expose a fundinfo-style KID URL, plus the localized wording needed to parse issuer PDFs.
+- Refreshed the docs and scraper structural entry points so contributors can find the new ETN fallback path from the wiki index and vendor navigation docs.
+
+## [2026-05-25] update | Record ISIN risk cache plan
+- Added a wiki topic page that outlines a minimal shared JSON cache for KID-derived ISIN risk indicators, including its storage location under the backend data root and the reason to keep it outside per-user folders.
+- Updated the docs index so the persistent-cache plan is discoverable alongside the existing scraper-runtime and data-model notes.
+
+## [2026-05-26] update | Persist shared ISIN risk cache
+- Updated the data-model and scraper-runtime wiki pages to document the new shared `data/isinRiskCache.json` file, which is loaded on server startup and reused across all users on the same backend.
+- Refreshed the docs index and the existing ISIN risk cache topic so contributors can find the implemented startup-hydration and atomic write-through behavior from the main wiki entry points.
+
+## [2026-05-26] update | Bypass blocked WisdomTree KID page
+- Updated `docs/scraper-runtime.md` with the direct dataspan fallback now used for `GB00BJYDH287`, because the public WisdomTree product page currently returns 403 to the server-side issuer fallback.
+- Refreshed the scraper vendor index so the justETF adapter description now mentions the direct issuer-document fallback for blocked WisdomTree pages.
+
+## [2026-05-26] update | Add crypto risk indicators
+- Added a generic asset-risk flow that keeps ISIN `SRI` badges and adds fetch-first 1-7 crypto `Risk` badges backed by Yahoo Finance history plus a shared `cryptoRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the new cache modules, crypto risk scraper, generic `/assets/risk-indicators` route, and mixed dashboard badge behavior.
+
+## [2026-05-26] update | Harden shared risk-cache persistence failures
+- Documented and implemented best-effort shared risk-cache persistence so disk-write failures are logged without failing risk-indicator API responses.
+- Updated backend API docs and scraper-runtime wiki notes so deploy-time permission and filesystem edge cases are discoverable during troubleshooting.
+
+## [2026-05-26] update | Add gold risk indicators
+- Extended the generic asset-risk flow so physical gold assets now get fetch-first 1-7 `Risk` badges backed by Yahoo Finance gold-futures history plus a shared `goldRiskCache.json` file.
+- Refreshed the backend, frontend, and wiki entry points so contributors can find the gold risk cache module, gold risk scraper, and the dashboard’s mixed ISIN, crypto, and gold badge behavior.
+
+## [2026-05-26] update | Add Other risk defaults and per-user overrides
+- Extended the shared asset-risk flow so `Other` assets now always publish a default `Risk 1/7`, while allowing per-user integer `1-7` overrides persisted in `assetsSchema.riskOverrides` and saved through the new authenticated `/assets/risk-overrides` endpoint.
+- Refreshed backend/frontend structural docs and the data-model wiki so contributors can find the `Other`-only override rules, settings-table controls, and dashboard weighted-risk behavior updates.
+
+## [2026-05-26] update | Proxy new asset-risk routes in Nginx
+- Updated the checked-in site template so production now proxies the generic asset-risk, legacy ISIN-risk, risk-override, and account-deletion endpoints to Express instead of redirecting them into the static app shell.
+- Refreshed the frontend deploy/runtime wiki notes because the exact backend route allowlist was lagging behind the server routes and caused remote-only failures after deploy.
 
 ## [2026-06-11] update | Preserve cached dashboard rows on failed refresh
 - Updated the data-model wiki notes so dashboard refreshes that omit same-schema dynamic assets now document the browser-side cache restoration behavior instead of looking like silent row deletions.
@@ -213,6 +184,35 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Documented the shared Dashboard and History rendering contract for group cards, charts, and History table tints.
 - Updated the scraper runtime notes because unexpected top-level scraper aborts now propagate every still-unresolved asset into the portfolio `failures` list, which keeps the frontend recovery path active even when the refresh dies before explicit per-asset failures are emitted.
 
+## [2026-07-27] update | Health-check wiki links
+- Replaced the superseded ISIN-only cache plan page with `docs/shared-risk-caches.md`, covering the current shared ISIN, crypto, and gold risk-cache model.
+- Added cross-references from the data-model and scraper-runtime pages, refreshed the docs index, and linked the new topic from the README key wiki list.
+- Softened the WisdomTree scraper note so it records the durable direct-document fallback without freezing an external 403 status that can change independently of the code.
+
+## [2026-08-19] update | Accept current WisdomTree issuer domain
+- Updated `docs/scraper-runtime.md` so the direct dataspan fallback for `GB00BJYDH287` now records the current `wisdomtree.com` issuer domain alongside the older `wisdomtree.eu` host.
+- Refreshed the docs and scraper vendor index entries because the justETF risk-indicator path now matches either supported WisdomTree issuer domain before falling back to the direct KID document.
+
+## [2026-09-19] update | Add percentage-driven performance weather
+- Added shared daily/weekly weather and grouped refresh-delta mood contracts, composed accessible dashboard title moods, and persisted completion markup.
+- Added the explicit `shortHorizon` payload contract and documented unavailable-baseline behavior so monthly and in-progress totals are not reused as weather percentages.
+
+## [2026-09-21] update | Fix dashboard refresh performance summary
+- Made the dashboard title weather mood and progress-banner percentage use the latest total against the last fully successful refresh total.
+- Persisted clean refresh source totals so the title mood remains correct after reload while partial refreshes keep their existing baseline safeguards.
+
+## [2026-09-25] update | Compound history average monthly growth
+- Changed the history `Avg Monthly Growth` card from a linear average of total growth to the compounded monthly rate across loaded history.
+- Documented the formula and its positive-baseline fallback in `docs/portfolio-metrics.md`.
+
+## [2026-09-25] update | Add history average annual growth
+- Added an `Avg Annual Growth` summary card on the history page that annualizes the compounded monthly growth rate.
+- Documented the annualized formula in `docs/portfolio-metrics.md`.
+
+## [2026-09-28] update | Add elapsed-time label to refresh delta
+- The dashboard progress-banner delta now appends a compact `in 5h35m`-style label for the time elapsed since the previous successful refresh.
+- Persisted `baselineUpdatedAt` and `refreshedAt` in `portfolioLastRefreshDelta` and documented the behavior in `docs/portfolio-metrics.md`.
+
 ## [2026-09-29] lint | Wiki health check
 - Linked the orphaned `performance-weather-moods.md` from the docs index, README, and view index, and added a status banner because the plan now diverges from shipped title-mood and progress-delta behavior.
 - Recorded that nothing in `server/` populates `shortHorizon`, added the crypto/gold risk bucket thresholds and cache TTL to `scraper-runtime.md`, and added missing cross-references between the deploy, scraper, and structural pages.
@@ -221,3 +221,14 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Corrected `data-model.md`: history writes emit fixed `Liquidity`/`Crypto`/`Houses`/`Equity`/`Gold` buckets, Settings saves drop `shortHorizon`, `/portfolio/stream` takes the password as a query parameter, and `logout()` clears only `userPassword` and `portfolio`.
 - Corrected `scraper-runtime.md` risk-scoring notes (close-count lookbacks, $\sqrt{365}$ annualization, USD `GC=F` source, non-PRIIPs scale), documented default fresh/stale TTLs and the 12-hour stale window inherited by 24-hour risk entries, and recorded how to run the unwired `tests/server/` `node:test` suite.
 - Added `getAthMood()` bands to `portfolio-metrics.md` and missing Related Docs links from the settings, login, commons, and dashboard folder indexes.
+
+## [2026-09-30] update | Fix health-check findings and restructure wiki
+- History writes now use one bucket per schema view group, Settings saves keep `shortHorizon`, and `/portfolio/stream` authenticates through the `X-User-Password` header via a `fetch`-based SSE reader; `data-model.md` and `portfolio-metrics.md` now describe the fixed behavior.
+- Added `npm run test:server` and wired it into `npm test`, the pre-commit hook, and CI; updated `scraper-runtime.md`, `shared-risk-caches.md`, and the README.
+- Renamed `frontend-cache.md` to `deploy-runtime.md` to match its scope, folded the durable weather-mood contract into `portfolio-metrics.md`, and removed the superseded `performance-weather-moods.md` plan.
+- Reordered this log oldest-first so new entries are appended at the bottom.
+
+## [2026-09-30] update | Add auth, refresh, risk, configuration, and testing pages
+- Added `auth-security.md`, `portfolio-refresh.md`, `risk-indicators.md`, `configuration.md`, and `testing.md` for concepts that were previously scattered or undocumented, and linked them from the index, README, related wiki pages, and folder indexes.
+- `logout()` and `401` responses now clear every per-user dashboard cache through `clearUserSession()`, and generated passwords now use `crypto.randomInt()` instead of `Math.random()`.
+- Recorded the PRIIPs Annex II market-risk methodology from the regulation text so the computed crypto/gold `Risk` scale is explicitly contrasted with the ISIN `SRI`.

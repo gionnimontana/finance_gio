@@ -96,6 +96,8 @@ const writeHistoricalData = async (passwordHash, historicalData) => {
 const ALLOWED_ASSET_CLASSES = ['Isin', 'Gold', 'Crypto', 'Other'];
 
 const DEFAULT_VIEW_GROUPS = ['Liquidity', 'Crypto', 'Gold', 'Houses', 'Equity'];
+// View-group names that would overwrite a history entry's own fields.
+const HISTORY_ENTRY_RESERVED_KEYS = new Set(['date', 'label', 'total']);
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
  
 /**
@@ -258,7 +260,7 @@ const isValidAssetRow = (asset) => {
 /**
  * Fill missing schema fields with defaults while preserving stored values when valid.
  * @param {unknown} schema - Raw schema object read from disk.
- * @returns {{ assets: unknown[], viewGroups: string[], viewGroupColors: Record<string, string>, prevMonthTotal: number|null, initYearNetworth: number|null }}
+ * @returns {{ assets: unknown[], viewGroups: string[], viewGroupColors: Record<string, string>, prevMonthTotal: number|null, initYearNetworth: number|null, shortHorizon: object|null }}
  */
 const normalizeAssetsSchema = (schema) => {
     const base = {
@@ -267,7 +269,8 @@ const normalizeAssetsSchema = (schema) => {
         viewGroupColors: {},
         riskOverrides: {},
         prevMonthTotal: null,
-        initYearNetworth: null
+        initYearNetworth: null,
+        shortHorizon: null
     };
 
     if (!schema || typeof schema !== 'object') return base;
@@ -281,6 +284,7 @@ const normalizeAssetsSchema = (schema) => {
         riskOverrides: sanitizeRiskOverrides(schema.riskOverrides, Array.isArray(schema.assets) ? schema.assets : []),
         prevMonthTotal: schema.prevMonthTotal ?? null,
         initYearNetworth: schema.initYearNetworth ?? null,
+        shortHorizon: schema.shortHorizon && typeof schema.shortHorizon === 'object' ? schema.shortHorizon : null,
     };
 }
 
@@ -635,11 +639,11 @@ const updateInitYearNetworth = async (passwordHash) => {
 }
 
 // Update historical data with current month's portfolio values
-// portfolio should have: total, Liquidity, Crypto, Equity, Gold, Houses (with .total for each)
+// portfolio carries one `{ total }` object per view group plus the overall total
 /**
  * Upsert the current month's portfolio totals into historical storage.
  * @param {string} passwordHash - The hashed password identifying the user.
- * @param {{ total: number, Liquidity?: { total: number }, Crypto?: { total: number }, Houses?: { total: number }, Equity?: { total: number }, Gold?: { total: number }, failures?: string[] }} portfolio - Aggregated portfolio totals.
+ * @param {{ total: number, failures?: string[] } & Record<string, unknown>} portfolio - Aggregated portfolio totals keyed by view group.
  * @returns {Promise<Array<object>>}
  */
 const updateHistoricalData = async (passwordHash, portfolio) => {
@@ -659,16 +663,17 @@ const updateHistoricalData = async (passwordHash, portfolio) => {
     }
     
     // Create the new month entry from portfolio data
+    const { viewGroups } = normalizeAssetsSchema(await getAssetsSchema(passwordHash));
     const newEntry = {
         label,
         date,
         total: Math.round(portfolio.total * 100) / 100,
-        Liquidity: { total: Math.round((portfolio.Liquidity?.total || 0) * 100) / 100 },
-        Crypto: { total: Math.round((portfolio.Crypto?.total || 0) * 100) / 100 },
-        Houses: { total: Math.round((portfolio.Houses?.total || 0) * 100) / 100 },
-        Equity: { total: Math.round((portfolio.Equity?.total || 0) * 100) / 100 },
-        Gold: { total: Math.round((portfolio.Gold?.total || 0) * 100) / 100 },
     };
+    for (const group of viewGroups) {
+        if (HISTORY_ENTRY_RESERVED_KEYS.has(group)) continue;
+        const groupTotal = Number(portfolio?.[group]?.total) || 0;
+        newEntry[group] = { total: Math.round(groupTotal * 100) / 100 };
+    }
     
     // Find if current month already exists
     const existingIndex = historicalData.findIndex(entry => entry.date === date);
