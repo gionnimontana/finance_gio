@@ -19,7 +19,7 @@ How the dashboard loads and refreshes portfolio values, which endpoint each path
 ## Frontend Paths
 - Manual refresh button: stream with `refresh=true`, then persist the snapshot and completion banner.
 - First load with no cached `portfolio`: stream with `refresh=false` so the banner still shows per-asset progress.
-- Cached payload from an older format, or a `schemaCacheKey` mismatch: plain `GET /portfolio?refresh=false`.
+- Cached payload from an older format (missing `allTimeHighTotal`/`allTimeHighLabel` or asset `displayName`), or a `schemaCacheKey` mismatch: plain `GET /portfolio?refresh=false`. A portfolio without some view group (for example no `Gold` assets) is not treated as an older format, so it does not refetch on every landing.
 - Stream connection failure, non-OK response, `error` event, or a stream that ends without `complete`: fall back to `GET /portfolio` with the same `refresh` flag. A fallback with `refresh=true` still writes history on the server.
 - Risk badges load separately from `/assets/risk-indicators`; see [risk-indicators.md](./risk-indicators.md).
 

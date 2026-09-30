@@ -1470,11 +1470,9 @@ const fetchData = async (refresh) => {
  */
 const getPortfolio = async (refresh) => {
     let portfolio = readPortfolioSnapshot(PORTFOLIO_CACHE_KEY);
-    // Force refresh if displayName is missing or viewGroups are missing (cache from old version)
+    // Refetch caches from older payload formats; group changes are handled by the schemaCacheKey check.
     const needsRefresh = portfolio && (
         (portfolio.Equity?.details && Object.values(portfolio.Equity.details).some(d => !d.displayName)) ||
-        !portfolio.Gold ||
-        !portfolio.Equity ||
         !Object.prototype.hasOwnProperty.call(portfolio, 'allTimeHighTotal') ||
         !Object.prototype.hasOwnProperty.call(portfolio, 'allTimeHighLabel')
     );

@@ -232,3 +232,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Added `auth-security.md`, `portfolio-refresh.md`, `risk-indicators.md`, `configuration.md`, and `testing.md` for concepts that were previously scattered or undocumented, and linked them from the index, README, related wiki pages, and folder indexes.
 - `logout()` and `401` responses now clear every per-user dashboard cache through `clearUserSession()`, and generated passwords now use `crypto.randomInt()` instead of `Math.random()`.
 - Recorded the PRIIPs Annex II market-risk methodology from the regulation text so the computed crypto/gold `Risk` scale is explicitly contrasted with the ISIN `SRI`.
+
+## [2026-09-30] update | Stop dashboard landing refetch for portfolios without Gold/Equity
+- The dashboard cache-format check no longer requires `Gold` and `Equity` groups, which made portfolios without those groups (or with a failed Gold/Equity scrape) refetch on every landing.
+- Documented the remaining older-format triggers in `portfolio-refresh.md`.
