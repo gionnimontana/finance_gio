@@ -13,3 +13,6 @@ This folder contains the main authenticated portfolio overview page and its page
 
 - [../../docs/portfolio-metrics.md](../../docs/portfolio-metrics.md): Saved-history ATH rules, title mood behavior, and cached-portfolio refresh expectations.
 - [../../docs/data-model.md](../../docs/data-model.md): Schema cache invalidation, view-group ordering, and the persisted summary fields behind dashboard rendering.
+- [../../docs/performance-weather-moods.md](../../docs/performance-weather-moods.md): Original weather-mood plan and band tables.
+- [../../docs/scraper-runtime.md](../../docs/scraper-runtime.md): How ISIN `SRI` and crypto/gold `Risk` badge values are produced.
+- [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): Shared persistence behind the asset-risk badges.

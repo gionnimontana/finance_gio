@@ -39,6 +39,7 @@ This page documents how production frontend releases force browsers to fetch fre
 ## Related
 - [../view/index.md](../view/index.md)
 - [../server/scripts/index.md](../server/scripts/index.md)
+- [./data-model.md](./data-model.md): auth header and SSE query-parameter behavior behind the proxied routes
 - [./scraper-runtime.md](./scraper-runtime.md): the `PFB_SCRAPER_*` systemd env vars that `deploy.sh` writes
 - [../deploy.sh](../deploy.sh)
 - [../site.nginx.template](../site.nginx.template)

@@ -12,13 +12,14 @@ This page records the shared on-disk cache model for asset risk indicators that 
 ## Notes
 - Shared risk-cache files stay outside `users/`, so account deletion removes a user's schema and history without deleting indicator values that may still be useful to other accounts on the same backend.
 - Persisted entries are keyed by normalized asset identifier and store `value`, `updatedAt`, `provider`, and optional `sourceUrl` metadata for small, inspectable troubleshooting records.
-- `refresh=true` bypasses fresh in-memory cache entries, but persisted values still seed the same runtime map during startup and remain available for stale recovery when allowed by the scraper runtime.
+- `refresh=true` bypasses fresh in-memory cache entries, but persisted values still seed the same runtime map during startup with their original `updatedAt`. They serve as fresh hits for 24 hours, but stale recovery only reuses entries younger than the runtime's 12-hour stale window (see [scraper-runtime.md](./scraper-runtime.md)).
 - Runtime write failures are best-effort: the server logs persistence problems and keeps serving successful in-memory risk results instead of failing the API response only because disk persistence failed.
 - The current single-process server relies on atomic rewrites rather than explicit file locking. Revisit SQLite or locks only if multiple backend processes later share one data directory.
-- Server tests cover file creation, startup hydration, key normalization, write-through persistence, sorted output, and best-effort behavior when cache writes fail.
+- Server tests in `tests/server/*-risk-cache.test.js` cover file creation, startup hydration, key normalization, write-through persistence, sorted output, and best-effort behavior when cache writes fail. They run only via `node --test tests/server/*.test.js`.
 
 ## Related
 - [Data model](./data-model.md)
 - [Scraper runtime](./scraper-runtime.md)
 - [API helpers](../server/api/index.md)
 - [Risk indicator orchestration](../server/scripts/index.md)
+- [Production route allowlist](./frontend-cache.md): `/assets/risk-indicators`, `/assets/isin-risk`, and `/assets/risk-overrides` must be proxied by Nginx

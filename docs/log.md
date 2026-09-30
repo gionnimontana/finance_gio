@@ -216,3 +216,8 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-09-29] lint | Wiki health check
 - Linked the orphaned `performance-weather-moods.md` from the docs index, README, and view index, and added a status banner because the plan now diverges from shipped title-mood and progress-delta behavior.
 - Recorded that nothing in `server/` populates `shortHorizon`, added the crypto/gold risk bucket thresholds and cache TTL to `scraper-runtime.md`, and added missing cross-references between the deploy, scraper, and structural pages.
+
+## [2026-09-30] lint | Wiki health check against code
+- Corrected `data-model.md`: history writes emit fixed `Liquidity`/`Crypto`/`Houses`/`Equity`/`Gold` buckets, Settings saves drop `shortHorizon`, `/portfolio/stream` takes the password as a query parameter, and `logout()` clears only `userPassword` and `portfolio`.
+- Corrected `scraper-runtime.md` risk-scoring notes (close-count lookbacks, $\sqrt{365}$ annualization, USD `GC=F` source, non-PRIIPs scale), documented default fresh/stale TTLs and the 12-hour stale window inherited by 24-hour risk entries, and recorded how to run the unwired `tests/server/` `node:test` suite.
+- Added `getAthMood()` bands to `portfolio-metrics.md` and missing Related Docs links from the settings, login, commons, and dashboard folder indexes.

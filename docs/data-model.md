@@ -9,9 +9,9 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - The settings page can delete the current user by removing that hashed user folder entirely, so account removal wipes both persisted JSON files in one server-side operation.
 - `assetsSchema.json` currently persists `assets`, `viewGroups`, `viewGroupColors`, `riskOverrides`, `prevMonthTotal`, `initYearNetworth`, and the optional `shortHorizon` object, so asset definitions, display grouping, per-group display colors, `Other`-asset manual risk overrides, summary baselines, and the explicit daily/weekly weather baseline live together.
 - `viewGroups` is the canonical ordering shared by Settings, Dashboard, and History when those pages render group rows, cards, charts, and tables.
-- `historicalData.json` stores monthly entries with `date`, `label`, `total`, and one total bucket per view group.
+- `historicalData.json` stores monthly entries with `date`, `label`, `total`, and per-group `{ total }` buckets. Live-refresh writes (`updateHistoricalData()`) currently emit only the fixed `Liquidity`, `Crypto`, `Houses`, `Equity`, and `Gold` buckets, so custom or renamed view groups are migrated in existing rows but are not captured by new monthly writes.
 - The settings page always reads the latest schema from `/assets/schema`, writes asset updates back through `/assets/schema`, and writes explicit group-order changes through `/assets/view-groups`.
-- The dashboard keeps a browser-local `portfolio` snapshot in `localStorage` for fast reloads and a separate `portfolioLastSuccessfulSnapshot` plus `portfolioLastUpdate` baseline for refresh-diff comparisons. Before reusing the visible snapshot, the frontend compares the cached `schemaCacheKey` against the backend schema and refreshes when the asset or group shape changed.
+- The dashboard keeps a browser-local `portfolio` snapshot in `localStorage` for fast reloads, a separate `portfolioLastSuccessfulSnapshot` plus `portfolioLastUpdate` baseline for refresh-diff comparisons, `portfolioLastRefreshDelta` for the persisted title mood and elapsed label, and `portfolioProgressBanner` for the restored completion banner. Before reusing the visible snapshot, the frontend compares the cached `schemaCacheKey` against the backend schema and refreshes when the asset or group shape changed.
 
 ## Notes
 - Saving assets keeps the existing `viewGroups` list but automatically appends any newly referenced group so ad-hoc regrouping stays valid.
@@ -25,10 +25,12 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - The backend also skips current-month `historicalData.json` overwrites when a live refresh still has failures, so saved history stays pinned to the last fully successful month snapshot until the next clean refresh succeeds.
 - `prevMonthTotal` and `initYearNetworth` stay in `assetsSchema.json` because the backend live-refresh flow derives those summary baselines from saved history before returning current portfolio data.
 - `shortHorizon` is passed through the portfolio and SSE payloads with `currentTotal`, `previousTotal`, `horizon`, and optional unrounded `percentage`; the frontend does not substitute monthly, year-to-date, or partial-stream totals when it is absent.
+- Settings saves (`/assets/schema`, `/assets/view-groups`, `/assets/risk-overrides`) rebuild the schema through `normalizeAssetsSchema()`, which does not carry `shortHorizon`, so any Settings save currently drops an externally set value.
 - The shared `isinRiskCache.json`, `cryptoRiskCache.json`, and `goldRiskCache.json` files are not tied to one user, so deleting an account does not remove previously discovered risk indicators for other accounts on the same backend.
 - The dashboard fetches generic asset risk indicators from `/assets/risk-indicators`, which currently returns regulatory `SRI` labels for ISIN assets, computed `Risk` labels for crypto and gold assets, and `Risk` labels for `Other` assets with a default `1/7` that can be overridden per user via `assetsSchema.riskOverrides`.
 - Multiple devices only share changes when they are connected to the same running backend and therefore the same backend data directory. Two separate local `http://localhost:8085` instances do not share `data/users/` state or the shared risk-cache files.
-- Login state is browser-local. The frontend stores the raw password in `localStorage` as `userPassword` and sends it on each authenticated request through the `X-User-Password` header.
+- Login state is browser-local. The frontend stores the raw password in `localStorage` as `userPassword` and sends it through the `X-User-Password` header on authenticated `fetch` requests. `/portfolio/stream` is the exception: `EventSource` cannot set headers, so the dashboard passes the password as a `?password=` query parameter, which means it can appear in proxy or access logs.
+- `logout()` clears only `userPassword` and `portfolio`; the other dashboard keys plus the `hideAbsoluteValues` and `useCompactAbsoluteValues` display preferences stay in the browser.
 - Account deletion clears the browser-local password as part of the logout redirect after the server folder has been removed, so the deleted password immediately stops authenticating on the same device.
 - Open pages are not real-time synchronized. Another session sees changes when it reloads the page, navigates back through a page that refetches, or manually refreshes the dashboard.
 
@@ -40,3 +42,5 @@ This page summarizes how user identity, persisted portfolio data, and browser-lo
 - [../view/history/index.md](../view/history/index.md)
 - [./shared-risk-caches.md](./shared-risk-caches.md)
 - [./portfolio-metrics.md](./portfolio-metrics.md)
+- [./scraper-runtime.md](./scraper-runtime.md): how ISIN `SRI` and computed crypto/gold `Risk` values are produced
+- [./frontend-cache.md](./frontend-cache.md): production route allowlist for the auth, portfolio, and asset APIs

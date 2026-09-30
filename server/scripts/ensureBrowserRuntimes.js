@@ -18,9 +18,16 @@ const puppeteerInstallerPath = require.resolve('puppeteer/install.mjs')
  * @returns {void}
  */
 const runNodeScript = (scriptPath, args = []) => {
+  const nodeOptions = process.env.NODE_OPTIONS || ''
+  // Trust the OS certificate store so downloads work behind TLS-inspecting proxies.
+  const env = nodeOptions.includes('--use-system-ca')
+    ? process.env
+    : { ...process.env, NODE_OPTIONS: `${nodeOptions} --use-system-ca`.trim() }
+
   execFileSync(process.execPath, [scriptPath, ...args], {
     cwd: repoRoot,
     stdio: 'inherit',
+    env,
   })
 }
 
