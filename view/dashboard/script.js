@@ -345,57 +345,6 @@ const renderDashboardPerformanceMood = (diffMeta) => {
 };
 
 /**
- * Resolve the canonical daily or weekly portfolio performance metadata.
- * @param {object} portfolio - Portfolio payload.
- * @returns {{ currentTotal: number, previousTotal: number, horizon: string, percentage: number }|null}
- */
-const getShortHorizonMeta = (portfolio) => {
-    const candidate = portfolio?.shortHorizon || portfolio?.performanceWeather;
-    if (!candidate || typeof candidate !== 'object') return null;
-
-    const currentTotal = Number(candidate.currentTotal);
-    const previousTotal = Number(candidate.previousTotal);
-    const suppliedPercentage = Number(candidate.percentage);
-    const percentage = Number.isFinite(suppliedPercentage)
-        ? suppliedPercentage
-        : (Number.isFinite(currentTotal) && Number.isFinite(previousTotal) && previousTotal !== 0
-            ? ((currentTotal - previousTotal) / previousTotal) * 100
-            : null);
-
-    if (!Number.isFinite(percentage)) return null;
-    return {
-        currentTotal,
-        previousTotal,
-        horizon: candidate.horizon || 'Short horizon',
-        percentage
-    };
-};
-
-/**
- * Render the independent short-horizon overview row.
- * @param {object} portfolio - Portfolio payload.
- * @returns {void}
- */
-const renderPerformanceWeather = (portfolio) => {
-    const meta = getShortHorizonMeta(portfolio);
-    const mood = getPerformanceWeatherMood(meta?.percentage);
-
-    const titleEl = document.getElementById('short_horizon_title');
-    const valueEl = document.getElementById('short_horizon_delta_value');
-    if (!titleEl || !valueEl) return;
-    titleEl.textContent = meta ? `Δ ${meta.horizon}` : 'Δ Short Horizon';
-    if (!meta) {
-        valueEl.className = 'overview_value';
-        valueEl.textContent = '—';
-        return;
-    }
-
-    const delta = meta.currentTotal - meta.previousTotal;
-    valueEl.className = `overview_value ${delta >= 0 ? 'positive' : 'negative'}`;
-    valueEl.innerHTML = `<span class="abs_value">${formatCompactValue(delta)}</span>${renderPercentageValue(`${t(meta.percentage)}%`)} ${mood.icon}`;
-};
-
-/**
  * Render the dashboard ATH overview line with privacy-mode-safe text.
  * @param {{ total?: number, allTimeHighTotal?: number|null, allTimeHighLabel?: string|null }} portfolio - Portfolio payload.
  * @returns {void}
@@ -1643,7 +1592,6 @@ const renderPortfolioData = (portfolio) => {
         ${renderPercentageValue(prevMonthdeltaPercentage === null ? '—' : `${t(prevMonthdeltaPercentage)}%`)}
     `;
     renderDashboardPerformanceMood(refreshDiffMeta);
-    renderPerformanceWeather(portfolio);
     renderPortfolioRiskIndicator(portfolio);
     renderAthDistance(portfolio);
     renderLastUpdate();
