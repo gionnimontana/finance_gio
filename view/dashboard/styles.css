@@ -264,6 +264,10 @@
     overflow: hidden;
 }
 
+.progress_banner.completed .progress_bar_container {
+    display: none;
+}
+
 .progress_bar {
     background-color: #2196F3;
     height: 100%;

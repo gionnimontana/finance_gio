@@ -64,6 +64,7 @@ test('streams per-asset progress on the first dashboard load without cache', asy
   await expect(page.locator('#page_loading')).toBeVisible()
   await expect(page.locator('#progress_banner')).toHaveClass(/visible/)
   await expect(page.locator('#progress_banner')).toHaveClass(/completed/)
+  await expect(page.locator('.progress_bar_container')).toBeHidden()
   await expect(page.locator('#progress_counter')).toHaveText('3/3')
   await expect(page.getByTestId('progress-asset-BTC')).toBeVisible()
   await expect(page.getByTestId('progress-asset-IE00B4L5Y983')).toBeVisible()
