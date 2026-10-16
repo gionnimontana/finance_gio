@@ -236,3 +236,6 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-09-30] update | Stop dashboard landing refetch for portfolios without Gold/Equity
 - The dashboard cache-format check no longer requires `Gold` and `Equity` groups, which made portfolios without those groups (or with a failed Gold/Equity scrape) refetch on every landing.
 - Documented the remaining older-format triggers in `portfolio-refresh.md`.
+
+## [2026-10-16] update | justETF KID discovery via localized pages
+- Updated `docs/risk-indicators.md` and the vendors index: the justETF `en` profile no longer lists KID documents, so the scraper now tries `en`, `it`, `de`, `fr` pages and falls back to the hardcoded WisdomTree KID URL.

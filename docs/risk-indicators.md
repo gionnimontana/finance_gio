@@ -8,7 +8,7 @@ The 1-7 risk badges shown on dashboard assets, where each value comes from, and 
 
 | Asset class | Label | Source |
 | --- | --- | --- |
-| `Isin` | `SRI` | Parsed from the product's PRIIPs KID PDF (justETF-linked, issuer-hosted, or direct WisdomTree fallback). |
+| `Isin` | `SRI` | Parsed from the product's PRIIPs KID PDF (justETF-linked on the `en`/`it`/`de`/`fr` profile pages, issuer-hosted, or direct WisdomTree fallback). |
 | `Crypto` | `Risk` | Computed from Yahoo Finance daily closes for `<ticker>-EUR`. |
 | `Gold` | `Risk` | Computed from Yahoo Finance `GC=F` gold-futures closes. |
 | `Other` | `Risk` | Default `1`, replaced by a per-user integer override from `assetsSchema.riskOverrides`. |

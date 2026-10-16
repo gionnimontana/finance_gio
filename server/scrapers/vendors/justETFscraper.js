@@ -9,6 +9,7 @@ const JUST_ETF_BASE_URL = 'https://www.justetf.com'
 const JUST_ETF_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
 const ISIN_RISK_CACHE_KEY_PREFIX = 'isin-risk:'
 const ISIN_RISK_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const KID_PAGE_LOCALES = ['en', 'it', 'de', 'fr']
 const KNOWN_DIRECT_ISSUER_KID_URLS = {
     GB00BJYDH287: {
         issuerHosts: ['wisdomtree.eu', 'wisdomtree.com'],
@@ -266,9 +267,9 @@ const fetchHtmlPage = async (url, timeoutMs) => {
  * @param {number} timeoutMs - Timeout in milliseconds.
  * @returns {Promise<string>}
  */
-const fetchJustEtfDetailsPage = async (isin, timeoutMs) => {
+const fetchJustEtfDetailsPage = async (isin, timeoutMs, locale = 'en') => {
     const normalizedIsin = normalizeIsin(isin)
-    const url = `${JUST_ETF_BASE_URL}/en/etf-profile.html?isin=${encodeURIComponent(normalizedIsin)}`
+    const url = `${JUST_ETF_BASE_URL}/${locale}/etf-profile.html?isin=${encodeURIComponent(normalizedIsin)}`
     return fetchHtmlPage(url, timeoutMs)
 }
 
@@ -279,18 +280,35 @@ const fetchJustEtfDetailsPage = async (isin, timeoutMs) => {
  * @returns {Promise<string>}
  */
 const resolveKidDocumentUrl = async (isin, timeoutMs) => {
-    const detailsHtml = await fetchJustEtfDetailsPage(isin, timeoutMs)
+    const normalizedIsin = normalizeIsin(isin)
+    let englishHtml = ''
+
+    for (const locale of KID_PAGE_LOCALES) {
+        try {
+            const detailsHtml = await fetchJustEtfDetailsPage(normalizedIsin, timeoutMs, locale)
+            if (locale === 'en') {
+                englishHtml = detailsHtml
+            }
+            return extractKidDocumentUrl(detailsHtml, normalizedIsin)
+        } catch (error) {
+            // justETF only lists KID documents on some locale pages, so try the next one.
+        }
+    }
 
     try {
-        return extractKidDocumentUrl(detailsHtml, isin)
-    } catch (error) {
-        const issuerProfileUrl = extractIssuerProfileUrl(detailsHtml)
-        const directIssuerKidUrl = buildKnownDirectIssuerKidUrl(isin, issuerProfileUrl)
+        const issuerProfileUrl = extractIssuerProfileUrl(englishHtml)
+        const directIssuerKidUrl = buildKnownDirectIssuerKidUrl(normalizedIsin, issuerProfileUrl)
         if (directIssuerKidUrl) {
             return directIssuerKidUrl
         }
         const issuerHtml = await fetchHtmlPage(issuerProfileUrl, timeoutMs)
-        return extractKidDocumentUrl(issuerHtml, isin)
+        return extractKidDocumentUrl(issuerHtml, normalizedIsin)
+    } catch (error) {
+        // justETF no longer exposes the issuer link, so trust the hardcoded KID URL for known products.
+        if (KNOWN_DIRECT_ISSUER_KID_URLS[normalizedIsin]) {
+            return KNOWN_DIRECT_ISSUER_KID_URLS[normalizedIsin].url
+        }
+        throw error
     }
 }
 
