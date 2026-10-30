@@ -18,12 +18,12 @@ The 1-7 risk badges shown on dashboard assets, where each value comes from, and 
 
 ## Computed Scores Versus PRIIPs SRI
 - The PRIIPs SRI for ISIN assets is regulatory. Under Commission Delegated Regulation (EU) 2017/653, Annex II, the market risk measure (MRM) is the annualised volatility equivalent to a 97.5% value-at-risk over the recommended holding period. Category 2 products compute it from up to 5 years of log returns (at least 2 years of daily data) with a Cornish-Fisher expansion. The SRI then combines the MRM class (1-7) with a credit risk measure (1-6), and manufacturers only move to a new MRM class after it has held for most reference points over the preceding four months.
-- The computed crypto/gold `Risk` is a project-specific heuristic: simple daily returns over the last 90 closes annualized with $\sqrt{365}$, plus max drawdown over the last year, each bucketed with fixed thresholds and the higher bucket kept. It has no holding period, no Cornish-Fisher correction, no credit component, and no smoothing, so it reacts to recent moves much faster than an SRI. Thresholds live in [scraper-runtime.md](./scraper-runtime.md).
+- The computed crypto/gold `Risk` is a project-specific heuristic: simple daily returns over the last 90 closes annualized with $\sqrt{365}$ (crypto) or $\sqrt{252}$ (gold), plus max drawdown over the last year, each bucketed with fixed thresholds and the higher bucket kept. It has no holding period, no Cornish-Fisher correction, no credit component, and no smoothing, so it reacts to recent moves much faster than an SRI. Thresholds live in [scraper-runtime.md](./scraper-runtime.md).
 - Treat SRI and computed `Risk` as comparable in direction only; the weighted portfolio average mixes both scales.
 
 ## Notes
 - Yahoo Finance's chart API and justETF's quote endpoint are undocumented public endpoints with no published contract; they can change, rate-limit, or block without notice, which is why each has fallbacks or cache reuse.
-- `GC=F` is the CME Group COMEX gold futures contract, quoted in USD. The gold score therefore ignores EUR/USD moves and, because futures only trade on exchange days, $\sqrt{365}$ overstates its annualized volatility.
+- `GC=F` is the CME Group COMEX gold futures contract, quoted in USD. The gold score therefore ignores EUR/USD moves; its volatility is annualized with $\sqrt{252}$ because futures only trade on exchange days.
 
 ## Sources
 - [Commission Delegated Regulation (EU) 2017/653, Annex II](https://www.legislation.gov.uk/eur/2017/653/annex/II/2020-12-31) (point-in-time copy of the EU text as of 31 December 2020; check EUR-Lex for the current consolidated EU version).

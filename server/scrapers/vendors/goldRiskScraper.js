@@ -17,6 +17,8 @@ const GOLD_HISTORY_RANGE = '1y';
 const GOLD_HISTORY_INTERVAL = '1d';
 const VOLATILITY_LOOKBACK_DAYS = 90;
 const MAX_DRAWDOWN_LOOKBACK_DAYS = 365;
+// COMEX futures only trade on exchange days.
+const TRADING_DAYS_PER_YEAR = 252;
 const VOLATILITY_THRESHOLDS = [0.2, 0.35, 0.5, 0.65, 0.85, 1.05];
 const MAX_DRAWDOWN_THRESHOLDS = [0.1, 0.2, 0.3, 0.45, 0.6, 0.75];
 
@@ -44,6 +46,7 @@ const scoreGoldRiskFromHistory = (closes) => scoreRiskFromHistory(closes, {
   maxDrawdownThresholds: MAX_DRAWDOWN_THRESHOLDS,
   volatilityLookbackDays: VOLATILITY_LOOKBACK_DAYS,
   maxDrawdownLookbackDays: MAX_DRAWDOWN_LOOKBACK_DAYS,
+  periodsPerYear: TRADING_DAYS_PER_YEAR,
 });
 
 /**

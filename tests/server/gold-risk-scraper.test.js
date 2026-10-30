@@ -23,3 +23,11 @@ test('goldRiskOptionCreator uses an isolated cache key for gold risk values', ()
   assert.equal(options[cacheKey].providers[0].name, 'yahoo-finance-gold-risk')
   assert.equal(options[cacheKey].cacheTtlMs, 24 * 60 * 60 * 1000)
 })
+
+test('gold volatility is annualized with trading days rather than calendar days', () => {
+  const closes = Array.from({ length: 91 }, (_, index) => (index % 2 === 0 ? 100 : 101))
+  const calendar = goldRiskScraper.calculateAnnualizedVolatility(closes, 90, 365)
+  const trading = goldRiskScraper.calculateAnnualizedVolatility(closes, 90, 252)
+
+  assert.ok(Math.abs(trading / calendar - Math.sqrt(252 / 365)) < 1e-9)
+})

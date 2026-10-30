@@ -244,3 +244,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 - Found no orphan pages or cross-page contradictions; verified env vars, routes, thresholds, TTLs, and word-list entropy against code.
 - Flagged that the PRIIPs Annex II source in `risk-indicators.md` predates Delegated Regulation (EU) 2021/2268 and needs a recheck against the consolidated text.
 - Added the justETF locale fallback to `scraper-runtime.md`, the Express-only legacy redirects to `deploy-runtime.md`, a `shortHorizon` caveat to `data-model.md`, and missing Related links in `risk-indicators.md`.
+
+## [2026-10-30] update | Annualize gold volatility with trading days
+- Gold risk now annualizes volatility with $\sqrt{252}$ instead of $\sqrt{365}$; crypto stays at $\sqrt{365}$. Updated `scraper-runtime.md` and `risk-indicators.md`.
+- Closed the documented gold overstatement gap. The EUR-Lex recheck of Delegated Regulation 2021/2268 remains open (EUR-Lex returns a bot challenge to automated fetches).

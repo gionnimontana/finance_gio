@@ -3,6 +3,7 @@
  */
 const DEFAULT_VOLATILITY_LOOKBACK_DAYS = 90;
 const DEFAULT_MAX_DRAWDOWN_LOOKBACK_DAYS = 365;
+const DEFAULT_PERIODS_PER_YEAR = 365;
 
 /**
  * Convert a metric into the 1-7 risk bucket scale.
@@ -45,9 +46,14 @@ const calculateDailyReturns = (closes) => {
  * Calculate annualized realized volatility from recent daily closes.
  * @param {number[]} closes - Positive close prices in chronological order.
  * @param {number} [lookbackDays=90] - Number of daily closes to use for volatility.
+ * @param {number} [periodsPerYear=365] - Daily observations per year (365 for 24/7 markets, 252 for exchange-traded).
  * @returns {number}
  */
-const calculateAnnualizedVolatility = (closes, lookbackDays = DEFAULT_VOLATILITY_LOOKBACK_DAYS) => {
+const calculateAnnualizedVolatility = (
+  closes,
+  lookbackDays = DEFAULT_VOLATILITY_LOOKBACK_DAYS,
+  periodsPerYear = DEFAULT_PERIODS_PER_YEAR
+) => {
   const recentCloses = closes.slice(-(lookbackDays + 1));
   const returns = calculateDailyReturns(recentCloses);
 
@@ -57,7 +63,7 @@ const calculateAnnualizedVolatility = (closes, lookbackDays = DEFAULT_VOLATILITY
 
   const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
   const variance = returns.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / returns.length;
-  return Math.sqrt(variance) * Math.sqrt(365);
+  return Math.sqrt(variance) * Math.sqrt(periodsPerYear);
 };
 
 /**
@@ -92,7 +98,7 @@ const calculateMaxDrawdown = (closes, lookbackDays = DEFAULT_MAX_DRAWDOWN_LOOKBA
 /**
  * Score a daily close history into a deterministic 1-7 risk value.
  * @param {number[]} closes - Positive close prices in chronological order.
- * @param {{ volatilityThresholds: number[], maxDrawdownThresholds: number[], volatilityLookbackDays?: number, maxDrawdownLookbackDays?: number }} config - Threshold configuration.
+ * @param {{ volatilityThresholds: number[], maxDrawdownThresholds: number[], volatilityLookbackDays?: number, maxDrawdownLookbackDays?: number, periodsPerYear?: number }} config - Threshold configuration.
  * @returns {number}
  */
 const scoreRiskFromHistory = (closes, config) => {
@@ -101,8 +107,9 @@ const scoreRiskFromHistory = (closes, config) => {
     maxDrawdownThresholds,
     volatilityLookbackDays = DEFAULT_VOLATILITY_LOOKBACK_DAYS,
     maxDrawdownLookbackDays = DEFAULT_MAX_DRAWDOWN_LOOKBACK_DAYS,
+    periodsPerYear = DEFAULT_PERIODS_PER_YEAR,
   } = config;
-  const annualizedVolatility = calculateAnnualizedVolatility(closes, volatilityLookbackDays);
+  const annualizedVolatility = calculateAnnualizedVolatility(closes, volatilityLookbackDays, periodsPerYear);
   const maxDrawdown = calculateMaxDrawdown(closes, maxDrawdownLookbackDays);
   const volatilityScore = bucketRiskScore(annualizedVolatility, volatilityThresholds);
   const drawdownScore = bucketRiskScore(maxDrawdown, maxDrawdownThresholds);
@@ -115,6 +122,7 @@ module.exports = {
   calculateDailyReturns,
   calculateMaxDrawdown,
   DEFAULT_MAX_DRAWDOWN_LOOKBACK_DAYS,
+  DEFAULT_PERIODS_PER_YEAR,
   DEFAULT_VOLATILITY_LOOKBACK_DAYS,
   scoreRiskFromHistory,
 };
