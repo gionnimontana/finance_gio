@@ -32,8 +32,20 @@ const {
 
 const app = express()
 const port = Number(process.env.PORT || 8085)
+
+/**
+ * Redirect the request to the login entrypoint.
+ * @param {import('express').Request} req - Incoming request.
+ * @param {import('express').Response} res - Outgoing response.
+ * @returns {void}
+ */
 const redirectToHome = (req, res) => res.redirect('/login/')
 
+/**
+ * Whether the request targets an extensionless app route rather than a static asset.
+ * @param {import('express').Request} req - Incoming request.
+ * @returns {boolean}
+ */
 const isAppRouteRequest = (req) => req.method === 'GET' && path.extname(req.path) === ''
 
 /**

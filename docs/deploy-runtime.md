@@ -16,6 +16,7 @@ This page documents how production deploys ship the backend and frontend, how Ng
 - Unknown non-asset GET paths now redirect to `/login/` instead of serving the login HTML from the wrong URL, letting the login page normalize authenticated users onward to `/dashboard/`.
 - Nginx serves versioned CSS and JS files with long-lived immutable caching because the query string changes on each deploy.
 - The deployed Nginx config is expected to proxy only exact backend endpoints to Express: `/health`, `/auth/generate`, `/auth/validate`, `/auth/user`, `/portfolio`, `/portfolio/history`, `/portfolio/stream`, `/assets/schema`, `/assets/isin-risk`, `/assets/risk-indicators`, `/assets/view-groups`, and `/assets/risk-overrides`.
+- Express also keeps legacy redirects (`/dashboard.html`, `/assets.html`, `/history.html`, and the `/financegio/*` base path) that exist only in the local server; in production Nginx sends those paths to `/login/` through the unknown-route fallback.
 - The checked-in site template lives in `../site.nginx.template` so deploys can render a domain-specific Nginx include file from one source template instead of keeping the production hostname hard-coded in the repo.
 
 ## Notes
@@ -23,7 +24,7 @@ This page documents how production deploys ship the backend and frontend, how Ng
 - `site.nginx.template` is the checked-in site server-block template, and `deploy.sh` renders it into `.deploy/$PFB_DEPLOY_SITE_DOMAIN.nginx` before installing it at `/var/www/$PFB_DEPLOY_SITE_DOMAIN/$PFB_DEPLOY_SITE_DOMAIN.nginx` on the host.
 - `/etc/nginx/nginx.conf` should include `/var/www/$PFB_DEPLOY_SITE_DOMAIN/$PFB_DEPLOY_SITE_DOMAIN.nginx` from the remote `http { ... }` block so future deploys update the live finance site config without hand-editing the main file.
 - Updating the include file on disk is not enough by itself; Nginx only starts serving route changes after a successful reload.
-- Local secrets belong in `.env`, which is ignored by git. `.env.example` documents the supported app and deploy variables, including `PFB_DEPLOY_SITE_DOMAIN` plus the current remote app path setting `PFB_DEPLOY_APP_PATH=/home/financegio`, and should stay credential-free.
+- Local secrets belong in `.env`, which is ignored by git. `.env.example` documents the supported app and deploy variables, including `PFB_DEPLOY_SITE_DOMAIN` and `PFB_DEPLOY_APP_PATH`, and should stay credential-free.
 - Prefer `PFB_DEPLOY_SSH_PRIVATE_KEY_PATH` over embedding a raw key, but the helper also accepts `PFB_DEPLOY_SSH_PRIVATE_KEY` and writes it to a temporary `0600` file for the duration of the session.
 - When a server still requires password auth, set `PFB_DEPLOY_SSH_PASSWORD` locally; the helper writes a short-lived askpass script in a temp directory and removes it after the session ends.
 - `npm run deploy:remote` intentionally shells into `PFB_DEPLOY_APP_PATH` and delegates to the checked-in `deploy.sh`, so the remote host keeps using the same deploy workflow, Nginx template rendering, and post-restart health verification through the deployed domain as a manual SSH session.

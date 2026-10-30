@@ -47,6 +47,10 @@ npm run browsers:install
 
 If you ran `npm install` before switching this repo to Node 24.15.0+, rerun `npm run browsers:install`. Puppeteer downloads and manages its browser separately from Playwright, and its cache location can change with configuration, so rerunning the install is the safest recovery step after runtime or browser-config changes.
 
+## Deploy
+
+Production deploys run `deploy.sh` on the server, and `npm run deploy:remote` triggers it over SSH. Copy `.env.example` to `.env` for the deploy settings. See [docs/deploy-runtime.md](./docs/deploy-runtime.md) and [docs/configuration.md](./docs/configuration.md).
+
 ## Commit And CI Automation
 
 - `pre-commit` runs `npm run test:server` and `npm run test:e2e:smoke`

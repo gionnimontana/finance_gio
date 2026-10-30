@@ -11,4 +11,5 @@ This folder contains the unauthenticated entry page used to validate an existing
 ## Related Docs
 
 - [../../docs/data-model.md](../../docs/data-model.md): Password-derived identity and browser-local login state.
+- [../../docs/auth-security.md](../../docs/auth-security.md): Password generation, validation, and account-creation rate limits.
 - [../../docs/deploy-runtime.md](../../docs/deploy-runtime.md): Unknown-route redirects to `/login/` and the cold-boot loading overlay.

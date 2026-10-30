@@ -14,3 +14,5 @@ This folder groups the shared scraping runtime and the vendor adapters used to f
 ## Related Docs
 
 - [../../docs/scraper-runtime.md](../../docs/scraper-runtime.md): Cross-cutting runtime notes for provider ordering, stale-cache recovery, deterministic fixture coverage, and deploy tuning.
+- [../../docs/shared-risk-caches.md](../../docs/shared-risk-caches.md): On-disk caches hydrated into the runtime at startup.
+- [../../docs/risk-indicators.md](../../docs/risk-indicators.md): How KID-derived `SRI` and computed `Risk` badges differ.

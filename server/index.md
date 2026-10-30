@@ -20,3 +20,8 @@ This folder contains the backend application logic for authentication, user data
 - [../docs/scraper-runtime.md](../docs/scraper-runtime.md): Provider fallback, fetch-only runtime behavior, and low-memory scraper tuning.
 - [../docs/shared-risk-caches.md](../docs/shared-risk-caches.md): Shared on-disk ISIN, crypto, and gold risk caches hydrated at startup.
 - [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): ATH and summary baselines produced by the portfolio builder.
+- [../docs/portfolio-refresh.md](../docs/portfolio-refresh.md): `/portfolio` versus `/portfolio/stream`, SSE events, and history-write side effects.
+- [../docs/risk-indicators.md](../docs/risk-indicators.md): Risk badge families served by `/assets/risk-indicators`.
+- [../docs/auth-security.md](../docs/auth-security.md): Header auth, rate limits, and CORS behavior.
+- [../docs/configuration.md](../docs/configuration.md): Environment variables read by the server and scrapers.
+- [../docs/testing.md](../docs/testing.md): Server `node:test` and Playwright suites.

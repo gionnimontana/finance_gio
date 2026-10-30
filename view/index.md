@@ -15,3 +15,7 @@ This folder contains the frontend pages, shared browser utilities, and page-spec
 - [../docs/data-model.md](../docs/data-model.md): Persisted schema/history files, view-group ordering, and browser-local cache behavior shared across pages.
 - [../docs/portfolio-metrics.md](../docs/portfolio-metrics.md): Dashboard ATH rules and the summary baselines reused across dashboard and history.
 - [../docs/deploy-runtime.md](../docs/deploy-runtime.md): Production-only generated frontend release behavior and cache-control expectations.
+- [../docs/auth-security.md](../docs/auth-security.md): Browser-stored credentials and what logout clears.
+- [../docs/portfolio-refresh.md](../docs/portfolio-refresh.md): Dashboard load and refresh paths.
+- [../docs/risk-indicators.md](../docs/risk-indicators.md): Risk badge sources and weighted averages.
+- [../docs/testing.md](../docs/testing.md): Playwright suites that exercise these pages.

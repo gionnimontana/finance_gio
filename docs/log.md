@@ -239,3 +239,8 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 
 ## [2026-10-16] update | justETF KID discovery via localized pages
 - Updated `docs/risk-indicators.md` and the vendors index: the justETF `en` profile no longer lists KID documents, so the scraper now tries `en`, `it`, `de`, `fr` pages and falls back to the hardcoded WisdomTree KID URL.
+
+## [2026-10-30] lint | Wiki health check
+- Found no orphan pages or cross-page contradictions; verified env vars, routes, thresholds, TTLs, and word-list entropy against code.
+- Flagged that the PRIIPs Annex II source in `risk-indicators.md` predates Delegated Regulation (EU) 2021/2268 and needs a recheck against the consolidated text.
+- Added the justETF locale fallback to `scraper-runtime.md`, the Express-only legacy redirects to `deploy-runtime.md`, a `shortHorizon` caveat to `data-model.md`, and missing Related links in `risk-indicators.md`.

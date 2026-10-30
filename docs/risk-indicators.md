@@ -27,6 +27,7 @@ The 1-7 risk badges shown on dashboard assets, where each value comes from, and 
 
 ## Sources
 - [Commission Delegated Regulation (EU) 2017/653, Annex II](https://www.legislation.gov.uk/eur/2017/653/annex/II/2020-12-31) (point-in-time copy of the EU text as of 31 December 2020; check EUR-Lex for the current consolidated EU version).
+- Open gap: this RTS was later amended by Delegated Regulation (EU) 2021/2268, so the Annex II summary above reflects the pre-amendment text. Recheck the MRM and SRI wording against the consolidated EUR-Lex version before relying on it (not verified here; EUR-Lex pages could not be fetched).
 - [CME Group gold futures contract specs](https://www.cmegroup.com/markets/metals/precious/gold.contractSpecs.html)
 
 ## Related
@@ -34,3 +35,5 @@ The 1-7 risk badges shown on dashboard assets, where each value comes from, and 
 - [../server/scrapers/vendors/index.md](../server/scrapers/vendors/index.md)
 - [../view/dashboard/index.md](../view/dashboard/index.md)
 - [./data-model.md](./data-model.md): `riskOverrides` persistence
+- [./shared-risk-caches.md](./shared-risk-caches.md): on-disk cache files behind the scraped families
+- [./scraper-runtime.md](./scraper-runtime.md): scoring thresholds, TTLs, and KID fallbacks
