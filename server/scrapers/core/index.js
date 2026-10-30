@@ -31,9 +31,20 @@ const scraperDiagnostics = {
     pagesCreated: 0,
 }
 
-// Lock to prevent concurrent refresh passes.
-let isScrapingInProgress = false
-let scrapingPromise = null
+// Passes run one at a time; each caller gets the result for its own asset list.
+let scrapingQueue = Promise.resolve()
+
+/**
+ * Queue a scrape pass behind any pass already running.
+ * @template T
+ * @param {() => Promise<T>} task - Pass to execute once earlier passes settle.
+ * @returns {Promise<T>}
+ */
+const runExclusive = (task) => {
+    const run = scrapingQueue.then(task, task)
+    scrapingQueue = run.catch(() => {})
+    return run
+}
 
 /**
  * Pause execution for a small amount of time.
@@ -806,12 +817,7 @@ const runWithConcurrency = async (
  * @returns {Promise<{values: Record<string, number>, failures: string[]}>}
  */
 const runDeterministicTestScraper = async (options, refresh, onProgress = null) => {
-    if (isScrapingInProgress && scrapingPromise) {
-        return scrapingPromise
-    }
-
-    isScrapingInProgress = true
-    scrapingPromise = (async () => {
+    return runExclusive(async () => {
         const fixture = readTestFixture()
         const configuredFailures = new Set(fixture.failures)
         const assetNames = options.map(option => Object.keys(option)[0])
@@ -819,82 +825,75 @@ const runDeterministicTestScraper = async (options, refresh, onProgress = null) 
         const failures = new Set()
         let completedCount = 0
 
-        try {
-            for (const option of options) {
-                const [name, rawOptionConfig] = Object.entries(option)[0]
-                const optionConfig = normalizeOptionConfig(name, rawOptionConfig)
-                const freshEntry = getFreshCacheEntry(name, optionConfig.cacheTtlMs)
+        for (const option of options) {
+            const [name, rawOptionConfig] = Object.entries(option)[0]
+            const optionConfig = normalizeOptionConfig(name, rawOptionConfig)
+            const freshEntry = getFreshCacheEntry(name, optionConfig.cacheTtlMs)
 
-                if (!refresh && freshEntry && !configuredFailures.has(name)) {
-                    completedCount += 1
-                    emitProgress(onProgress, {
-                        name,
-                        value: freshEntry.value,
-                        failed: false,
-                        cached: true,
-                        stale: false,
-                        provider: freshEntry.provider || 'deterministic-fixture',
-                        reason: null,
-                    }, completedCount, totalAssets)
-                    continue
-                }
-
-                await sleep(fixture.progressDelayMs)
-
-                const staleEntry = getReusableCacheEntry(name, optionConfig.staleCacheTtlMs)
-                const shouldFail = configuredFailures.has(name) || !hasFixtureValue(fixture.values, name)
-                let result = null
-
-                if (!shouldFail) {
-                    const value = normalizeScrapedValue(fixture.values[name])
-                    writeCacheEntry(name, value, { provider: 'deterministic-fixture' })
-                    result = {
-                        name,
-                        value,
-                        failed: false,
-                        cached: false,
-                        stale: false,
-                        provider: 'deterministic-fixture',
-                        reason: null,
-                    }
-                } else if (staleEntry) {
-                    result = {
-                        name,
-                        value: staleEntry.value,
-                        failed: false,
-                        cached: true,
-                        stale: true,
-                        provider: staleEntry.provider || 'deterministic-fixture',
-                        reason: 'stale-cache',
-                    }
-                } else {
-                    failures.add(name)
-                    result = {
-                        name,
-                        value: null,
-                        failed: true,
-                        cached: false,
-                        stale: false,
-                        provider: null,
-                        reason: 'fixture-failure',
-                    }
-                }
-
+            if (!refresh && freshEntry && !configuredFailures.has(name)) {
                 completedCount += 1
-                emitProgress(onProgress, result, completedCount, totalAssets)
+                emitProgress(onProgress, {
+                    name,
+                    value: freshEntry.value,
+                    failed: false,
+                    cached: true,
+                    stale: false,
+                    provider: freshEntry.provider || 'deterministic-fixture',
+                    reason: null,
+                }, completedCount, totalAssets)
+                continue
             }
 
-            return {
-                values: getCachedValuesSnapshot(assetNames),
-                failures: [...failures],
+            await sleep(fixture.progressDelayMs)
+
+            const staleEntry = getReusableCacheEntry(name, optionConfig.staleCacheTtlMs)
+            const shouldFail = configuredFailures.has(name) || !hasFixtureValue(fixture.values, name)
+            let result = null
+
+            if (!shouldFail) {
+                const value = normalizeScrapedValue(fixture.values[name])
+                writeCacheEntry(name, value, { provider: 'deterministic-fixture' })
+                result = {
+                    name,
+                    value,
+                    failed: false,
+                    cached: false,
+                    stale: false,
+                    provider: 'deterministic-fixture',
+                    reason: null,
+                }
+            } else if (staleEntry) {
+                result = {
+                    name,
+                    value: staleEntry.value,
+                    failed: false,
+                    cached: true,
+                    stale: true,
+                    provider: staleEntry.provider || 'deterministic-fixture',
+                    reason: 'stale-cache',
+                }
+            } else {
+                failures.add(name)
+                result = {
+                    name,
+                    value: null,
+                    failed: true,
+                    cached: false,
+                    stale: false,
+                    provider: null,
+                    reason: 'fixture-failure',
+                }
             }
-        } finally {
-            isScrapingInProgress = false
-            scrapingPromise = null
+
+            completedCount += 1
+            emitProgress(onProgress, result, completedCount, totalAssets)
         }
-    })()
 
-    return scrapingPromise
+        return {
+            values: getCachedValuesSnapshot(assetNames),
+            failures: [...failures],
+        }
+    })
 }
 
 /**
@@ -910,13 +909,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
         return runDeterministicTestScraper(options, refresh, onProgress)
     }
 
-    if (isScrapingInProgress && scrapingPromise) {
-        console.log('Scraping already in progress, waiting for completion...')
-        return scrapingPromise
-    }
-
-    isScrapingInProgress = true
-    scrapingPromise = (async () => {
+    return runExclusive(async () => {
         const normalizedOptions = options.map((option) => {
             const [name, rawOptionConfig] = Object.entries(option)[0]
             return {
@@ -994,12 +987,8 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
             } catch (closeError) {
                 // Ignore cleanup failures.
             }
-            isScrapingInProgress = false
-            scrapingPromise = null
         }
-    })()
-
-    return scrapingPromise
+    })
 }
 
 /**
@@ -1008,8 +997,7 @@ const multipleUrlSelectorScraper = async (options, maxRetries = 2, refresh, onPr
  */
 const resetScraperState = () => {
     cacheEntries.clear()
-    isScrapingInProgress = false
-    scrapingPromise = null
+    scrapingQueue = Promise.resolve()
     scraperDiagnostics.browserLaunches = 0
     scraperDiagnostics.pagesCreated = 0
 }

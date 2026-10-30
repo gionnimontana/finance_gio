@@ -248,3 +248,7 @@ Supported labels are `bootstrap`, `update`, `query`, and `lint`.
 ## [2026-10-30] update | Annualize gold volatility with trading days
 - Gold risk now annualizes volatility with $\sqrt{252}$ instead of $\sqrt{365}$; crypto stays at $\sqrt{365}$. Updated `scraper-runtime.md` and `risk-indicators.md`.
 - Closed the documented gold overstatement gap. The EUR-Lex recheck of Delegated Regulation 2021/2268 remains open (EUR-Lex returns a bot challenge to automated fetches).
+
+## [2026-10-30] update | Queue concurrent scrape passes
+- Documented in scraper-runtime.md that scrape passes are queued per caller instead of sharing one in-flight result.
+- Fixes first-refresh scraper errors when cold risk caches made portfolio and risk-indicator scrapes overlap.
