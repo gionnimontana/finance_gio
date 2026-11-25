@@ -282,6 +282,17 @@ input, select {
     box-sizing: border-box;
 }
 
+/* Native select arrows ignore padding and sit flush against the border. */
+select {
+    appearance: none;
+    padding-right: 30px;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1.5 1.5 6 6 10.5 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px 8px;
+}
+
 /* Utilities */
 .inline {
     display: inline-flex;
