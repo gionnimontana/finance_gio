@@ -4,7 +4,7 @@ This folder contains the frontend assets shared across every page in the applica
 
 ## Files
 
-- [styles.css](./styles.css): Shared layout, sticky desktop header, mobile bottom navigation, banners, tables, summary-card styling, and the dark full-screen loading overlay used during cold page boots.
+- [styles.css](./styles.css): Shared layout, sticky desktop header, mobile bottom navigation whose label truncation applies only inside the nav bar, banners, tables, summary-card styling, and the dark full-screen loading overlay used during cold page boots.
 - [utils.js](./utils.js): Common auth, fetch, and session helpers including `clearUserSession()` for logout and auth expiry, centralized currency-aware whole-number full-value or compact absolute-value formatting with persisted Settings preferences plus opt-in forced-compact labels and no-currency overrides for exception views, privacy-aware percentage helpers, shared saved-or-default view-group color resolution, shared authenticated assets-schema, history, and asset-risk fetch helpers, shared ATH mood-title helpers plus the `getPerformanceWeatherMood()` and `getProgressGroupDeltaMood()` weather helpers, shared footer and banner utilities, and the helper that dismisses the loading overlay only after the first page render is ready.
 
 ## Related Docs

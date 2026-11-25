@@ -415,7 +415,7 @@ body.hide_absolute .pct_placeholder {
         box-sizing: border-box; /* Include padding in width */
     }
 
-    .nav_link {
+    .nav_links .nav_link {
         flex: 1;
         text-align: center;
         margin: 0 4px;
@@ -425,10 +425,5 @@ body.hide_absolute .pct_placeholder {
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 120px; /* Prevent single buttons from being too wide */
-    }
-
-    /* Adjust specific buttons on mobile if needed */
-    .nav_link.danger {
-        /* Logout button style adjustments if it were here */
     }
 }

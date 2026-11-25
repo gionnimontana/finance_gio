@@ -90,18 +90,19 @@
         </label>
     </div>
 
-    <div class="container" style="margin-top: 30px;">
-        <div class="hint" style="text-align:center; margin-bottom: 10px;">
-            Use this password on another device to access your data.
-        </div>
-        <div class="footer_actions">
-            <button id="export_password_btn" class="nav_link" onclick="copyPassword()">📋</button>
-            <div class="password_export">
-                <input id="export_password" type="password" readonly aria-label="Your password" />
-                <button id="toggle_password_btn" class="btn" onclick="togglePasswordVisibility()">👁️</button>
+    <div class="container account_panel">
+        <div class="section_title">Access on another device</div>
+        <p class="hint account_hint">Use this password to open the same data on another device.</p>
+        <div class="password_export">
+            <input id="export_password" type="password" readonly aria-label="Your password" />
+            <div class="password_export_actions">
+                <button id="toggle_password_btn" class="btn" type="button" aria-label="Show password" onclick="togglePasswordVisibility()">👁️ Show</button>
+                <button id="export_password_btn" class="btn primary" type="button" onclick="copyPassword()">📋 Copy password</button>
             </div>
-            <button class="nav_link danger" onclick="logout()">🚪 Logout</button>
-            <button id="delete_user_btn" class="nav_link danger" onclick="openDeleteUserModal()">🗑️ Remove server record</button>
+        </div>
+        <div class="account_actions">
+            <button class="btn account_action" type="button" onclick="logout()">🚪 Log out</button>
+            <button id="delete_user_btn" class="btn danger" type="button" onclick="openDeleteUserModal()">🗑️ Delete my data</button>
         </div>
     </div>
 

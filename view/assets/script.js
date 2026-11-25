@@ -899,6 +899,10 @@ window.confirmDeleteUser = async () => {
  * Toggle the visibility of the exported password input.
  * @returns {void}
  */
+/**
+ * Show or hide the exported password and keep the toggle label in sync.
+ * @returns {void}
+ */
 window.togglePasswordVisibility = () => {
     const input = el('export_password');
     const toggleBtn = el('toggle_password_btn');
@@ -906,7 +910,8 @@ window.togglePasswordVisibility = () => {
 
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    toggleBtn.textContent = isHidden ? '🙈' : '👁️';
+    toggleBtn.textContent = isHidden ? '🙈 Hide' : '👁️ Show';
+    toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 };
 
 /**

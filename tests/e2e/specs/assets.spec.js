@@ -103,7 +103,7 @@ test('manages assets, view groups, password export, delete modal export, and log
     window.localStorage.setItem('hideAbsoluteValues', '1')
   })
 
-  await page.getByRole('button', { name: '🚪 Logout' }).click()
+  await page.getByRole('button', { name: '🚪 Log out' }).click()
   await expect(page).toHaveURL(/\/login\/$/)
 
   const remainingKeys = await page.evaluate(() => Object.keys(window.localStorage))
